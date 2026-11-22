@@ -1568,9 +1568,10 @@ function renderGuides() {
     ${S.uid ? '<button class="btn primary" data-act="g-new">Write a guide</button>' : '<button class="btn" data-act="signin">Sign in to write a guide</button>'}</div>`;
   // Writing or editing.
   if (S.gEdit) {
+    const open = $("#guideform"); if (open && open.dataset.ed === String(S.gEdit)) return; // never wipe a guide being written
     const g = S.gEdit === "new" ? { title: "", category: S.gTab in G_CATS ? S.gTab : "Gathering", zone: "", lmin: "", lmax: "", body: "" } : S.guides.find((x) => x.id === S.gEdit);
     if (!g) { S.gEdit = null; return renderGuides(); }
-    root.innerHTML = head + `<form class="card form guide-form" id="guideform">
+    root.innerHTML = head + `<form class="card form guide-form" id="guideform" data-ed="${esc(S.gEdit)}">
       <h3 style="margin-top:0">${S.gEdit === "new" ? "Write a guide" : "Edit guide"}</h3>
       <label for="gf-title">Title</label><input id="gf-title" maxlength="100" required value="${esc(g.title)}" placeholder="e.g. Thorium run through Un'Goro Crater">
       <div class="gf-row">
@@ -1770,7 +1771,9 @@ function renderEvents() {
     ${S.uid ? '<button class="btn primary" data-act="ev-new">Plan an event</button>' : '<button class="btn" data-act="signin">Sign in to plan an event</button>'}</div>`;
   const msg = S.evMsg ? `<p class="ev-msg">${esc(S.evMsg)}</p>` : "";
 
-  if (S.evEdit) { root.innerHTML = head + eventForm(); return; }
+  // An open form is never redrawn by background refreshes, so nothing typed is lost.
+  const f = $("#eventform");
+  if (S.evEdit) { if (f && f.dataset.ed === S.evEdit) return; root.innerHTML = head + eventForm(); return; }
 
   if (S.eventId) {
     const e = S.events.find((x) => x.id === S.eventId);
@@ -1848,7 +1851,7 @@ function eventForm() {
   if (!e) { S.evEdit = null; return ""; }
   const durs = [30, 60, 90, 120, 150, 180, 240, 300, 360, 480];
   if (!durs.includes(e.dur)) durs.push(e.dur);
-  return `<form class="card form guide-form" id="eventform">
+  return `<form class="card form guide-form" id="eventform" data-ed="${esc(S.evEdit)}">
     <h3 style="margin-top:0">${S.evEdit === "new" ? "Plan an event" : "Edit event"}</h3>
     <label for="ef-title">What is it?</label><input id="ef-title" maxlength="80" required value="${esc(e.title)}" placeholder="e.g. Scarlet Monastery: Library and Armory">
     <div class="gf-row ef-row">
