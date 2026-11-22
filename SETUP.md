@@ -44,7 +44,9 @@ Members can link their Battle.net account on **My crafter**. It shows a verified
    - `BNET_REGION` (optional): `us` (default), `eu`, `kr` or `tw`
 4. In Netlify, go to **Deploys → Trigger deploy → Deploy project** so the new variables take effect.
 
-Blizzard's API may not list WoW Forever characters yet. If it doesn't, linking still verifies the BattleTag and members add their characters by hand.
+Blizzard's API lists WoW Forever characters (namespace `profile-forever-us`, confirmed November 2026). Retail and Classic characters on the same account show up too, labelled by game. If a list comes back empty, members can still add characters by hand.
+
+To check the settings at any time, open `/.netlify/functions/bnet-start?check=1`. It shows the public Client ID and whether the Blizzard secret works, never the secret itself.
 
 ## 7. Make yourself an admin
 1. Create your account on the live site.
