@@ -15,7 +15,8 @@ const FINISHED = new Set(["done", "declined", "cancelled"]);
 const S = {
   view: "recipes", q: "", prof: -1, hasCrafter: false, onlyNew: false, limit: 150, sel: null, reqFor: null,
   B: null, me: null, uid: null, loaded: false,
-  crafters: new Map(), requests: [], listings: [], profiles: {}, bnet: {},
+  crafters: new Map(), requests: [], listings: [], profiles: {}, bnet: {}, board: [],
+  boardTab: "open", boardCat: "", viewUser: null, notifOpen: false, seenOverride: 0, postOpen: false,
   myDoc: null, pendingSave: false, editChar: lsGet("gc.editChar"), editProf: null, mineQ: "", saveState: "",
   reqTab: "open", mq: "", mtype: "", authTab: "in",
 };
@@ -86,7 +87,7 @@ async function loadMe() {
   if ((S.me && S.me.id) !== S.uid) { S.myDoc = null; S.crafters = new Map(); S.requests = []; S.listings = []; }
   S.uid = S.me ? S.me.id : null;
   $("#who").innerHTML = S.me
-    ? `<span>Signed in as <strong>${esc(S.me.username)}</strong></span><button class="btn small" data-act="signout">Sign out</button>`
+    ? `<a class="me-link" href="#profile" title="Your profile">${esc(S.me.username)}</a><button class="btn small" data-act="signout">Sign out</button>`
     : `<button class="btn small primary" data-act="signin">Sign in</button>`;
 }
 
@@ -96,7 +97,7 @@ async function refresh() {
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
   try {
     const d = await S.B.loadAll();
-    S.profiles = d.profiles; S.bnet = d.bnet || {};
+    S.profiles = d.profiles; S.bnet = d.bnet || {}; S.board = d.board || [];
     S.crafters = new Map(d.crafters.map((c) => [c.uid, c]));
     S.requests = d.requests; S.listings = d.listings;
     if (!S.pendingSave) { const mine = S.crafters.get(S.uid); S.myDoc = mine ? structuredClone({ chars: mine.chars, note: mine.note }) : (S.myDoc || null); }
@@ -124,9 +125,11 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "recipes", "mine", "requests", "market"];
+  const VIEWS = ["home", "rules", "map", "board", "recipes", "mine", "requests", "market", "profile"];
   let view = "home";
+  S.viewUser = null; S.notifOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
+  else if (/^member-[0-9a-z_-]+$/i.test(h)) { S.viewUser = h.slice(7); view = "profile"; }
   else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
   else if (VIEWS.includes(h)) view = h;
   const changed = S.view !== view;
@@ -149,7 +152,10 @@ function render() {
     const b = $("#req-badge"); b.textContent = open; b.hidden = !open;
     const a = document.activeElement;
     const typing = a && a.matches && a.matches("input[type=text],input[type=number],input[type=password],textarea") ? a : null;
+    renderBell();
     if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
+    else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) renderBoard(); }
+    else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "recipes") renderRecipes();
     else if (S.view === "mine") { if (!(typing && typing.closest("#view-mine"))) renderMine(); }
     else if (S.view === "requests") renderRequests();
@@ -260,7 +266,7 @@ function renderSheet() {
   else who = crafters.map((x, i) => {
     const mine = x.uid === S.uid; const un = userName(x.uid);
     return `<div class="crafter"><div><div class="nm">${esc(x.char)}${mine ? ' <span class="muted">(you)</span>' : ""}</div>
-      <div class="rl">${un ? esc(un) + " · " : ""}${tagFor(x.uid) ? `<span class="bnet-tag small" title="Verified Battle.net account">✓ ${esc(tagFor(x.uid))}</span> · ` : ""}${esc(x.prof)} ${x.skill || ""}</div>${x.note ? `<div class="note">${esc(x.note)}</div>` : ""}</div>
+      <div class="rl">${un ? memberLink(x.uid, un) + " · " : ""}${tagFor(x.uid) ? `<span class="bnet-tag small" title="Verified Battle.net account">✓ ${esc(tagFor(x.uid))}</span> · ` : ""}${esc(x.prof)} ${x.skill || ""}</div>${x.note ? `<div class="note">${esc(x.note)}</div>` : ""}</div>
       ${mine ? "" : `<button class="btn small primary" data-act="ask" data-i="${i}">Request</button>`}</div>
       ${S.reqFor && S.reqFor.uid === x.uid && S.reqFor.char === x.char ? requestForm() : ""}`;
   }).join("");
@@ -462,6 +468,187 @@ function renderMarket() {
   }).join("") || `<tr><td colspan="5"><div class="empty"><strong>No listings yet.</strong>Post something you're selling or looking for.</div></td></tr>`;
 }
 
+/* ---------- Members & profiles ---------- */
+const CLASSES = ["Druid", "Hunter", "Mage", "Paladin", "Priest", "Rogue", "Shaman", "Warlock", "Warrior"];
+const CLASS_COLOR = { Druid: "#FF7C0A", Hunter: "#AAD372", Mage: "#3FC7EB", Paladin: "#F48CBA", Priest: "#E8E8E8", Rogue: "#FFF468", Shaman: "#0070DD", Warlock: "#8788EE", Warrior: "#C69B6D" };
+const prof = (uid) => S.profiles[uid] || {};
+const classDot = (c) => (CLASS_COLOR[c] ? `<span class="cdot" style="background:${CLASS_COLOR[c]}" title="${esc(c)}"></span>` : "");
+const memberLink = (uid, label) => `<a class="mlink" href="#member-${esc(uid)}">${esc(label || userName(uid) || "Someone")}</a>`;
+function profsOf(uid) {
+  const out = [];
+  const doc = S.crafters.get(uid);
+  for (const [char, c] of Object.entries((doc && doc.chars) || {}))
+    for (const [p, v] of Object.entries(c.profs || {})) out.push({ char, prof: p, skill: v.skill || 0, known: (v.known || []).length });
+  return out;
+}
+
+function memberCard(uid, big) {
+  const p = prof(uid), tag = tagFor(uid);
+  const main = p.mainChar ? `${classDot(p.mainClass)}<strong>${esc(p.mainChar)}</strong>${p.mainLevel ? ` <span class="muted">${p.mainLevel}</span>` : ""}${p.mainClass ? ` <span class="muted">${esc(p.mainClass)}</span>` : ""}${p.mainRealm ? ` <span class="muted">· ${esc(p.mainRealm)}</span>` : ""}` : `<span class="muted">No main character set</span>`;
+  const profs = profsOf(uid);
+  return `<div class="member ${big ? "big" : ""}">
+    <div class="avatar" aria-hidden="true">${esc((p.mainChar || p.username || "?")[0].toUpperCase())}</div>
+    <div class="minfo">
+      <div class="mname">${big ? esc(p.username || "Member") : memberLink(uid, p.username)}${p.faction ? ` <span class="tag ${p.faction === "Horde" ? "horde" : "ally"}">${esc(p.faction)}</span>` : ""}${tag ? ` <span class="bnet-tag small">✓ ${esc(tag)}</span>` : ""}</div>
+      <div class="mmain">${main}</div>
+      ${profs.length ? `<div class="mprofs">${profs.map((x) => `<span class="pchip">${esc(x.prof)}${x.skill ? " " + x.skill : ""}</span>`).join("")}</div>` : ""}
+    </div></div>`;
+}
+
+function renderProfile() {
+  const root = $("#view-profile");
+  if (!S.uid) { root.innerHTML = signInPrompt("see member profiles"); return; }
+  const uid = S.viewUser || S.uid;
+  const mine = uid === S.uid;
+  const p = prof(uid);
+  if (!S.profiles[uid]) { root.innerHTML = `<div class="card empty"><strong>That member wasn't found.</strong><a href="#profile">Back to your profile</a></div>`; return; }
+
+  const posts = S.board.filter((b) => b.author === uid && b.status === "open");
+  const others = Object.keys(S.profiles).filter((id) => id !== uid)
+    .sort((a, b) => (userName(a) || "").localeCompare(userName(b) || ""));
+  const details = `
+    <div class="card">
+      ${memberCard(uid, true)}
+      ${p.bio ? `<p class="bio">${esc(p.bio)}</p>` : ""}
+      <dl class="pfacts">
+        ${p.discord ? `<div><dt>Discord</dt><dd>${esc(p.discord)}</dd></div>` : ""}
+        ${p.playTimes ? `<div><dt>Usually on</dt><dd>${esc(p.playTimes)}</dd></div>` : ""}
+        ${p.joined ? `<div><dt>Joined the hall</dt><dd>${new Date(p.joined).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" })}</dd></div>` : ""}
+      </dl>
+      ${!mine && posts.length ? `<h3>Open requests on the board</h3><ul class="mats">${posts.map((b) => `<li><a href="#board">${esc(b.title)}</a><span class="muted num">×${b.qty}</span></li>`).join("")}</ul>` : ""}
+    </div>`;
+
+  let editor = "";
+  if (mine) {
+    const chars = ((S.bnet[S.uid] || {}).characters) || [];
+    editor = `
+    <div class="card">
+      <h2>Edit your profile</h2>
+      ${chars.length ? `<div class="fillrow"><label class="muted" for="pf-fill">Fill from your WoW character</label>
+        <select id="pf-fill"><option value="">Choose a character…</option>${chars.map((c, i) => `<option value="${i}">${esc(c.name)} · ${c.level || "?"} ${esc(c.cls || "")}${c.realm ? " · " + esc(c.realm) : ""}${c.game ? " (" + esc(c.game) + ")" : ""}</option>`).join("")}</select></div>`
+      : `<p class="muted" style="margin:0 0 10px">Link your Battle.net account on <a href="#mine">My crafter</a> to fill this in from your WoW character.</p>`}
+      <form class="form" id="profform" style="margin:0">
+        <div class="row"><label for="pr-char">Main character</label><input type="text" id="pr-char" maxlength="24" value="${esc(p.mainChar || "")}"></div>
+        <div class="row"><label for="pr-realm">Realm</label><input type="text" id="pr-realm" maxlength="40" value="${esc(p.mainRealm || "")}"></div>
+        <div class="row"><label for="pr-class">Class</label><select id="pr-class"><option value="">—</option>${CLASSES.map((c) => `<option ${p.mainClass === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
+        <div class="row"><label for="pr-level">Level</label><input type="number" id="pr-level" min="0" max="80" value="${p.mainLevel || ""}"></div>
+        <div class="row"><label for="pr-faction">Faction</label><select id="pr-faction"><option value="">—</option>${["Alliance", "Horde"].map((f) => `<option ${p.faction === f ? "selected" : ""}>${f}</option>`).join("")}</select></div>
+        <div class="row"><label for="pr-discord">Discord name</label><input type="text" id="pr-discord" maxlength="40" value="${esc(p.discord || "")}"></div>
+        <div class="row"><label for="pr-times">Usually on</label><input type="text" id="pr-times" maxlength="80" value="${esc(p.playTimes || "")}" placeholder="e.g. Weeknights 7–10pm AEST"></div>
+        <div class="row"><label for="pr-bio">About you</label><textarea id="pr-bio" rows="3" maxlength="400">${esc(p.bio || "")}</textarea></div>
+        <div class="actions"><span class="saved" id="pr-saved"></span><button class="btn primary" type="submit">Save profile</button></div>
+      </form>
+    </div>`;
+  }
+  root.innerHTML = `
+    <div class="map-head"><p class="eyebrow">Bark and Stone · Members</p><h2 class="hero-title">${mine ? "Your profile" : esc(p.username || "Member")}</h2></div>
+    <div class="cols prof-cols">${details}${editor || `<div class="card"><h2>Ask them for something</h2><p class="muted">Find a recipe they know on <a href="#recipes">Recipes</a> and press Request, or post on the <a href="#board">Request Board</a> for anyone to pick up.</p></div>`}</div>
+    <h3 class="sec" style="margin-top:22px">Guild members (${Object.keys(S.profiles).length})</h3>
+    <div class="members">${(mine ? others : [S.uid, ...others.filter((x) => x !== S.uid)]).map((id) => memberCard(id)).join("") || '<p class="muted">You\'re the first one here.</p>'}</div>`;
+}
+
+/* ---------- Public request board ---------- */
+const CATS = { craft: "Craft", item: "Find an item", gather: "Gather", help: "Help" };
+function renderBoard() {
+  const root = $("#view-board");
+  if (!S.uid) { root.innerHTML = signInPrompt("use the Request Board"); return; }
+  const tabs = [["open", "Open"], ["claimed", "Taken"], ["done", "Done"], ["mine", "Mine"]];
+  const list = S.board.filter((b) => {
+    if (S.boardCat && b.category !== S.boardCat) return false;
+    if (S.boardTab === "mine") return b.author === S.uid || b.claimer === S.uid;
+    return b.status === S.boardTab;
+  }).sort((a, b) => b.created - a.created);
+  const counts = { open: S.board.filter((b) => b.status === "open").length, claimed: S.board.filter((b) => b.status === "claimed").length };
+  const recipeNames = DATA_OK ? [...new Set(RECIPES.map((r) => r.name))].sort() : [];
+
+  const card = (b) => {
+    const rec = b.recipeId && BYID.get(b.recipeId);
+    const crafters = rec ? (INDEX.get(rec.id) || []) : [];
+    const canMake = crafters.some((c) => c.uid === S.uid);
+    const mine = b.author === S.uid, took = b.claimer === S.uid, admin = S.me && S.me.isAdmin;
+    let acts = [];
+    if (b.status === "open" && !mine) acts.push(["claim", "I'll do it", "primary"]);
+    if (b.status === "claimed" && took) acts.push(["done", "Mark done", "primary"], ["release", "Give it back", ""]);
+    if (mine && b.status === "open") acts.push(["cancel", "Cancel", ""]);
+    if (mine && b.status === "claimed") acts.push(["done", "Mark done", "primary"], ["reopen", "Reopen", ""]);
+    if ((mine || admin) && (b.status === "done" || b.status === "cancelled")) acts.push(["delete", "Remove", "danger"]);
+    if (admin && !mine && b.status !== "done" && b.status !== "cancelled") acts.push(["delete", "Remove", "danger"]);
+    const statusLabel = { open: "open", claimed: "taken", done: "done", cancelled: "cancelled" }[b.status];
+    return `<article class="post ${b.status}">
+      <div class="post-main">
+        <div class="post-top"><span class="tag cat-${esc(b.category)}">${esc(CATS[b.category] || b.category)}</span><span class="pill st-${b.status === "claimed" ? "accepted" : b.status === "open" ? "pending" : esc(b.status)}">${statusLabel}</span>${canMake && b.status === "open" ? '<span class="tag can">You can craft this</span>' : ""}</div>
+        <h3 class="post-title">${rec ? `<a class="q${rec.q}" href="#recipe-${rec.id}">${esc(b.title)}</a>` : esc(b.title)} <span class="num muted">×${b.qty}</span></h3>
+        ${b.note ? `<p class="post-note">${esc(b.note)}</p>` : ""}
+        <div class="meta">Posted by <strong>${esc(b.authorChar || "?")}</strong> (${memberLink(b.author)}) · ${ago(b.created)} · Offer ${gold(b.offer)}${rec ? ` · ${crafters.length} guild crafter${crafters.length === 1 ? "" : "s"} know this` : ""}</div>
+        ${b.claimer ? `<div class="meta">${b.status === "done" ? "Done by" : "Taken by"} <strong>${esc(b.claimerChar || "?")}</strong> (${memberLink(b.claimer)})${b.claimed ? " · " + ago(b.claimed) : ""}</div>` : ""}
+      </div>
+      <div class="acts">${acts.map((a) => `<button class="btn small ${a[2]}" data-act="post" data-op="${a[0]}" data-id="${esc(b.id)}">${a[1]}</button>`).join("")}</div>
+    </article>`;
+  };
+
+  root.innerHTML = `
+    <div class="map-head board-head"><div><p class="eyebrow">Bark and Stone · Request Board</p><h2 class="hero-title">Request Board</h2>
+      <p class="muted map-intro">Post what you need and anyone in the guild can take the job. Crafts, items, materials or a hand with something.</p></div>
+      <button class="btn primary" data-act="post-toggle">${S.postOpen ? "Close" : "Post a request"}</button></div>
+    ${S.postOpen ? `<form class="form postform" id="boardform">
+      <div class="row"><label for="bf-cat">What kind</label><select id="bf-cat">${Object.entries(CATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
+      <div class="row"><label for="bf-title">What you need</label><input type="text" id="bf-title" list="recipelist" maxlength="80" required placeholder="e.g. Elixir of Lion's Strength, 10 Copper Bars, help with a quest"></div>
+      <div class="row"><label for="bf-qty">Quantity</label><input type="number" id="bf-qty" min="1" max="9999" value="1"></div>
+      <div class="row"><label for="bf-offer">Offer (gold)</label><input type="number" id="bf-offer" min="0" step="0.01" placeholder="0"></div>
+      <div class="row"><label for="bf-char">Your character</label><input type="text" id="bf-char" maxlength="24" value="${esc(defaultChar() || prof(S.uid).mainChar || "")}" required></div>
+      <div class="row"><label for="bf-note">Details</label><textarea id="bf-note" rows="2" maxlength="300" placeholder="I'll bring the mats, need it by Friday raid, etc."></textarea></div>
+      <div class="actions"><button class="btn primary" type="submit">Post to the board</button></div>
+      <datalist id="recipelist">${recipeNames.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+    </form>` : ""}
+    <div class="filters">
+      <div class="chips">${tabs.map(([k, l]) => `<button class="chip" data-act="board-tab" data-t="${k}" aria-pressed="${S.boardTab === k}">${l}${counts[k] != null ? `<span class="n">${counts[k]}</span>` : ""}</button>`).join("")}</div>
+      <div class="chips"><button class="chip" data-act="board-cat" data-c="" aria-pressed="${!S.boardCat}">All kinds</button>${Object.entries(CATS).map(([k, v]) => `<button class="chip" data-act="board-cat" data-c="${k}" aria-pressed="${S.boardCat === k}">${v}</button>`).join("")}</div>
+    </div>
+    <div class="posts">${list.map(card).join("") || `<div class="card empty"><strong>${S.boardTab === "open" ? "No open requests right now." : "Nothing here yet."}</strong>${S.boardTab === "open" ? "Post one, and the whole guild will see it." : ""}</div>`}</div>`;
+}
+
+/* ---------- Notifications ---------- */
+function seenAt() { return Math.max(S.seenOverride, (prof(S.uid).notifSeen) || 0); }
+function notifications() {
+  if (!S.uid) return [];
+  const out = [];
+  const label = (r) => (r.kind === "craft" && BYID.get(r.recipeId) ? BYID.get(r.recipeId).name : r.label || "an item");
+  for (const r of S.requests) {
+    if (r.to === S.uid && r.status === "pending") out.push({ t: r.created, text: `<strong>${esc(r.fromChar || userName(r.from))}</strong> asked you for ${esc(label(r))} ×${r.qty}`, href: "#requests" });
+    if (r.to === S.uid && r.status === "cancelled") out.push({ t: r.updated || r.created, text: `<strong>${esc(r.fromChar || userName(r.from))}</strong> cancelled their request for ${esc(label(r))}`, href: "#requests" });
+    if (r.from === S.uid && r.status !== "pending" && r.status !== "cancelled") out.push({ t: r.updated || r.created, text: `<strong>${esc(r.toChar || userName(r.to))}</strong> marked your request for ${esc(label(r))} as ${esc(r.status)}`, href: "#requests" });
+  }
+  for (const b of S.board) {
+    if (b.author === S.uid && b.claimer && b.claimer !== S.uid && (b.status === "claimed" || b.status === "done"))
+      out.push({ t: b.updated, text: `<strong>${esc(b.claimerChar || userName(b.claimer))}</strong> ${b.status === "done" ? "finished" : "took"} your board request: ${esc(b.title)}`, href: "#board" });
+    if (b.author !== S.uid && b.status === "open")
+      out.push({ t: b.created, text: `New on the board from <strong>${esc(b.authorChar || userName(b.author))}</strong>: ${esc(b.title)}`, href: "#board" });
+    if (b.author !== S.uid && b.claimer === S.uid && b.status === "cancelled")
+      out.push({ t: b.updated, text: `A job you took was cancelled: ${esc(b.title)}`, href: "#board" });
+  }
+  const seen = seenAt();
+  return out.filter((n) => n.t).sort((a, b) => b.t - a.t).slice(0, 40).map((n) => ({ ...n, unread: n.t > seen }));
+}
+function renderBell() {
+  const bell = $("#bell"); if (!bell) return;
+  bell.hidden = !S.uid;
+  if (!S.uid) { $("#notif-panel").hidden = true; return; }
+  const list = notifications();
+  const unread = list.filter((n) => n.unread).length;
+  const badge = $("#bell-count"); badge.textContent = unread > 9 ? "9+" : unread; badge.hidden = !unread;
+  bell.setAttribute("aria-label", unread ? `Notifications, ${unread} new` : "Notifications");
+  const panel = $("#notif-panel");
+  panel.hidden = !S.notifOpen;
+  if (S.notifOpen) panel.innerHTML = `
+    <div class="np-head"><strong>Notifications</strong>${unread ? `<button class="linkish" data-act="notif-read">Mark all read</button>` : ""}</div>
+    ${list.length ? `<ul class="np-list">${list.map((n) => `<li class="${n.unread ? "unread" : ""}"><a href="${n.href}" data-act="notif-go">${n.text}<span class="np-time">${ago(n.t)}</span></a></li>`).join("")}</ul>`
+      : `<p class="muted np-empty">Nothing yet. Requests, board jobs and replies will show up here.</p>`}`;
+}
+async function markRead() {
+  S.seenOverride = Date.now(); renderBell();
+  try { await S.B.markNotifsSeen(); } catch {}
+}
+
 /* ---------- sign-in dialog ---------- */
 function openAuth(tab) {
   S.authTab = tab || "in";
@@ -477,6 +664,7 @@ function openAuth(tab) {
 
 /* ---------- events ---------- */
 document.addEventListener("click", async (e) => {
+  if (S.notifOpen && !e.target.closest("#notif-panel,#bell")) { S.notifOpen = false; renderBell(); }
   const t = e.target.closest("[data-act],[data-recipe],[data-prof]");
   if (!t) { if (e.target.id === "auth") $("#auth").hidden = true; return; }
   if (t.dataset.recipe) { S.sel = Number(t.dataset.recipe); S.reqFor = null; history.replaceState(null, "", "#recipe-" + S.sel); renderRecipes(); return; }
@@ -484,6 +672,27 @@ document.addEventListener("click", async (e) => {
   const act = t.dataset.act;
   if (act === "signin") openAuth("in");
   else if (act === "signup") openAuth("up");
+  else if (act === "bell") { S.notifOpen = !S.notifOpen; renderBell(); }
+  else if (act === "notif-read") markRead();
+  else if (act === "notif-go") { S.notifOpen = false; markRead(); }
+  else if (act === "post-toggle") { S.postOpen = !S.postOpen; renderBoard(); if (S.postOpen) $("#bf-title").focus(); }
+  else if (act === "board-tab") { S.boardTab = t.dataset.t; renderBoard(); }
+  else if (act === "board-cat") { S.boardCat = t.dataset.c; renderBoard(); }
+  else if (act === "post") {
+    const op = t.dataset.op, id = t.dataset.id;
+    if (op === "delete" && t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "Click again to remove"; return; }
+    let fields = null;
+    if (op === "claim") {
+      const ch = defaultChar() || prof(S.uid).mainChar;
+      if (!ch) { note("Set your main character on your profile (or add one on My crafter) first, so the poster knows who's helping."); return; }
+      fields = { status: "claimed", claimer: S.uid, claimerChar: ch };
+    } else if (op === "done") fields = { status: "done" };
+    else if (op === "release" || op === "reopen") fields = { status: "open" };
+    else if (op === "cancel") fields = { status: "cancelled" };
+    t.disabled = true;
+    try { op === "delete" ? await S.B.deletePost(id) : await S.B.updatePost(id, fields); await refresh(); }
+    catch (err) { note(err.message.includes("already taken") ? "Someone else took that job first." : "Couldn't update that post: " + err.message); t.disabled = false; refresh(); }
+  }
   else if (act === "auth-tab") openAuth(t.dataset.t);
   else if (act === "auth-close") $("#auth").hidden = true;
   else if (act === "signout") { try { await S.B.signOut(); } catch {} await loadMe(); refresh(); }
@@ -584,6 +793,26 @@ document.addEventListener("submit", async (e) => {
       S.reqFor = null; renderSheet(); note("Request sent. Track it on the Requests tab."); refresh();
     } catch (x) { note("Couldn't send the request: " + x.message); btn.disabled = false; }
   }
+  else if (f.id === "boardform") {
+    const title = $("#bf-title").value.trim().slice(0, 80), ch = $("#bf-char").value.trim().slice(0, 24);
+    if (!title || !ch) return;
+    lsSet("gc.char", ch); btn.disabled = true;
+    const rec = DATA_OK && RECIPES.find((r) => r.name.toLowerCase() === title.toLowerCase());
+    try {
+      await S.B.createPost({ category: $("#bf-cat").value, title, recipeId: rec ? rec.id : null, qty: Math.max(1, Math.min(9999, Number($("#bf-qty").value) || 1)),
+        offer: Math.max(0, Number($("#bf-offer").value) || 0), note: $("#bf-note").value.trim().slice(0, 300), authorChar: ch });
+      S.postOpen = false; S.boardTab = "open"; await refresh(); note("Posted. The whole guild can see it on the Request Board.");
+    } catch (x) { note("Couldn't post that: " + x.message); btn.disabled = false; }
+  }
+  else if (f.id === "profform") {
+    btn.disabled = true; const saved = $("#pr-saved");
+    const fields = { mainChar: $("#pr-char").value.trim().slice(0, 24), mainRealm: $("#pr-realm").value.trim().slice(0, 40), mainClass: $("#pr-class").value,
+      mainLevel: Math.max(0, Math.min(80, Number($("#pr-level").value) || 0)), faction: $("#pr-faction").value, discord: $("#pr-discord").value.trim().slice(0, 40),
+      playTimes: $("#pr-times").value.trim().slice(0, 80), bio: $("#pr-bio").value.trim().slice(0, 400) };
+    try { await S.B.saveProfile(fields); Object.assign(S.profiles[S.uid] || (S.profiles[S.uid] = {}), fields); saved.textContent = "Saved."; document.activeElement.blur(); renderProfile(); }
+    catch (x) { saved.textContent = "Couldn't save: " + x.message; }
+    btn.disabled = false;
+  }
   else if (f.id === "addchar") {
     const name = $("#newchar").value.trim().slice(0, 24); if (!name) return;
     const d = ensureMyDoc(); if (!d.chars[name]) d.chars[name] = { profs: {} };
@@ -610,6 +839,15 @@ document.addEventListener("change", (e) => {
     const set = new Set(p.known || []); t.checked ? set.add(id) : set.delete(id); p.known = [...set];
     queueSave();
     const chip = document.querySelector('[data-act="pick-prof"][aria-pressed="true"] .n'); if (chip) chip.textContent = set.size;
+  }
+  else if (t.id === "pf-fill" && t.value !== "") {
+    const c = ((S.bnet[S.uid] || {}).characters || [])[Number(t.value)]; if (!c) return;
+    $("#pr-char").value = String(c.name || "").slice(0, 24);
+    $("#pr-realm").value = String(c.realm || "").slice(0, 40);
+    if (CLASSES.includes(c.cls)) $("#pr-class").value = c.cls;
+    $("#pr-level").value = c.level || "";
+    if (c.faction === "Alliance" || c.faction === "Horde") $("#pr-faction").value = c.faction;
+    $("#pr-saved").textContent = "Filled in from " + c.name + ". Press Save profile to keep it.";
   }
   else if (t.id === "addprof" && t.value) {
     const c = ensureMyDoc().chars[S.editChar]; c.profs = c.profs || {}; c.profs[t.value] = { skill: 1, known: [] };

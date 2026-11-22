@@ -48,6 +48,9 @@ Blizzard's API lists WoW Forever characters (namespace `profile-forever-us`, con
 
 To check the settings at any time, open `/.netlify/functions/bnet-start?check=1`. It shows the public Client ID and whether the Blizzard secret works, never the secret itself.
 
+## 6b. Request Board, profiles and notifications
+Run `supabase-board-profiles.sql` once in the SQL Editor (after `supabase-setup.sql`). It adds profile fields (main character, class, Discord, play times, bio), the public `board_posts` table and the "last read" time for notifications. Only the poster can edit a board post; anyone else can only take an open job for themselves, give it back, or mark their job done.
+
 ## 7. Make yourself an admin
 1. Create your account on the live site.
 2. Run in the SQL Editor: `update public.profiles set is_admin = true where username = 'YourUsername';`

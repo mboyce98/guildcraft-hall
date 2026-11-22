@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d9a441'/%3E%3Cpath d='M8 22l9-9 3 3-9 9zM15 9l4-4 8 8-4 4z' fill='%231b1306'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=8">
+<link rel="stylesheet" href="styles.css?v=9">
 </head>
 <body>
 <header class="top">
@@ -18,11 +18,19 @@
       <a href="#home" data-tab="home">Home</a>
       <a href="#rules" data-tab="rules">Rules</a>
       <a href="#map" data-tab="map">Map</a>
+      <a href="#board" data-tab="board">Board</a>
       <a href="#recipes" data-tab="recipes">Recipes</a>
       <a href="#mine" data-tab="mine">My crafter</a>
       <a href="#requests" data-tab="requests">Requests <span class="badge" id="req-badge" hidden></span></a>
       <a href="#market" data-tab="market">Market</a>
     </nav>
+    <div class="bell-wrap">
+      <button class="bell" id="bell" data-act="bell" aria-label="Notifications" hidden>
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6zm0 19a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z" fill="currentColor"/></svg>
+        <span class="badge" id="bell-count" hidden></span>
+      </button>
+      <div class="notif-panel" id="notif-panel" hidden></div>
+    </div>
     <div class="who" id="who"></div>
   </div>
 </header>
@@ -46,7 +54,8 @@
         <h3 class="sec">New here? Start with these</h3>
         <ol class="steps">
           <li><strong>Read the rules.</strong> Rule 1 is the one that really matters: respect your fellow Guildies.</li>
-          <li><strong>Create your account</strong> and link your Battle.net so guildmates can find your characters.</li>
+          <li><strong>Create your account</strong>, link your Battle.net, and fill in your profile from your WoW character.</li>
+          <li><strong>Need something?</strong> Post it on the Request Board, and anyone in the guild can take the job.</li>
           <li><strong>List what you can craft</strong> on My crafter, so others can send you requests.</li>
           <li><strong>Browse recipes and the market</strong> to find a crafter or a deal.</li>
         </ol>
@@ -67,6 +76,8 @@
     </div>
 
     <div class="tiles">
+      <a class="tile" href="#board"><strong>Request Board</strong><span>Ask the whole guild for something, or pick up a job.</span></a>
+      <a class="tile" href="#profile"><strong>Your profile</strong><span>Your main character, Discord and play times.</span></a>
       <a class="tile" href="#map"><strong>World map</strong><span>Where herbs, ore and treasure chests are found.</span></a>
       <a class="tile" href="#recipes"><strong>Recipes</strong><span>Every WoW Forever recipe and who in the guild can craft it.</span></a>
       <a class="tile" href="#mine"><strong>My crafter</strong><span>Your characters, professions and known recipes.</span></a>
@@ -137,6 +148,8 @@
   </section>
 
   <section id="view-map" hidden></section>
+  <section id="view-board" hidden></section>
+  <section id="view-profile" hidden></section>
   <section id="view-recipes" hidden></section>
   <section id="view-mine" hidden></section>
   <section id="view-requests" hidden></section>
@@ -171,8 +184,8 @@
   </div>
 </div>
 
-<script src="backend.js?v=5"></script>
-<script src="app.js?v=7"></script>
+<script src="backend.js?v=6"></script>
+<script src="app.js?v=9"></script>
 <script src="map.js?v=2"></script>
 </body>
 </html>

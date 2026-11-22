@@ -63,10 +63,11 @@ function demoDb() {
     async updatePassword() {},
     async loadAll() {
       const profiles = {};
-      data.users.forEach((u) => { profiles[u.id] = { username: u.username, isAdmin: false }; });
+      data.users.forEach((u) => { profiles[u.id] = { username: u.username, isAdmin: false, notifSeen: u.notifSeen || 0, ...(u.profile || {}) }; });
       const uid = data.session;
       return {
         profiles,
+        board: (data.board || []).map((b) => ({ ...b })),
         crafters: Object.entries(data.crafters).map(([id, c]) => ({ uid: id, chars: c.chars || {}, note: c.note || "" })),
         requests: data.requests.filter((r) => r.from === uid || r.to === uid).map((r) => ({ ...r })),
         listings: data.listings.map((l) => ({ ...l })),
@@ -75,6 +76,11 @@ function demoDb() {
     async linkBnet() { throw new Error("Battle.net linking works once the site is connected to Supabase."); },
     async unlinkBnet() {},
     async saveBnet() {},
+    async saveProfile(f) { const u = need(); Object.assign(u, { profile: f }); persist(); },
+    async markNotifsSeen() { const u = need(); u.notifSeen = Date.now(); persist(); },
+    async createPost(o) { const u = need(); (data.board = data.board || []).push({ ...o, id: String(data.seq++), author: u.id, status: "open", created: Date.now(), updated: Date.now() }); persist(); },
+    async updatePost(id, f) { const p = (data.board || []).find((x) => x.id === id); if (p) { Object.assign(p, f, { updated: Date.now() }); if (f.status === "open") { p.claimer = null; p.claimerChar = ""; } persist(); } },
+    async deletePost(id) { data.board = (data.board || []).filter((x) => x.id !== id); persist(); },
     async saveMine(doc) { const u = need(); data.crafters[u.id] = { chars: doc.chars, note: doc.note }; persist(); },
     async createRequest(o) { const u = need(); data.requests.push({ ...o, id: String(data.seq++), from: u.id, status: "pending", created: Date.now() }); persist(); },
     async setRequestStatus(id, status) { const r = data.requests.find((x) => x.id === id); if (r) { r.status = status; persist(); } },
@@ -137,24 +143,37 @@ async function supabaseDb() {
     async resetPassword(email) { ok(await sb.auth.resetPasswordForEmail(email, { redirectTo })); },
     async updatePassword(password) { ok(await sb.auth.updateUser({ password })); },
     async loadAll() {
-      const [profiles, crafters, requests, listings, links] = await Promise.all([
-        sb.from("profiles").select("id,username,is_admin"),
+      const [profiles, crafters, requests, listings, links, board] = await Promise.all([
+        sb.from("profiles").select("*"),
         sb.from("crafters").select("user_id,chars,note"),
         sb.from("requests").select("*").order("created_at", { ascending: false }).limit(500),
         sb.from("listings").select("*").order("created_at", { ascending: false }).limit(500),
         sb.from("bnet_links").select("user_id,battletag,characters,linked_at"),
+        sb.from("board_posts").select("*").order("created_at", { ascending: false }).limit(300),
       ].map((p) => p.then(ok)));
       const pmap = {}, bnet = {};
-      profiles.forEach((p) => { pmap[p.id] = { username: p.username, isAdmin: p.is_admin }; });
+      profiles.forEach((p) => {
+        pmap[p.id] = {
+          username: p.username, isAdmin: p.is_admin, joined: Date.parse(p.created_at),
+          mainChar: p.main_char || "", mainRealm: p.main_realm || "", mainClass: p.main_class || "", mainLevel: p.main_level || 0,
+          faction: p.faction || "", bio: p.bio || "", discord: p.discord || "", playTimes: p.play_times || "",
+          notifSeen: p.notif_seen_at ? Date.parse(p.notif_seen_at) : 0,
+        };
+      });
       links.forEach((l) => { bnet[l.user_id] = { battletag: l.battletag, characters: l.characters || [], linkedAt: Date.parse(l.linked_at) }; });
       return {
         profiles: pmap,
         bnet,
+        board: board.map((b) => ({
+          id: String(b.id), author: b.author_id, authorChar: b.author_char, category: b.category, title: b.title, recipeId: b.recipe_id,
+          qty: b.qty, offer: Number(b.offer), note: b.note, status: b.status, claimer: b.claimer_id, claimerChar: b.claimer_char,
+          created: Date.parse(b.created_at), updated: Date.parse(b.updated_at), claimed: b.claimed_at ? Date.parse(b.claimed_at) : 0,
+        })),
         crafters: crafters.map((c) => ({ uid: c.user_id, chars: c.chars || {}, note: c.note || "" })),
         requests: requests.map((r) => ({
           id: String(r.id), kind: r.kind, recipeId: r.recipe_id, listingId: r.listing_id, label: r.label, qty: r.qty,
           tip: Number(r.tip), note: r.note, from: r.from_id, fromChar: r.from_char, to: r.to_id, toChar: r.to_char,
-          status: r.status, created: Date.parse(r.created_at),
+          status: r.status, created: Date.parse(r.created_at), updated: Date.parse(r.updated_at),
         })),
         listings: listings.map((l) => ({
           id: String(l.id), seller: l.seller_id, char: l.char, type: l.type, item: l.item, qty: l.qty,
@@ -162,6 +181,28 @@ async function supabaseDb() {
         })),
       };
     },
+    // ---- Profile & notifications ----
+    async saveProfile(f) {
+      const id = await need();
+      ok(await sb.from("profiles").update({
+        main_char: f.mainChar, main_realm: f.mainRealm, main_class: f.mainClass, main_level: f.mainLevel || 0,
+        faction: f.faction, bio: f.bio, discord: f.discord, play_times: f.playTimes,
+      }).eq("id", id));
+    },
+    async markNotifsSeen() { const id = await need(); ok(await sb.from("profiles").update({ notif_seen_at: new Date().toISOString() }).eq("id", id)); },
+    // ---- Public request board ----
+    async createPost(o) {
+      await need();
+      ok(await sb.from("board_posts").insert({ author_char: o.authorChar, category: o.category, title: o.title, recipe_id: o.recipeId || null, qty: o.qty, offer: o.offer, note: o.note || "" }));
+    },
+    async updatePost(id, fields) {
+      const row = {};
+      if ("status" in fields) row.status = fields.status;
+      if ("claimer" in fields) row.claimer_id = fields.claimer;
+      if ("claimerChar" in fields) row.claimer_char = fields.claimerChar;
+      ok(await sb.from("board_posts").update(row).eq("id", Number(id)));
+    },
+    async deletePost(id) { ok(await sb.from("board_posts").delete().eq("id", Number(id))); },
     // ---- Battle.net link (runs through the site's Netlify function, which holds the Blizzard secret) ----
     async linkBnet() {
       const { data } = await sb.auth.getSession();
