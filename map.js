@@ -1,35 +1,26 @@
 /* Bark and Stone — World map: where herbs, ore and chests are found (data: map.json, from Wowhead's WoW Forever database).
-   The continent layout is our own schematic (not to scale, not Blizzard's artwork). Grids use in-game map coordinates (0–100). */
+   Drawn over the guild's world map image (images/world-map.webp). Grids use in-game map coordinates (0–100). */
 (() => {
 "use strict";
 const $ = (s, el = document) => el.querySelector(s);
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-// Schematic positions: [zoneId, centreX, centreY, width, height] in a 100 x 118 box per continent. Small tiles are cities.
-const LAYOUT = {
-  "Eastern Kingdoms": [
-    [1497, 10, 4, 12, 6], [85, 24, 9, 22, 9], [28, 46, 9, 20, 9], [139, 68, 9, 22, 9],
-    [130, 20, 21, 20, 9], [36, 42, 20, 18, 8], [47, 64, 21, 22, 9],
-    [17065, 12, 33, 16, 8], [267, 34, 31, 20, 8], [45, 56, 33, 20, 9],
-    [11, 48, 45, 20, 9],
-    [1, 32, 56, 20, 9], [1537, 46, 55, 10, 6], [38, 60, 55, 16, 9],
-    [51, 40, 66, 18, 8], [3, 60, 66, 18, 8],
-    [46, 44, 76, 20, 8], [44, 64, 78, 16, 8],
-    [1519, 22, 84, 12, 6], [12, 40, 86, 18, 8], [8, 70, 89, 18, 8],
-    [40, 24, 95, 18, 8], [10, 42, 96, 16, 8], [41, 58, 98, 14, 8], [4, 72, 101, 16, 8],
-    [33, 40, 110, 26, 9],
-  ],
-  Kalimdor: [
-    [1657, 18, 6, 12, 6], [141, 30, 9, 16, 8], [493, 50, 9, 14, 7], [618, 70, 10, 22, 9],
-    [148, 32, 21, 16, 10], [361, 52, 21, 16, 9], [616, 70, 23, 16, 8], [16, 86, 32, 18, 9],
-    [331, 48, 34, 22, 9], [406, 24, 42, 22, 8], [1637, 74, 38, 14, 6],
-    [405, 20, 56, 20, 9], [17, 52, 52, 22, 16], [14, 76, 50, 16, 10],
-    [1638, 32, 64, 14, 6], [215, 36, 73, 18, 8], [15, 74, 70, 20, 9],
-    [357, 18, 84, 20, 9], [400, 52, 82, 22, 8],
-    [1377, 24, 103, 18, 9], [490, 46, 100, 18, 9], [440, 70, 104, 20, 10],
-  ],
+// Zone positions on images/world-map.webp (1080 x 675 px), at each zone's label.
+const MAP_W = 1080, MAP_H = 675;
+const POS = {
+  // Kalimdor
+  141: [135, 48], 1657: [62, 58], 493: [190, 96], 148: [182, 140], 618: [278, 146], 616: [258, 186],
+  361: [174, 207], 16: [312, 255], 331: [186, 266], 406: [122, 296], 1637: [296, 282], 14: [296, 316],
+  17: [266, 340], 1638: [228, 360], 405: [110, 366], 215: [176, 386], 16651: [128, 414], 357: [138, 446],
+  15: [272, 424], 400: [232, 480], 490: [222, 526], 1377: [162, 530], 440: [262, 576],
+  // Eastern Kingdoms
+  139: [956, 114], 85: [792, 150], 1497: [800, 170], 28: [884, 160], 36: [866, 204], 130: [792, 204],
+  47: [944, 214], 267: [852, 240], 17066: [742, 228], 16756: [744, 250], 17065: [782, 266], 45: [936, 266],
+  11: [932, 322], 1537: [842, 334], 1: [836, 350], 38: [930, 346], 51: [862, 390], 3: [950, 390],
+  16591: [962, 420], 46: [862, 428], 1519: [818, 440], 12: [862, 462], 44: [956, 462], 40: [792, 480],
+  8: [948, 492], 10: [862, 505], 41: [918, 505], 4: [966, 520], 33: [868, 546],
 };
-const PLACED = new Set(Object.values(LAYOUT).flat().map((z) => z[0]));
+const PLACED = new Set(Object.keys(POS).map(Number));
 const TERR = { 0: "Alliance", 1: "Horde", 2: "Contested", 3: "Sanctuary", 4: "PvP" };
 const KIND = { herb: "Herb", vein: "Ore", chest: "Chest" };
 
@@ -92,22 +83,26 @@ function itemFor(name) {
 
 function heatColor(t) { return `color-mix(in oklab, var(--heat) ${Math.round(18 + t * 82)}%, transparent)`; }
 
-function continentSvg(title, focus) {
-  const tiles = LAYOUT[title].map(([id, cx, cy, w, h]) => {
-    const z = ZONES.get(id); if (!z) return "";
-    const city = w <= 14 && h <= 6;
+// The guild's world map image with a clickable marker on every zone. Searching lights markers by how many spawns a zone has.
+function worldSvg(focus) {
+  const marks = Object.entries(POS).map(([idStr, [x, y]]) => {
+    const id = Number(idStr), z = ZONES.get(id); if (!z) return "";
     const f = focus ? focus[id] : null;
-    const cls = ["z", "t" + z.terr, city ? "city" : "", st.zone === id ? "sel" : "", focus ? (f ? "hit" : "dim") : ""].join(" ");
-    const heat = f ? `style="--h:${heatColor(f.t)}"` : "";
+    const cls = ["z", st.zone === id ? "sel" : "", focus ? (f ? "hit" : "dim") : ""].join(" ");
     const lv = levels(z);
-    return `<g class="${cls}" data-zone="${id}" ${heat} tabindex="0" role="button" aria-label="${esc(z.name)}${lv ? ", levels " + lv : ""}${f ? ", " + f.n + " nodes" : ""}">
-      <rect x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}" rx="1.6"></rect>
-      <text x="${cx}" y="${cy - (city ? 0 : 0.6)}" class="zn">${esc(z.name.length > 18 && !city ? z.name.replace("Mountains", "Mtns").replace("Plaguelands", "Plague.") : z.name)}</text>
-      ${city ? "" : `<text x="${cx}" y="${cy + 2.6}" class="zl">${f ? f.n + " nodes" : lv}</text>`}
+    const r = f ? 9 + Math.round(f.t * 9) : 8;
+    return `<g class="${cls}" data-zone="${id}" tabindex="0" role="button" aria-label="${esc(z.name)}${lv ? ", levels " + lv : ""}${f ? ", " + f.n + " spawns" : ""}">
+      <circle class="hitbox" cx="${x}" cy="${y}" r="20"></circle>
+      <circle class="dot" cx="${x}" cy="${y}" r="${r}" ${f ? `style="fill:${heatColor(0.35 + f.t * 0.65)}"` : ""}></circle>
+      ${f ? `<text x="${x}" y="${y + 0.5}" class="cnt">${f.n > 999 ? Math.round(f.n / 100) / 10 + "k" : f.n}</text>` : ""}
+      <title>${esc(z.name)}${lv ? " (" + lv + ")" : ""}${f ? " · " + f.n + " spawns" : ""}</title>
     </g>`;
   }).join("");
-  return `<figure class="continent"><figcaption>${esc(title)}</figcaption>
-    <svg viewBox="0 0 100 118" role="group" aria-label="${esc(title)} schematic map">${tiles}</svg></figure>`;
+  return `<figure class="worldmap">
+    <div class="wm-scroll"><div class="wm-inner">
+      <img src="images/world-map.webp?v=1" width="${MAP_W}" height="${MAP_H}" alt="World map of Kalimdor and the Eastern Kingdoms in WoW Forever">
+      <svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="group" aria-label="Zones">${marks}</svg>
+    </div></div></figure>`;
 }
 
 function render() {
@@ -131,7 +126,7 @@ function render() {
       </div>
       <div class="map-layout">
         <div><div class="map-results" id="mapresults"></div><div class="map-board" id="mapboard"></div>
-          <p class="map-legend"><span class="lg t0"></span>Alliance <span class="lg t1"></span>Horde <span class="lg t2"></span>Contested · Schematic layout, not to scale.</p>
+          <p class="map-legend">Click a marker to see a zone. When you search, brighter, bigger markers mean more spawns.</p>
           <div id="maprest"></div></div>
         <aside class="sheet map-sheet" id="mapsheet" aria-label="Details"></aside>
       </div>`;
@@ -157,7 +152,7 @@ function draw() {
     const max = Math.max(...Object.values(sel.zones).map((z) => z.n), 1);
     focus = {}; for (const [z, v] of Object.entries(sel.zones)) focus[z] = { n: v.n, t: v.n / max };
   }
-  $("#mapboard").innerHTML = continentSvg("Eastern Kingdoms", focus) + continentSvg("Kalimdor", focus);
+  $("#mapboard").innerHTML = worldSvg(focus);
 
   // Zones with no spot on the schematic (new Forever zones, dungeons, raids) are listed instead.
   const restIds = sel ? Object.keys(sel.zones).map(Number).filter((z) => !PLACED.has(z))

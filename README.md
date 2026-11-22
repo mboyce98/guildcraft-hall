@@ -5,5 +5,5 @@ The site for Bark and Stone, an Australian social-first WoW Forever guild: a fro
 - Plain HTML/CSS/JS, no build step. Live at https://guildcraft-hall.netlify.app/ (deploys automatically from `main` via Netlify) and https://mboyce98.github.io/guildcraft-hall/.
 - Accounts and guild data run on Supabase. See [SETUP.md](SETUP.md).
 - `recipes.json` comes from Wowhead's WoW Forever database.
-- `map.json` holds herb, ore-vein and treasure-chest locations from the same database (fetched 22 Nov 2026), drawn by `map.js` on our own schematic of both continents (not Blizzard's map art).
+- `map.json` holds herb, ore-vein and treasure-chest locations from the same database (fetched 22 Nov 2026), drawn by `map.js` as markers over the guild's world map image (`images/world-map.webp`, artwork © Blizzard Entertainment).
 - `serve.ps1` runs a local preview at http://localhost:8080 on Windows.
