@@ -297,3 +297,27 @@ h3{margin:12px 0 6px}
 .coins .s{color:#d4d8de} .coins .s::after{background:radial-gradient(circle at 35% 35%, #ffffff, #9aa3ad)}
 .coins .c{color:#e39a5c} .coins .c::after{background:radial-gradient(circle at 35% 35%, #ffc79a, #a85a24)}
 .npc-modal .npc-card{width:min(680px, 100%)}
+
+/* ---------- Front-page gallery ---------- */
+.gallery{margin-top:14px}
+.gal-head{display:flex; justify-content:space-between; align-items:baseline; gap:10px; margin-bottom:8px}
+.gal-head h3{margin:0}
+.gal-count{font-size:.8rem; font-variant-numeric:tabular-nums}
+.gal-viewport{position:relative; aspect-ratio:16/7; max-height:440px; width:100%; overflow:hidden; border:1px solid #6b5426; border-radius:8px; background:#0b0d14; box-shadow:0 12px 30px rgb(0 0 0 / .5); outline:1px solid rgb(227 181 91 / .12); outline-offset:-6px}
+.gal-slide{position:absolute; inset:0; margin:0; opacity:0; visibility:hidden; transition:opacity .6s ease, visibility 0s linear .6s}
+.gal-slide.on{opacity:1; visibility:visible; transition:opacity .6s ease}
+.gal-slide::before{content:""; position:absolute; inset:-20px; background:var(--bg) center / cover no-repeat; filter:blur(18px) brightness(.45)}
+.gal-slide img{position:relative; display:block; width:100%; height:100%; object-fit:contain; cursor:zoom-in}
+.gal-slide figcaption{position:absolute; left:0; right:0; bottom:0; padding:28px 16px 12px; background:linear-gradient(180deg, transparent, rgb(8 10 16 / .85)); font-family:var(--f-display); color:var(--gold-hi); font-size:1rem; letter-spacing:.03em; text-shadow:0 1px 2px #000}
+.gal-nav{position:absolute; top:50%; transform:translateY(-50%); z-index:2; width:40px; height:40px; border-radius:50%; border:1px solid rgb(227 181 91 / .5); background:rgb(10 12 18 / .65); color:var(--gold-hi); font-size:1.6rem; line-height:1; cursor:pointer; display:grid; place-items:center; padding:0 0 3px}
+.gal-nav:hover, .gal-nav:focus-visible{background:rgb(40 30 14 / .9)}
+.gal-nav.prev{left:10px} .gal-nav.next{right:10px}
+.gal-dots{display:flex; justify-content:center; gap:8px; margin-top:8px}
+.gal-dots button{width:10px; height:10px; padding:0; border-radius:50%; border:1px solid var(--brass); background:transparent; cursor:pointer}
+.gal-dots button[aria-selected="true"]{background:var(--brass); box-shadow:0 0 8px rgb(227 181 91 / .6)}
+.gal-big{z-index:70; background:rgb(0 0 0 / .85); gap:10px; align-content:center; justify-items:center}
+.gal-big figure{margin:0; max-width:min(1400px, 96vw)}
+.gal-big img{display:block; max-width:100%; max-height:84vh; border:1px solid #6b5426; border-radius:6px}
+.gal-big figcaption{text-align:center; color:var(--gold-hi); font-family:var(--f-display); margin-top:8px}
+@media (max-width: 640px){ .gal-viewport{aspect-ratio:4/3} .gal-nav{width:34px; height:34px} }
+@media (prefers-reduced-motion: reduce){ .gal-slide, .gal-slide.on{transition:none} }

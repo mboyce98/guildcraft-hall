@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=8">
+<link rel="stylesheet" href="theme.css?v=9">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -66,6 +66,20 @@
         <a class="btn primary" href="#rules">Read the guild rules</a>
       </div>
     </div>
+
+    <section class="gallery" id="gallery" aria-roledescription="carousel" aria-label="Guild gallery">
+      <div class="gal-head"><h3 class="sec">From our adventures</h3><span class="muted gal-count" id="gal-count"></span></div>
+      <div class="gal-viewport">
+        <!-- To add a screenshot: put it in images/gallery/ and copy one <figure> below. -->
+        <figure class="gal-slide" style="--bg:url('images/gallery/shot-1.jpg')"><img src="images/gallery/shot-1.jpg" alt="A lone adventurer facing a misty sea temple at sunrise" loading="lazy" width="683" height="782"><figcaption>Sunrise over a forgotten sea temple</figcaption></figure>
+        <figure class="gal-slide" style="--bg:url('images/gallery/shot-2.jpg')"><img src="images/gallery/shot-2.jpg" alt="A dwarf looking down into the canals of Stormwind at night" loading="lazy" width="1600" height="1000"><figcaption>Night watch over the Stormwind canals</figcaption></figure>
+        <figure class="gal-slide" style="--bg:url('images/gallery/shot-3.jpg')"><img src="images/gallery/shot-3.jpg" alt="A rogue on a torch-lit path through a dark, foggy forest" loading="lazy" width="1600" height="1000"><figcaption>A torch-lit road through Duskwood</figcaption></figure>
+        <figure class="gal-slide" style="--bg:url('images/gallery/shot-4.jpg')"><img src="images/gallery/shot-4.jpg" alt="Adventurers gathered around a campfire under an Alliance banner at Sentinel Hill" loading="lazy" width="1600" height="900"><figcaption>Campfire night at Sentinel Hill, Westfall</figcaption></figure>
+        <button class="gal-nav prev" type="button" data-gal="prev" aria-label="Previous picture">‹</button>
+        <button class="gal-nav next" type="button" data-gal="next" aria-label="Next picture">›</button>
+      </div>
+      <div class="gal-dots" id="gal-dots" role="tablist" aria-label="Choose a picture"></div>
+    </section>
 
     <div class="home-grid">
       <div class="card">
@@ -437,5 +451,6 @@
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=6"></script>
+<script src="gallery.js?v=1"></script>
 </body>
 </html>
