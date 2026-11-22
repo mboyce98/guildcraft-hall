@@ -13,8 +13,8 @@
         NEVER put the secret / service_role key here.
    ========================================================= */
 const BACKEND = {
-  supabaseUrl: "",
-  supabaseAnonKey: "", // publishable key (safe in a website)
+  supabaseUrl: "https://aclhzgtyucqxekzuahyx.supabase.co",
+  supabaseAnonKey: "sb_publishable_wRsOqGd5oXzvIESdDEOewA_oceG9nd_", // publishable key (safe in a website)
 };
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,24}$/;

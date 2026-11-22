@@ -129,6 +129,14 @@ create policy "members read listings" on public.listings for select to authentic
 create policy "post own listings" on public.listings for insert to authenticated with check (seller_id = auth.uid());
 create policy "remove own listings" on public.listings for delete to authenticated using (seller_id = auth.uid() or public.is_admin());
 
+-- ---------- Table access for signed-in members (row-level security above still applies) ----------
+grant usage on schema public to authenticated;
+grant select, update on public.profiles to authenticated;
+grant select, insert, update, delete on public.crafters to authenticated;
+grant select, insert, update, delete on public.requests to authenticated;
+grant select, insert, delete on public.listings to authenticated;
+grant usage, select on all sequences in schema public to authenticated;
+
 -- ---------- Live updates ----------
 alter publication supabase_realtime add table public.crafters, public.requests, public.listings;
 
