@@ -231,4 +231,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 window.GC_MAP = { render };
+// If the page opened straight on #map, the page may have tried to draw before this file arrived.
+const mv = document.getElementById("view-map");
+if (mv && !mv.hidden && !mv.dataset.built) render();
 })();
