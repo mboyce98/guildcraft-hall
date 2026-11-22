@@ -18,7 +18,7 @@ function category(tag) {
   const t = tag || "";
   if (/Trainer/i.test(t) && CLASSES.some((c) => t.startsWith(c))) return "class";
   if (/Trainer|^(Artisan|Expert|Journeyman|Master) /i.test(t) && PROFS.some((p) => t.includes(p)) && !/Supplies|Supplier|Recipes/i.test(t)) return "prof";
-  if (/Weapon Master|Pet Trainer/i.test(t)) return "class";
+  if (/Weapon Master|Pet Trainer|Demon Trainer/i.test(t)) return "class";
   if (/Banker|Auctioneer|Innkeeper|Gryphon|Flight Master|Wind Rider|Hippogryph|Bat Handler|Stable Master|Battlemaster|Guild Master|Tabard|Mailbox/i.test(t)) return "service";
   return "vendor";
 }
@@ -27,7 +27,7 @@ let DATA = null, loading = null;
 const st = { city: "ironforge", cats: new Set(["class", "prof", "vendor", "service"]), q: "", sel: null };
 
 function load() {
-  if (!loading) loading = fetch("city-npcs.json?v=1").then((r) => r.json()).then((d) => {
+  if (!loading) loading = fetch("city-npcs.json?v=2").then((r) => r.json()).then((d) => {
     DATA = d;
     for (const c of Object.values(d.cities)) c.npcs.forEach((n) => { n.cat = category(n[2]); n.s = (n[1] + " " + n[2]).toLowerCase(); });
   });
