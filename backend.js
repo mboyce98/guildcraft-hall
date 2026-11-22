@@ -81,12 +81,13 @@ function demoDb() {
     async updatePassword() {},
     async loadAll() {
       const profiles = {};
-      data.users.forEach((u) => { profiles[u.id] = { username: u.username, isAdmin: false, notifSeen: u.notifSeen || 0, ...(u.profile || {}) }; });
+      data.users.forEach((u) => { profiles[u.id] = { username: u.username, isAdmin: u.isAdmin !== false, joined: u.joined || 0, notifSeen: u.notifSeen || 0, ...(u.profile || {}) }; });
       const uid = data.session;
       return {
         profiles,
         board: (data.board || []).map((b) => ({ ...b })),
         messages: (data.messages || []).map((m) => ({ ...m })),
+        dms: (data.dms || []).filter((m) => m.from === uid || m.to === uid).map((m) => ({ ...m })),
         crafters: Object.entries(data.crafters).map(([id, c]) => ({ uid: id, chars: c.chars || {}, note: c.note || "" })),
         requests: data.requests.filter((r) => r.from === uid || r.to === uid).map((r) => ({ ...r })),
         listings: data.listings.map((l) => ({ ...l })),
@@ -109,6 +110,12 @@ function demoDb() {
     async discordEnabled() { return false; },
     async signInWithDiscord() { throw new Error("Discord sign-in works once the site is connected to Supabase."); },
     async markNotifsSeen() { const u = need(); u.notifSeen = Date.now(); persist(); },
+    async sendDm(to, body) { const u = need(); (data.dms = data.dms || []).push({ id: String(data.seq++), from: u.id, to, body, t: Date.now(), read: false }); persist(); },
+    async markDmsRead(from) { const u = need(); (data.dms || []).forEach((m) => { if (m.to === u.id && m.from === from) m.read = true; }); persist(); },
+    async deleteDm(id) { data.dms = (data.dms || []).filter((m) => m.id !== id); persist(); },
+    async loadSettings() { return { ...(data.settings || {}) }; },
+    async saveSetting(key, value) { (data.settings = data.settings || {})[key] = value; persist(); },
+    async adminSetMember(id, f) { const u = data.users.find((x) => x.id === id); if (u) { u.profile = { ...(u.profile || {}), ...("rank" in f ? { rank: f.rank } : {}) }; if ("isAdmin" in f) u.isAdmin = !!f.isAdmin; persist(); } },
     async createPost(o) { const u = need(); (data.board = data.board || []).push({ ...o, id: String(data.seq++), author: u.id, status: "open", created: Date.now(), updated: Date.now() }); persist(); },
     async updatePost(id, f) { const p = (data.board || []).find((x) => x.id === id); if (p) { Object.assign(p, f, { updated: Date.now() }); if (f.status === "open") { p.claimer = null; p.claimerChar = ""; } persist(); } },
     async deletePost(id) { data.board = (data.board || []).filter((x) => x.id !== id); persist(); },
@@ -184,18 +191,21 @@ async function supabaseDb() {
         sb.from("messages").select("*").order("created_at", { ascending: false }).limit(1000),
       ].map((p) => p.then(ok)));
       const pmap = {}, bnet = {};
+      const dmRes = await sb.from("direct_messages").select("*").order("created_at", { ascending: false }).limit(1000);
+      const dms = dmRes.error ? [] : dmRes.data;
       profiles.forEach((p) => {
         pmap[p.id] = {
           username: p.username, isAdmin: p.is_admin, joined: Date.parse(p.created_at),
           mainChar: p.main_char || "", mainRealm: p.main_realm || "", mainClass: p.main_class || "", mainLevel: p.main_level || 0,
           faction: p.faction || "", bio: p.bio || "", discord: p.discord || "", playTimes: p.play_times || "",
-          notifSeen: p.notif_seen_at ? Date.parse(p.notif_seen_at) : 0, avatar: p.avatar_url || "",
+          notifSeen: p.notif_seen_at ? Date.parse(p.notif_seen_at) : 0, avatar: p.avatar_url || "", rank: p.guild_rank || "",
         };
       });
       links.forEach((l) => { bnet[l.user_id] = { battletag: l.battletag, characters: l.characters || [], linkedAt: Date.parse(l.linked_at) }; });
       return {
         profiles: pmap,
         bnet,
+        dms: dms.reverse().map((m) => ({ id: String(m.id), from: m.sender_id, to: m.recipient_id, body: m.body, t: Date.parse(m.created_at), read: !!m.read_at })),
         messages: messages.reverse().map((m) => ({ id: String(m.id), type: m.thread_type, thread: String(m.thread_id), author: m.author_id, body: m.body, t: Date.parse(m.created_at) })),
         board: board.map((b) => ({
           id: String(b.id), author: b.author_id, authorChar: b.author_char, category: b.category, title: b.title, recipeId: b.recipe_id,
@@ -213,6 +223,21 @@ async function supabaseDb() {
           price: Number(l.price), note: l.note, created: Date.parse(l.created_at),
         })),
       };
+    },
+    // ---- Private messages ----
+    async sendDm(to, body) { await need(); ok(await sb.from("direct_messages").insert({ recipient_id: to, body })); },
+    async markDmsRead(from) { const id = await need(); ok(await sb.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("recipient_id", id).eq("sender_id", from).is("read_at", null)); },
+    async deleteDm(id) { ok(await sb.from("direct_messages").delete().eq("id", Number(id))); },
+    // ---- Site settings (anyone can read; admins write) ----
+    async loadSettings() { const r = await sb.from("site_settings").select("key,value"); return r.error ? {} : Object.fromEntries(r.data.map((x) => [x.key, x.value])); },
+    async saveSetting(key, value) { await need(); ok(await sb.from("site_settings").upsert({ key, value, updated_at: new Date().toISOString() })); },
+    // ---- Admin ----
+    async adminSetMember(id, f) {
+      const row = {};
+      if ("rank" in f) row.guild_rank = f.rank;
+      if ("isAdmin" in f) row.is_admin = !!f.isAdmin;
+      const res = ok(await sb.from("profiles").update(row).eq("id", id).select("id"));
+      if (!res || !res.length) throw new Error("The database didn't allow that change. Is your account an admin?");
     },
     // ---- Chat ----
     async sendMessage(type, threadId, body) { await need(); ok(await sb.from("messages").insert({ thread_type: type, thread_id: Number(threadId), body })); },

@@ -423,3 +423,64 @@ h3{margin:12px 0 6px}
   .gear .gs.r{text-align:left; align-items:flex-start}
   .talents{columns:1}
 }
+
+/* ---------- Members directory ---------- */
+.admin-only[hidden]{display:none !important}
+.mem-filters{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin-bottom:14px}
+.mem-filters input[type=search]{flex:1 1 260px}
+.mem-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px}
+.mcard{display:flex; gap:12px; align-items:flex-start; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); color:var(--ink); text-decoration:none; transition:border-color .15s, transform .15s, box-shadow .15s}
+.mcard:hover, .mcard:focus-visible{border-color:var(--brass); box-shadow:0 0 0 1px var(--brass), 0 8px 20px rgb(0 0 0 / .45); transform:translateY(-1px)}
+.mc-av{position:relative; flex:none}
+.mc-av .online-dot{position:absolute; right:0; bottom:2px; border:2px solid #111}
+.mc-info{display:flex; flex-direction:column; gap:4px; min-width:0}
+.mc-name{font-family:var(--f-display); font-weight:700; color:var(--gold-hi); font-size:1.05rem}
+.mc-main{font-size:.9rem}
+.mc-tags:empty{display:none}
+.rank-tag{display:inline-block; font-family:var(--f-display); font-size:.68rem; letter-spacing:.06em; text-transform:uppercase; padding:1px 7px; border-radius:999px; border:1px solid #6b5426; color:var(--gold-hi); background:var(--brass-soft); vertical-align:middle}
+.rank-tag.rank-thane{background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color:var(--brass-ink); border-color:#000}
+.rank-tag.rank-archdruid{color:#ff9a3d; border-color:#7a4a1a}
+.rank-tag.rank-backburner{color:#ff6b5c; border-color:#7a2a22}
+.rank-tag.rank-officer{color:#6cb4ff; border-color:#284b70}
+.rank-tag.rank-initiate{color:var(--muted); background:none; border-color:var(--line)}
+.rank-tag.admin{color:#5fd47e; border-color:#2b5a37; background:rgb(95 212 126 / .08)}
+.prof-head{display:flex; justify-content:space-between; align-items:flex-end; gap:12px; flex-wrap:wrap}
+.prof-head .eyebrow a{color:inherit; text-decoration:none}
+.prof-acts{display:flex; gap:8px}
+
+/* ---------- Private messages ---------- */
+.dm-btn{text-decoration:none}
+.dm-btn .badge{position:absolute; top:-4px; right:-6px}
+.dm-layout{display:grid; grid-template-columns:minmax(220px, 300px) 1fr; gap:14px; align-items:start}
+.dm-side{display:flex; flex-direction:column; gap:8px}
+.dm-side select{width:100%}
+.dm-convos{list-style:none; margin:6px 0 0; padding:0; display:flex; flex-direction:column; gap:2px; max-height:60vh; overflow:auto}
+.dm-convos a{display:flex; gap:10px; align-items:center; padding:7px 8px; border-radius:6px; color:var(--ink); text-decoration:none}
+.dm-convos a:hover{background:var(--hover)}
+.dm-convos a.cur{background:var(--brass-soft); box-shadow:inset 3px 0 0 var(--brass)}
+.dm-convos a.unread strong{color:var(--gold-hi)}
+.dmc-text{display:flex; flex-direction:column; min-width:0; flex:1}
+.dmc-text small{color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dmc-meta{display:flex; flex-direction:column; align-items:flex-end; gap:2px}
+.dm-none{padding:8px}
+.dm-main.empty{min-height:240px; display:flex; flex-direction:column; justify-content:center}
+.dm-head{display:flex; gap:10px; align-items:center; padding-bottom:10px; border-bottom:1px solid var(--line); margin-bottom:10px}
+.dm-head a{color:var(--ink); text-decoration:none}
+.dm-log{max-height:55vh; min-height:220px}
+@media (max-width:720px){ .dm-layout{grid-template-columns:1fr} .dm-convos{max-height:30vh} }
+
+/* ---------- Home announcement ---------- */
+.announce{margin:0 0 16px; padding:12px 16px; border:1px solid var(--brass); border-radius:10px; background:linear-gradient(180deg, rgb(227 181 91 / .16), rgb(227 181 91 / .05)); box-shadow:0 0 18px rgb(227 181 91 / .15)}
+.announce .ann-label{font-family:var(--f-display); font-size:.72rem; letter-spacing:.1em; text-transform:uppercase; color:var(--brass)}
+.announce p{margin:4px 0 0; white-space:pre-line}
+
+/* ---------- Admin ---------- */
+.adm-stats{margin:0 0 14px}
+.adm-tabs{margin-bottom:12px}
+.adm-table{width:100%; border-collapse:collapse; font-size:.9rem}
+.adm-table th{text-align:left; font-family:var(--f-display); color:#c9b994; font-weight:600; padding:6px 8px; border-bottom:1px solid var(--line)}
+.adm-table td{padding:6px 8px; border-bottom:1px solid rgb(75 60 34 / .5); vertical-align:middle}
+.adm-mem{display:inline-flex; gap:8px; align-items:center; color:var(--ink); text-decoration:none}
+.adm-check{display:inline-flex; gap:6px; align-items:center; white-space:nowrap}
+.adm-list{list-style:none; margin:0 0 16px; padding:0; display:flex; flex-direction:column; gap:6px}
+.adm-list li{display:flex; justify-content:space-between; gap:10px; align-items:center; padding:7px 10px; border:1px solid rgb(75 60 34 / .6); border-radius:6px; background:rgb(10 12 18 / .5)}

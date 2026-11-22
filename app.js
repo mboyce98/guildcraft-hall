@@ -21,6 +21,7 @@ const S = {
   boardTab: "open", boardCat: "", viewUser: null, notifOpen: false, seenOverride: 0, postOpen: false,
   myDoc: null, pendingSave: false, editChar: lsGet("gc.editChar"), editProf: null, mineQ: "", saveState: "",
   reqTab: "open", mq: "", mtype: "", authTab: "in",
+  dms: [], settings: {}, dmWith: null, memQ: "", memClass: "", memRank: "", adminTab: "members",
 };
 let PROFS = [], ITEMS = {}, RECIPES = [], BYID = new Map(), INDEX = new Map(), DATA_OK = false;
 let renderQueued = false;
@@ -111,10 +112,12 @@ function syncPresence() {
 let refreshTimer = null;
 function queueRefresh(now) { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, now ? 0 : 400); }
 async function refresh() {
+  S.B.loadSettings().then((s) => { S.settings = s || {}; renderHome(); }).catch(() => {});
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
   try {
     const d = await S.B.loadAll();
-    S.profiles = d.profiles; S.bnet = d.bnet || {}; S.board = d.board || []; S.messages = d.messages || [];
+    S.profiles = d.profiles; S.bnet = d.bnet || {}; S.board = d.board || []; S.messages = d.messages || []; S.dms = d.dms || [];
+    if (S.me) S.me.isAdmin = !!(S.profiles[S.uid] && S.profiles[S.uid].isAdmin);
     S.crafters = new Map(d.crafters.map((c) => [c.uid, c]));
     S.requests = d.requests; S.listings = d.listings;
     if (!S.pendingSave) { const mine = S.crafters.get(S.uid); S.myDoc = mine ? structuredClone({ chars: mine.chars, note: mine.note }) : (S.myDoc || null); }
@@ -143,11 +146,13 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
   else if (/^member-[0-9a-z_-]+$/i.test(h)) { S.viewUser = h.slice(7); view = "profile"; }
+  else if (/^messages-[0-9a-z_-]+$/i.test(h)) { S.dmWith = h.slice(9); view = "messages"; }
+  else if (h === "messages") { S.dmWith = null; view = "messages"; }
   else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
   else if (VIEWS.includes(h)) view = h;
   const changed = S.view !== view;
@@ -183,12 +188,15 @@ function render() {
       const box = document.querySelector(`.chat-form[data-key="${chatState.key}"] input`);
       if (box && document.activeElement !== box) { box.value = chatState.value; box.focus(); try { box.setSelectionRange(chatState.s, chatState.e); } catch {} }
     }, 0);
-    renderBell(); renderOnline();
+    renderBell(); renderOnline(); renderDmButton();
     if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
+    else if (S.view === "members") { if (!(typing && typing.closest("#view-members"))) renderMembers(); }
+    else if (S.view === "messages") renderMessages();
+    else if (S.view === "admin") { if (!(typing && typing.closest("#view-admin"))) renderAdmin(); }
     else if (S.view === "recipes") renderRecipes();
     else if (S.view === "mine") { if (!(typing && typing.closest("#view-mine"))) renderMine(); }
     else if (S.view === "requests") { if (!(typing && typing.closest("#view-requests"))) { renderRequests(); scrollChats(); } }
@@ -229,7 +237,10 @@ window.GC_SEARCH_RECIPES = (name) => {
 /* ---------- Home ---------- */
 function renderHome() {
   const act = $("#home-actions"); if (!act) return;
-  const discord = /^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(GUILD.discordInvite) ? `<a class="btn discord" href="${esc(GUILD.discordInvite)}" target="_blank" rel="noopener">Join our Discord</a>` : "";
+  const inv = (S.settings.discord_invite || GUILD.discordInvite || "").trim();
+  const discord = /^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(inv) ? `<a class="btn discord" href="${esc(inv)}" target="_blank" rel="noopener">Join our Discord</a>` : "";
+  const ann = $("#home-announce");
+  if (ann) { const t = (S.settings.announcement || "").trim(); ann.hidden = !t; ann.innerHTML = t ? `<span class="ann-label">From the officers</span><p>${esc(t)}</p>` : ""; }
   act.innerHTML = `<a class="btn primary" href="#rules">Read the guild rules</a>` + discord + (S.uid
     ? `<a class="btn" href="#mine">Go to my crafter</a>`
     : `<button class="btn" data-act="signup">Create your account</button><button class="btn" data-act="signin">Sign in</button>`);
@@ -583,7 +594,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
@@ -604,7 +615,7 @@ function memberCard(uid, big) {
   return `<div class="member ${big ? "big" : ""}">
     ${avatarImg(uid, big ? 56 : 40)}
     <div class="minfo">
-      <div class="mname">${big ? esc(p.username || "Member") : memberLink(uid, p.username)}${p.faction ? ` <span class="tag ${p.faction === "Horde" ? "horde" : "ally"}">${esc(p.faction)}</span>` : ""}${tag ? ` <span class="bnet-tag small">✓ ${esc(tag)}</span>` : ""}</div>
+      <div class="mname">${big ? esc(p.username || "Member") : memberLink(uid, p.username)}${p.rank ? ` <span class="rank-tag rank-${esc(p.rank.toLowerCase())}">${esc(p.rank)}</span>` : ""}${p.isAdmin ? ' <span class="rank-tag admin">Admin</span>' : ""}${p.faction ? ` <span class="tag ${p.faction === "Horde" ? "horde" : "ally"}">${esc(p.faction)}</span>` : ""}${tag ? ` <span class="bnet-tag small">✓ ${esc(tag)}</span>` : ""}</div>
       <div class="mmain">${main}</div>
       ${profs.length ? `<div class="mprofs">${profs.map((x) => `<span class="pchip">${esc(x.prof)}${x.skill ? " " + x.skill : ""}</span>`).join("")}</div>` : ""}
     </div></div>`;
@@ -661,11 +672,162 @@ function renderProfile() {
     </div>`;
   }
   root.innerHTML = `
-    <div class="map-head"><p class="eyebrow">Bark and Stone · Members</p><h2 class="hero-title">${mine ? "Your profile" : esc(p.username || "Member")}</h2></div>
-    <div class="cols prof-cols">${details}${editor || `<div class="card"><h2>Ask them for something</h2><p class="muted">Find a recipe they know on <a href="#recipes">Recipes</a> and press Request, or post on the <a href="#board">Request Board</a> for anyone to pick up.</p></div>`}</div>
-    ${armoryCard(uid, mine)}
-    <h3 class="sec" style="margin-top:22px">Guild members (${Object.keys(S.profiles).length})</h3>
-    <div class="members">${(mine ? others : [S.uid, ...others.filter((x) => x !== S.uid)]).map((id) => memberCard(id)).join("") || '<p class="muted">You\'re the first one here.</p>'}</div>`;
+    <div class="map-head prof-head"><div><p class="eyebrow"><a href="#members">Bark and Stone · Members</a></p><h2 class="hero-title">${mine ? "Your profile" : esc(p.username || "Member")}</h2></div>
+      <div class="prof-acts">${mine ? "" : `<a class="btn primary" href="#messages-${esc(uid)}">Send a message</a>`}<a class="btn" href="#members">All members</a></div></div>
+    <div class="cols prof-cols">${details}${editor || `<div class="card"><h2>Get in touch</h2><p class="muted">Send ${esc(p.username || "them")} a <a href="#messages-${esc(uid)}">private message</a>, find a recipe they know on <a href="#recipes">Recipes</a> and press Request, or post on the <a href="#board">Request Board</a> for anyone to pick up.</p></div>`}</div>
+    ${armoryCard(uid, mine)}`;
+  void others;
+}
+
+/* ---------- Members directory ---------- */
+const RANKS = ["Thane", "Archdruid", "Backburner", "Officer", "Clansfolk", "Initiate"];
+const rankTag = (p) => (p.rank ? `<span class="rank-tag rank-${esc(p.rank.toLowerCase())}">${esc(p.rank)}</span>` : "") + (p.isAdmin ? ' <span class="rank-tag admin">Admin</span>' : "");
+function renderMembers() {
+  const root = $("#view-members");
+  if (!S.uid) { root.innerHTML = signInPrompt("see the guild's members"); delete root.dataset.built; return; }
+  if (!root.dataset.built) {
+    root.dataset.built = "1";
+    root.innerHTML = `
+      <div class="map-head"><p class="eyebrow">Bark and Stone · The guild</p><h2 class="hero-title">Members</h2>
+        <p class="muted map-intro">Everyone in the hall. Click a member to see their profile, gear and professions, or to send them a message.</p></div>
+      <div class="filters mem-filters">
+        <input type="search" id="memq" placeholder="Search names, characters or professions" aria-label="Search members">
+        <select id="memclass" aria-label="Class"><option value="">All classes</option>${CLASSES.map((c) => `<option>${c}</option>`).join("")}</select>
+        <select id="memrank" aria-label="Rank"><option value="">All ranks</option>${RANKS.map((r) => `<option>${r}</option>`).join("")}</select>
+        <span class="muted num" id="mem-count"></span>
+      </div>
+      <div class="mem-grid" id="mem-grid"></div>`;
+    $("#memq").addEventListener("input", (e) => { S.memQ = e.target.value; drawMembers(); });
+    $("#memclass").addEventListener("change", (e) => { S.memClass = e.target.value; drawMembers(); });
+    $("#memrank").addEventListener("change", (e) => { S.memRank = e.target.value; drawMembers(); });
+  }
+  drawMembers();
+}
+function drawMembers() {
+  const online = new Set(S.online.map((o) => o.id));
+  const q = S.memQ.trim().toLowerCase();
+  const all = Object.keys(S.profiles);
+  const rankNo = (id) => { const i = RANKS.indexOf(prof(id).rank); return i < 0 ? 99 : i; };
+  const ids = all.filter((id) => {
+    const p = prof(id);
+    if (S.memClass && p.mainClass !== S.memClass) return false;
+    if (S.memRank && p.rank !== S.memRank) return false;
+    if (q && ![p.username, p.mainChar, p.mainRealm, p.mainClass, p.rank, tagFor(id), ...profsOf(id).map((x) => x.prof)].join(" ").toLowerCase().includes(q)) return false;
+    return true;
+  }).sort((a, b) => (online.has(b) - online.has(a)) || rankNo(a) - rankNo(b) || (userName(a) || "").localeCompare(userName(b) || ""));
+  $("#mem-count").textContent = ids.length === all.length ? `${all.length} member${all.length === 1 ? "" : "s"}` : `${ids.length} of ${all.length}`;
+  $("#mem-grid").innerHTML = ids.map((id) => {
+    const p = prof(id); const profs = profsOf(id);
+    const main = p.mainChar ? `${classDot(p.mainClass)}<strong>${esc(p.mainChar)}${p.mainRealm ? " " + esc(p.mainRealm) : ""}</strong>${p.mainLevel || p.mainClass ? ` <span class="muted">${p.mainLevel ? p.mainLevel + " " : ""}${esc(p.mainClass || "")}</span>` : ""}` : `<span class="muted">No main character yet</span>`;
+    return `<a class="mcard" href="#member-${esc(id)}">
+      <span class="mc-av">${avatarImg(id, 56)}${online.has(id) ? '<span class="online-dot" title="Online now"></span>' : ""}</span>
+      <span class="mc-info">
+        <span class="mc-name">${esc(p.username || "Member")}${id === S.uid ? ' <span class="muted">(you)</span>' : ""}</span>
+        <span class="mc-tags">${rankTag(p)}</span>
+        <span class="mc-main">${main}</span>
+        ${profs.length ? `<span class="mprofs">${profs.slice(0, 4).map((x) => `<span class="pchip">${esc(x.prof)}${x.skill ? " " + x.skill : ""}</span>`).join("")}</span>` : ""}
+      </span></a>`;
+  }).join("") || `<div class="empty"><strong>No one matches that.</strong>Try a different search or filter.</div>`;
+}
+
+/* ---------- Private messages ---------- */
+const dmUnread = () => S.dms.filter((m) => m.to === S.uid && !m.read).length;
+function renderDmButton() {
+  const b = $("#dm-btn"); if (!b) return;
+  b.hidden = !S.uid;
+  const n = S.uid ? dmUnread() : 0, c = $("#dm-count");
+  c.textContent = n > 9 ? "9+" : n; c.hidden = !n;
+  b.setAttribute("aria-label", n ? `Messages, ${n} unread` : "Messages");
+  document.querySelectorAll(".admin-only").forEach((el) => { el.hidden = !(S.me && S.me.isAdmin); });
+}
+function conversations() {
+  const map = new Map();
+  for (const m of S.dms) {
+    const other = m.from === S.uid ? m.to : m.from;
+    const c = map.get(other) || { id: other, last: null, unread: 0 };
+    if (!c.last || m.t >= c.last.t) c.last = m;
+    if (m.to === S.uid && !m.read) c.unread++;
+    map.set(other, c);
+  }
+  return [...map.values()].sort((a, b) => b.last.t - a.last.t);
+}
+function renderMessages() {
+  const root = $("#view-messages");
+  if (!S.uid) { root.innerHTML = signInPrompt("send private messages"); return; }
+  const w = S.dmWith && S.dmWith !== S.uid && S.profiles[S.dmWith] ? S.dmWith : null;
+  const list = conversations();
+  if (w && !list.some((c) => c.id === w)) list.unshift({ id: w, last: null, unread: 0 });
+  // Opening a conversation marks it read.
+  const unreadHere = w ? S.dms.filter((m) => m.from === w && m.to === S.uid && !m.read) : [];
+  if (unreadHere.length) { unreadHere.forEach((m) => { m.read = true; }); S.B.markDmsRead(w).catch(() => {}); setTimeout(() => { renderBell(); renderDmButton(); }, 0); }
+  const others = Object.keys(S.profiles).filter((id) => id !== S.uid).sort((a, b) => (userName(a) || "").localeCompare(userName(b) || ""));
+  const side = `<aside class="dm-side card">
+      <label class="muted" for="dm-new">New message to</label>
+      <select id="dm-new"><option value="">Choose a member…</option>${others.map((id) => `<option value="${esc(id)}">${esc(userName(id) || "Member")}${prof(id).mainChar ? " · " + esc(prof(id).mainChar) : ""}</option>`).join("")}</select>
+      <ul class="dm-convos">${list.map((c) => `<li><a href="#messages-${esc(c.id)}" class="${c.id === w ? "cur" : ""} ${c.unread ? "unread" : ""}">${avatarImg(c.id, 36)}
+        <span class="dmc-text"><strong>${esc(userName(c.id) || "Member")}</strong><small>${c.last ? (c.last.from === S.uid ? "You: " : "") + esc(c.last.body.slice(0, 50)) : "New conversation"}</small></span>
+        <span class="dmc-meta">${c.last ? `<small class="muted">${ago(c.last.t)}</small>` : ""}${c.unread ? `<span class="badge">${c.unread}</span>` : ""}</span></a></li>`).join("") || `<li class="muted dm-none">No conversations yet.</li>`}</ul>
+    </aside>`;
+  let main;
+  if (!w) main = `<div class="card dm-main empty"><strong>Private messages</strong>Pick a conversation, choose someone above, or press “Send a message” on any member's profile. Only the two of you can read them.</div>`;
+  else {
+    const msgs = S.dms.filter((m) => (m.from === w && m.to === S.uid) || (m.from === S.uid && m.to === w));
+    const p = prof(w);
+    main = `<div class="card dm-main">
+      <div class="dm-head"><a href="#member-${esc(w)}">${avatarImg(w, 40)}</a><div><a href="#member-${esc(w)}"><strong>${esc(p.username || "Member")}</strong></a> ${rankTag(p)}<div class="muted small">${p.mainChar ? esc(p.mainChar + (p.mainRealm ? " " + p.mainRealm : "")) : ""}${S.online.some((o) => o.id === w) ? ' · <span class="online-dot"></span> online now' : ""}</div></div></div>
+      <div class="chat"><div class="chat-log dm-log" aria-live="polite">${msgs.map((m) => `<div class="msg ${m.from === S.uid ? "me" : ""}">${avatarImg(m.from, 26)}
+        <div class="msg-b"><div class="msg-meta"><strong>${esc(userName(m.from) || "Someone")}</strong> · ${ago(m.t)}${m.from === S.uid ? ` <button class="linkish small-x" data-act="dm-del" data-id="${esc(m.id)}" aria-label="Delete message">delete</button>` : ""}</div>
+        <div class="msg-body">${esc(m.body)}</div></div></div>`).join("") || `<p class="muted chat-empty">Start the conversation with ${esc(p.username || "them")}.</p>`}</div>
+      <form class="chat-form dm-form" data-key="dm:${esc(w)}"><input type="text" maxlength="1000" placeholder="Write a private message…" aria-label="Message" autocomplete="off"><button class="btn small primary" type="submit">Send</button></form></div>
+    </div>`;
+  }
+  root.innerHTML = `<div class="map-head"><p class="eyebrow">Bark and Stone · Messages</p><h2 class="hero-title">Messages</h2></div><div class="dm-layout">${side}${main}</div>`;
+  const log = root.querySelector(".dm-log"); if (log) log.scrollTop = log.scrollHeight;
+}
+
+/* ---------- Admin ---------- */
+function renderAdmin() {
+  const root = $("#view-admin");
+  if (!S.uid) { root.innerHTML = signInPrompt("open the admin page"); return; }
+  if (!(S.me && S.me.isAdmin)) { root.innerHTML = `<div class="card empty"><strong>Admins only.</strong>This page is for guild officers. Ask the guildmaster if you need access.</div>`; return; }
+  const ids = Object.keys(S.profiles);
+  const rankNo = (id) => { const i = RANKS.indexOf(prof(id).rank); return i < 0 ? 99 : i; };
+  const openPosts = S.board.filter((b) => b.status === "open" || b.status === "claimed");
+  const stat = (n, label) => `<div><span class="num">${fmt(n)}</span><span>${label}</span></div>`;
+  const tabs = [["members", "Members & ranks"], ["site", "Announcement & Discord"], ["mod", "Moderation"]];
+  let body = "";
+  if (S.adminTab === "members") {
+    const sorted = ids.slice().sort((a, b) => rankNo(a) - rankNo(b) || (userName(a) || "").localeCompare(userName(b) || ""));
+    body = `<div class="table-wrap"><table class="adm-table"><thead><tr><th>Member</th><th>Main character</th><th>Joined</th><th>Rank</th><th>Admin</th><th></th></tr></thead><tbody>
+      ${sorted.map((id) => { const p = prof(id); const self = id === S.uid; return `<tr>
+        <td><a class="adm-mem" href="#member-${esc(id)}">${avatarImg(id, 28)}<strong>${esc(p.username || "Member")}</strong></a>${self ? ' <span class="muted">(you)</span>' : ""}</td>
+        <td>${p.mainChar ? `${classDot(p.mainClass)}${esc(p.mainChar + (p.mainRealm ? " " + p.mainRealm : ""))} <span class="muted">${p.mainLevel || ""} ${esc(p.mainClass || "")}</span>` : '<span class="muted">—</span>'}</td>
+        <td class="muted num">${p.joined ? new Date(p.joined).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : ""}</td>
+        <td><select data-admin-rank="${esc(id)}" aria-label="Rank for ${esc(p.username || "member")}">${p.rank ? "" : `<option value="" selected disabled>—</option>`}${RANKS.map((r) => `<option ${p.rank === r ? "selected" : ""}>${r}</option>`).join("")}</select></td>
+        <td><label class="adm-check"><input type="checkbox" data-admin-admin="${esc(id)}" ${p.isAdmin ? "checked" : ""} ${self ? "disabled title=\"You can't remove your own admin access\"" : ""}> admin</label></td>
+        <td>${self ? "" : `<a class="btn small" href="#messages-${esc(id)}">Message</a>`}</td></tr>`; }).join("")}
+      </tbody></table></div>
+      <p class="muted small">Ranks show on member cards and profiles. Admins can open this page, set ranks, post the announcement and remove posts, listings and chat messages. Nobody, admins included, can read other people's private messages.</p>`;
+  } else if (S.adminTab === "site") {
+    body = `<form class="form" id="adminset" style="margin:0">
+      <div class="row"><label for="as-ann">Home page announcement</label><textarea id="as-ann" rows="3" maxlength="500" placeholder="e.g. Guild meeting Saturday 8pm AEST in Ironforge. Leave empty to hide.">${esc(S.settings.announcement || "")}</textarea></div>
+      <div class="row"><label for="as-discord">Discord invite link</label><input type="url" id="as-discord" maxlength="200" value="${esc(S.settings.discord_invite || "")}" placeholder="https://discord.gg/…"></div>
+      <div class="actions"><span class="saved" id="as-saved"></span><button class="btn primary" type="submit">Save</button></div>
+    </form><p class="muted small">The announcement shows at the top of the home page for everyone, signed in or not. The Discord link adds a “Join our Discord” button there.</p>`;
+  } else {
+    const listItem = (l) => `<li><span><strong>${esc(l.item)}</strong> ×${l.qty} · ${gold(l.price)} <span class="muted">by ${esc(l.char)} (${memberLink(l.seller)}) · ${ago(l.created)}</span></span><button class="btn small danger" data-act="adm-listing-del" data-id="${esc(l.id)}">Remove</button></li>`;
+    const postItem = (b) => `<li><span><strong>${esc(b.title)}</strong> ×${b.qty} <span class="muted">${esc(b.status)} · by ${esc(b.authorChar || "?")} (${memberLink(b.author)}) · ${ago(b.created)}</span></span><button class="btn small danger" data-act="adm-post-del" data-id="${esc(b.id)}">Remove</button></li>`;
+    const msgItem = (m) => `<li><span>“${esc(m.body.slice(0, 140))}” <span class="muted">${memberLink(m.author)} on a board post · ${ago(m.t)}</span></span><button class="btn small danger" data-act="msg-del" data-id="${esc(m.id)}">Delete</button></li>`;
+    body = `<h3 class="sec">Request Board (${S.board.length})</h3><ul class="adm-list">${S.board.slice().sort((a, b) => b.created - a.created).map(postItem).join("") || '<li class="muted">Nothing posted.</li>'}</ul>
+      <h3 class="sec">Market listings (${S.listings.length})</h3><ul class="adm-list">${S.listings.slice().sort((a, b) => b.created - a.created).map(listItem).join("") || '<li class="muted">No listings.</li>'}</ul>
+      <h3 class="sec">Recent chat on the Request Board</h3><ul class="adm-list">${S.messages.filter((m) => m.type === "board").slice(-60).reverse().map(msgItem).join("") || '<li class="muted">No messages.</li>'}</ul>
+      <p class="muted small">Chat on private crafting requests and private messages are only visible to the people in them.</p>`;
+  }
+  root.innerHTML = `
+    <div class="map-head"><p class="eyebrow">Bark and Stone · Officers</p><h2 class="hero-title">Admin</h2></div>
+    <div class="home-stats adm-stats">${stat(ids.length, "members")}${stat(ids.filter((id) => prof(id).isAdmin).length, "admins")}${stat(S.online.length, "online now")}${stat(openPosts.length, "open board jobs")}${stat(S.listings.length, "market listings")}</div>
+    <div class="chips adm-tabs">${tabs.map(([k, l]) => `<button class="chip" data-act="adm-tab" data-t="${k}" aria-pressed="${S.adminTab === k}">${l}</button>`).join("")}</div>
+    <div class="card adm-body">${body}</div>`;
 }
 
 /* ---------- Armory: the member's WoW Forever character, from Blizzard ---------- */
@@ -820,6 +982,7 @@ function notifications() {
     if (m.type === "request") { const r = S.requests.find((x) => x.id === m.thread); if (r) out.push({ t: m.t, text: `<strong>${esc(userName(m.author))}</strong> messaged you about ${esc(label(r))}: “${esc(m.body.slice(0, 60))}”`, href: "#requests" }); }
     else if (mineBoard.has(m.thread)) { const b = S.board.find((x) => x.id === m.thread); if (b) out.push({ t: m.t, text: `<strong>${esc(userName(m.author))}</strong> on “${esc(b.title)}”: “${esc(m.body.slice(0, 60))}”`, href: "#board" }); }
   }
+  for (const m of S.dms) if (m.to === S.uid) out.push({ t: m.t, text: `<strong>${esc(userName(m.from) || "Someone")}</strong> sent you a message: “${esc(m.body.slice(0, 60))}”`, href: "#messages-" + m.from });
   const seen = seenAt();
   return out.filter((n) => n.t).sort((a, b) => b.t - a.t).slice(0, 40).map((n) => ({ ...n, unread: n.t > seen }));
 }
@@ -890,6 +1053,14 @@ document.addEventListener("click", async (e) => {
     if (S.view === "board") renderBoard(); else renderRequests();
     scrollChats();
     const f = document.querySelector(`.chat-form[data-key="${k}"] input`); if (f) f.focus();
+  }
+  else if (act === "dm-del") { t.disabled = true; try { await S.B.deleteDm(t.dataset.id); await refresh(); } catch (err) { note("Couldn't delete that message: " + err.message); } }
+  else if (act === "adm-tab") { S.adminTab = t.dataset.t; renderAdmin(); }
+  else if (act === "adm-post-del" || act === "adm-listing-del") {
+    if (!confirm("Remove this for everyone?")) return;
+    t.disabled = true;
+    try { act === "adm-post-del" ? await S.B.deletePost(t.dataset.id) : await S.B.deleteListing(t.dataset.id); await refresh(); }
+    catch (err) { note("Couldn't remove that: " + err.message); t.disabled = false; }
   }
   else if (act === "msg-del") { t.disabled = true; try { await S.B.deleteMessage(t.dataset.id); await refresh(); } catch (err) { note("Couldn't delete that message: " + err.message); } }
   else if (act === "avatar-remove") { try { await S.B.removeAvatar(); (S.profiles[S.uid] || {}).avatar = ""; renderProfile(); renderWho(); syncPresence(); } catch (err) { note(err.message); } }
@@ -1016,6 +1187,24 @@ document.addEventListener("submit", async (e) => {
       S.reqFor = null; renderSheet(); note("Request sent. Track it on the Requests tab."); refresh();
     } catch (x) { note("Couldn't send the request: " + x.message); btn.disabled = false; }
   }
+  else if (f.classList.contains("dm-form")) {
+    const input = f.querySelector("input"), body = input.value.trim().slice(0, 1000); if (!body) return;
+    const to = f.dataset.key.slice(3);
+    btn.disabled = true;
+    try {
+      await S.B.sendDm(to, body); input.value = "";
+      await refresh(); renderMessages();
+      const again = document.querySelector(".dm-form input"); if (again) again.focus();
+    } catch (x) { note("Couldn't send that message: " + x.message); btn.disabled = false; }
+  }
+  else if (f.id === "adminset") {
+    const ann = $("#as-ann").value.trim().slice(0, 500), inv = $("#as-discord").value.trim().slice(0, 200), saved = $("#as-saved");
+    if (inv && !/^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(inv)) { saved.textContent = "The Discord link should start with https://discord.gg/"; return; }
+    btn.disabled = true;
+    try { await S.B.saveSetting("announcement", ann); await S.B.saveSetting("discord_invite", inv); S.settings = { ...S.settings, announcement: ann, discord_invite: inv }; saved.textContent = "Saved. It's on the home page now."; renderHome(); }
+    catch (x) { saved.textContent = "Couldn't save: " + x.message; }
+    btn.disabled = false;
+  }
   else if (f.classList.contains("chat-form")) {
     const input = f.querySelector("input"), body = input.value.trim().slice(0, 500); if (!body) return;
     const [type, id] = f.dataset.key.split(":");
@@ -1066,8 +1255,18 @@ document.addEventListener("submit", async (e) => {
   }
 });
 
-document.addEventListener("change", (e) => {
+document.addEventListener("change", async (e) => {
   const t = e.target;
+  if (t.id === "dm-new" && t.value) { location.hash = "#messages-" + t.value; return; }
+  if (t.dataset.adminRank || t.dataset.adminAdmin) {
+    const id = t.dataset.adminRank || t.dataset.adminAdmin, p = prof(id);
+    const f = t.dataset.adminRank ? { rank: t.value } : { isAdmin: t.checked };
+    t.disabled = true;
+    let msg;
+    try { await S.B.adminSetMember(id, f); msg = `${p.username || "Member"} ${"rank" in f ? "is now " + f.rank : f.isAdmin ? "is now an admin" : "is no longer an admin"}.`; }
+    catch (err) { msg = "Couldn't change that: " + err.message; }
+    await refresh(); note(msg); return;
+  }
   if (t.matches("[data-known]")) {
     const p = ensureMyDoc().chars[S.editChar].profs[S.editProf]; const id = Number(t.dataset.known);
     const set = new Set(p.known || []); t.checked ? set.add(id) : set.delete(id); p.known = [...set];

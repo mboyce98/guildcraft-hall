@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=12">
+<link rel="stylesheet" href="theme.css?v=13">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -23,7 +23,7 @@
       <a href="#home" data-tab="home">Home</a>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Guild</button>
-        <div class="navmenu"><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Lore</a><a href="#classes" data-tab="classes">Classes &amp; races</a><a href="#profile" data-tab="profile">Members</a></div>
+        <div class="navmenu"><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Lore</a><a href="#classes" data-tab="classes">Classes &amp; races</a><a href="#members" data-tab="members">Members</a><a href="#messages" data-tab="messages">Messages</a><a href="#admin" data-tab="admin" class="admin-only" hidden>Admin</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">World</button>
@@ -42,6 +42,10 @@
       <button class="online-btn" id="online-btn" data-act="online" aria-label="Who's online" title="Who's online" hidden><span class="online-dot"></span><span id="online-count">0</span> online</button>
       <div class="notif-panel online-panel" id="online-panel" hidden></div>
     </div>
+    <a class="bell dm-btn" id="dm-btn" href="#messages" aria-label="Messages" title="Messages" hidden>
+      <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true"><path d="M3 6.5A2.5 2.5 0 0 1 5.5 4h13A2.5 2.5 0 0 1 21 6.5v11a2.5 2.5 0 0 1-2.5 2.5h-13A2.5 2.5 0 0 1 3 17.5zm2.2-.5 6.8 5.3L18.8 6zM19 7.9l-6.4 5a1 1 0 0 1-1.2 0L5 7.9v9.6c0 .3.2.5.5.5h13c.3 0 .5-.2.5-.5z" fill="currentColor"/></svg>
+      <span class="badge" id="dm-count" hidden></span>
+    </a>
     <div class="bell-wrap">
       <button class="bell" id="bell" data-act="bell" aria-label="Notifications" hidden>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6zm0 19a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z" fill="currentColor"/></svg>
@@ -57,6 +61,7 @@
   <div id="demo-note" class="notice demo" hidden><strong>Demo mode.</strong> Accounts and data are saved only in this browser until the site is connected to Supabase (see SETUP.md).</div>
   <div id="status-note" class="notice" hidden></div>
   <section id="view-home" class="home">
+    <div class="announce" id="home-announce" role="status" hidden></div>
     <div class="hero">
       <p class="eyebrow">WoW Forever · Australian based · Social first</p>
       <h2 class="hero-title">Welcome to Bark and Stone</h2>
@@ -406,6 +411,9 @@
   <section id="view-loot" hidden></section>
   <section id="view-board" hidden></section>
   <section id="view-profile" hidden></section>
+  <section id="view-members" hidden></section>
+  <section id="view-messages" hidden></section>
+  <section id="view-admin" hidden></section>
   <section id="view-recipes" hidden></section>
   <section id="view-mine" hidden></section>
   <section id="view-requests" hidden></section>
@@ -446,8 +454,8 @@
   </div>
 </div>
 
-<script src="backend.js?v=8"></script>
-<script src="app.js?v=17"></script>
+<script src="backend.js?v=9"></script>
+<script src="app.js?v=18"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=6"></script>
