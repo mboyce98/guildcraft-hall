@@ -321,3 +321,59 @@ h3{margin:12px 0 6px}
 .gal-big figcaption{text-align:center; color:var(--gold-hi); font-family:var(--f-display); margin-top:8px}
 @media (max-width: 640px){ .gal-viewport{aspect-ratio:4/3} .gal-nav{width:34px; height:34px} }
 @media (prefers-reduced-motion: reduce){ .gal-slide, .gal-slide.on{transition:none} }
+
+/* ---------- Tavern music dock ---------- */
+.music-btn{gap:2px}
+.music-btn .music-eq{display:none; position:absolute; bottom:-3px; right:-4px; gap:1px; align-items:flex-end; height:9px; padding:1px 2px; border-radius:3px; background:var(--brass)}
+.music-btn.on{border-color:var(--brass); color:var(--gold-hi); box-shadow:0 0 10px rgb(227 181 91 / .35)}
+.music-btn.on .music-eq{display:flex}
+.music-eq i{display:block; width:2px; background:var(--brass-ink); animation:md-eq .9s ease-in-out infinite alternate}
+.music-eq i:nth-child(2){animation-delay:-.3s} .music-eq i:nth-child(3){animation-delay:-.6s}
+@keyframes md-eq{from{height:2px} to{height:7px}}
+@media (prefers-reduced-motion: reduce){.music-eq i{animation:none; height:5px}}
+
+.music-dock{position:fixed; left:16px; bottom:16px; z-index:60; width:min(360px, calc(100vw - 32px)); padding:12px 14px 10px; border:1px solid #6b5426; border-radius:10px;
+  background:linear-gradient(180deg, rgb(28 22 12 / .97), rgb(12 13 19 / .97)); box-shadow:0 0 0 1px #000, 0 18px 44px rgb(0 0 0 / .6); color:var(--ink)}
+.md-top{display:flex; gap:12px; align-items:center}
+.md-video{flex:none; width:128px; height:72px; border:1px solid #5a4a2b; border-radius:6px; overflow:hidden; background:#000}
+.md-video iframe, .md-video > div{width:128px; height:72px; display:block}
+.md-now{min-width:0; flex:1; display:flex; flex-direction:column; gap:2px}
+.md-now .eyebrow{margin:0; font-size:.7rem}
+.md-now strong{font-family:var(--f-display); color:var(--gold-hi); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.md-now .muted{font-size:.78rem}
+.md-x{align-self:flex-start; background:none; border:0; color:var(--muted); font-size:1.1rem; cursor:pointer; padding:2px 4px; border-radius:4px}
+.md-x:hover{color:var(--gold-hi); background:var(--hover)}
+.md-seek{display:grid; grid-template-columns:auto 1fr auto; gap:8px; align-items:center; margin:10px 0 4px; font-size:.75rem; color:var(--muted)}
+.music-dock input[type=range]{-webkit-appearance:none; appearance:none; width:100%; height:6px; border-radius:3px; margin:0; cursor:pointer;
+  background:linear-gradient(90deg, var(--gold-lo), var(--brass) var(--fill, 0%), #2a2a33 var(--fill, 0%)); border:1px solid #000}
+.music-dock input[type=range]::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--gold-hi), var(--gold-lo)); border:1px solid #000; box-shadow:0 0 6px rgb(227 181 91 / .5)}
+.music-dock input[type=range]::-moz-range-thumb{width:14px; height:14px; border-radius:50%; background:radial-gradient(circle at 35% 35%, var(--gold-hi), var(--gold-lo)); border:1px solid #000}
+.music-dock input[type=range]:focus-visible{outline:2px solid var(--brass); outline-offset:3px}
+.md-ctrls{display:flex; align-items:center; gap:4px}
+.md-b{background:linear-gradient(180deg, #2a2f3d, #171a24); border:1px solid #5a4a2b; color:var(--ink); width:34px; height:34px; border-radius:50%; cursor:pointer; font-size:.85rem; display:grid; place-items:center; padding:0}
+.md-b:hover{border-color:var(--brass); color:var(--gold-hi)}
+.md-b[aria-pressed="true"]{color:var(--brass-ink); background:var(--brass)}
+.md-b:disabled{opacity:.5; cursor:wait}
+.md-play{width:42px; height:42px; font-size:1rem; color:var(--brass-ink); background:radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold-lo)); border-color:#000}
+.md-play:hover{color:#000; filter:brightness(1.1)}
+.md-vol{display:flex; align-items:center; gap:6px; margin-left:auto; flex:1; max-width:140px}
+.md-list{margin-top:8px; border-top:1px solid var(--line); padding-top:6px}
+.md-list summary{cursor:pointer; font-family:var(--f-display); font-size:.85rem; color:#c9b994; display:flex; gap:6px; align-items:baseline}
+.md-list summary #md-all{margin-left:auto}
+.md-list ol{list-style:none; margin:6px 0 0; padding:0; max-height:min(38vh, 300px); overflow:auto}
+.md-list li button{width:100%; display:grid; grid-template-columns:2ch 1fr auto; gap:8px; text-align:left; background:none; border:0; color:var(--ink); padding:5px 6px; border-radius:4px; cursor:pointer; font:inherit; font-size:.85rem}
+.md-list li button:hover{background:var(--hover)}
+.md-list li button.cur{background:var(--brass-soft); color:var(--gold-hi)}
+.md-credit{font-size:.7rem; margin:8px 0 0; line-height:1.4}
+.md-credit a{color:#c9b994}
+/* Shrunk: just the video, the title and play/pause. */
+.music-dock.mini{width:auto; max-width:calc(100vw - 32px); padding:8px 10px}
+.music-dock.mini .md-seek, .music-dock.mini .md-list, .music-dock.mini .md-credit, .music-dock.mini .md-x,
+.music-dock.mini .md-ctrls > :not(.md-play){display:none}
+.music-dock.mini .md-video, .music-dock.mini .md-video iframe, .music-dock.mini .md-video > div{width:96px; height:54px}
+.music-dock.mini .md-top{gap:10px}
+.music-dock.mini .md-now{max-width:150px; cursor:pointer}
+.music-dock.mini{display:flex; align-items:center; gap:10px}
+.music-dock.mini .md-ctrls{margin:0}
+.music-dock.mini.gone{display:none}
+@media (max-width:560px){ .music-dock{left:8px; right:8px; bottom:8px; width:auto} .music-dock.mini{right:auto} }
