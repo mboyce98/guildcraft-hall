@@ -117,14 +117,15 @@ async function supabaseDb() {
       const u = data.session?.user;
       if (!u) return null;
       uid = u.id; subscribe();
-      const p = ok(await sb.from("profiles").select("username,is_admin").eq("id", u.id).maybeSingle());
+      const { data: p } = await sb.from("profiles").select("username,is_admin").eq("id", u.id).maybeSingle();
       return { id: u.id, username: p?.username || "crafter", isAdmin: !!p?.is_admin };
     },
     onAuthChange(fn) { authFns.push(fn); },
     onChange(fn) { changeFns.push(fn); },
     async signUp({ email, password, username }) {
-      const taken = ok(await sb.from("profiles").select("id").ilike("username", username.replace(/[\\%_]/g, "\\$&")).limit(1));
-      if (taken.length) throw new Error("That username is taken.");
+      // Visitors can't read member profiles, so ask the database's username_taken() helper instead.
+      const { data: taken } = await sb.rpc("username_taken", { name: username });
+      if (taken === true) throw new Error("That username is taken.");
       const res = ok(await sb.auth.signUp({ email, password, options: { data: { username }, emailRedirectTo: redirectTo } }));
       return { needsConfirm: !res.session };
     },

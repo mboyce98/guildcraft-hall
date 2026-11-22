@@ -142,3 +142,26 @@ alter publication supabase_realtime add table public.crafters, public.requests, 
 
 -- ---------- Make yourself an admin (after creating your account on the site) ----------
 -- update public.profiles set is_admin = true where username = 'YourUsername';
+
+-- ---------- Username check for the sign-up form ----------
+create or replace function public.username_taken(name text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (select 1 from profiles where lower(username) = lower(name));
+$$;
+revoke all on function public.username_taken(text) from public;
+grant execute on function public.username_taken(text) to anon, authenticated;
+
+-- ---------- Linked Battle.net accounts (written only by the site's server function) ----------
+create table public.bnet_links (
+  user_id     uuid primary key references public.profiles(id) on delete cascade,
+  battletag   text not null default '' check (char_length(battletag) <= 40),
+  bnet_id     bigint,
+  region      text not null default 'us' check (char_length(region) <= 4),
+  characters  jsonb not null default '[]'::jsonb check (pg_column_size(characters) < 100000),
+  linked_at   timestamptz not null default now()
+);
+alter table public.bnet_links enable row level security;
+create policy "members read links" on public.bnet_links for select to authenticated using (true);
+create policy "unlink own" on public.bnet_links for delete to authenticated using (user_id = auth.uid());
+grant select, delete on public.bnet_links to authenticated;
+alter publication supabase_realtime add table public.bnet_links;
