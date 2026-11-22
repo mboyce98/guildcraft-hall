@@ -151,7 +151,7 @@ $$;
 revoke all on function public.username_taken(text) from public;
 grant execute on function public.username_taken(text) to anon, authenticated;
 
--- ---------- Linked Battle.net accounts (written only by the site's server function) ----------
+-- ---------- Linked Battle.net accounts (each member saves their own after signing in with Blizzard) ----------
 create table public.bnet_links (
   user_id     uuid primary key references public.profiles(id) on delete cascade,
   battletag   text not null default '' check (char_length(battletag) <= 40),
@@ -163,5 +163,7 @@ create table public.bnet_links (
 alter table public.bnet_links enable row level security;
 create policy "members read links" on public.bnet_links for select to authenticated using (true);
 create policy "unlink own" on public.bnet_links for delete to authenticated using (user_id = auth.uid());
-grant select, delete on public.bnet_links to authenticated;
+create policy "link own" on public.bnet_links for insert to authenticated with check (user_id = auth.uid());
+create policy "relink own" on public.bnet_links for update to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
+grant select, insert, update, delete on public.bnet_links to authenticated;
 alter publication supabase_realtime add table public.bnet_links;

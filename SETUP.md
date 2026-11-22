@@ -31,20 +31,18 @@ The site runs in **demo mode** until it's connected to Supabase. In demo mode, a
 2. Set **Site URL** to the Netlify address and add it under **Redirect URLs**. Sign-up and password-reset emails link back here.
 
 ## 6. Link Battle.net accounts (optional)
-Members can link their Battle.net account on **My crafter**. It shows a verified BattleTag next to their name and lists their WoW characters to add with one click. The Blizzard secret stays on Netlify, never in the site.
+Members can link their Battle.net account on **My crafter**. It shows a verified BattleTag next to their name and lists their WoW characters to add with one click. The Blizzard secret stays on Netlify, never in the site. The BattleTag and character list come from Blizzard, then each member's page saves them under their own sign-in.
 
 1. Sign in at https://develop.battle.net/access/clients and click **Create client**.
    - **Client name:** GuildCraft Hall
    - **Redirect URL:** `https://guildcraft-hall.netlify.app/.netlify/functions/bnet-callback`
    - **Service URL:** `https://guildcraft-hall.netlify.app`
 2. Copy the **Client ID** and **Client Secret**.
-3. In Supabase, go to **Project Settings → API Keys** and copy a **secret** key (create one if needed). The server function uses it to save links.
-4. In Netlify, open the project, then **Project configuration → Environment variables → Add a variable**, and add:
+3. In Netlify, open the project, then **Project configuration → Environment variables → Add a variable**, and add:
    - `BNET_CLIENT_ID`: the Client ID
    - `BNET_CLIENT_SECRET`: the Client Secret
-   - `SUPABASE_SECRET_KEY`: the Supabase secret key
    - `BNET_REGION` (optional): `us` (default), `eu`, `kr` or `tw`
-5. In Netlify, go to **Deploys → Trigger deploy → Deploy project** so the new variables take effect.
+4. In Netlify, go to **Deploys → Trigger deploy → Deploy project** so the new variables take effect.
 
 Blizzard's API may not list WoW Forever characters yet. If it doesn't, linking still verifies the BattleTag and members add their characters by hand.
 

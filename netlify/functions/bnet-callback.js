@@ -1,5 +1,6 @@
-// Blizzard sends members back here after they approve. Saves their BattleTag and WoW characters.
-const { SUPABASE_URL, env, readState } = require("./_shared");
+// Blizzard sends members back here after they approve. Fetches their BattleTag and WoW characters,
+// then hands them to the page, which saves them under the member's own sign-in.
+const { env, ready, readState } = require("./_shared");
 
 // Blizzard keeps each game version's characters in its own namespace. We try each one and keep what answers.
 const GAMES = (region) => [
@@ -9,16 +10,25 @@ const GAMES = (region) => [
   { ns: `profile-forever-${region}`, label: "WoW Forever" },
 ];
 
+const page = (cfg, status, data) => ({
+  statusCode: 200,
+  headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  // Same site as the page, so sessionStorage carries the result over without putting it in the address bar.
+  body: `<!doctype html><meta charset="utf-8"><title>Linking Battle.net…</title><p>Finishing up…</p><script>
+try { ${data ? `sessionStorage.setItem("gc.bnet", ${JSON.stringify(JSON.stringify(data)).replace(/</g, "\\u003c")});` : ""} } catch (e) {}
+location.replace(${JSON.stringify(`${cfg.site}/?bnet=${status}#mine`)});
+</script>`,
+});
+
 exports.handler = async (event) => {
   const cfg = env();
-  const back = (status) => ({ statusCode: 302, headers: { Location: `${cfg.site}/?bnet=${status}#mine`, "cache-control": "no-store" }, body: "" });
   const q = event.queryStringParameters || {};
-  if (q.error) return back("cancelled");
-  if (!cfg.clientId || !cfg.clientSecret || !cfg.secretKey) return back("off");
+  if (q.error) return page(cfg, "cancelled");
+  if (!ready(cfg)) return page(cfg, "off");
 
   let state;
-  try { state = readState(q.state, cfg.secretKey); } catch { state = null; }
-  if (!state || !q.code) return back("expired");
+  try { state = readState(q.state, cfg.clientSecret); } catch { state = null; }
+  if (!state || !q.code) return page(cfg, "expired");
 
   try {
     // 1. Swap the one-time code for an access token.
@@ -30,7 +40,7 @@ exports.handler = async (event) => {
       },
       body: new URLSearchParams({ grant_type: "authorization_code", code: q.code, redirect_uri: cfg.site + "/.netlify/functions/bnet-callback" }),
     });
-    if (!tokenRes.ok) return back("failed");
+    if (!tokenRes.ok) { console.error("token exchange failed", tokenRes.status); return page(cfg, "failed"); }
     const { access_token } = await tokenRes.json();
     const auth = { Authorization: "Bearer " + access_token };
 
@@ -54,19 +64,11 @@ exports.handler = async (event) => {
     }
     characters.sort((a, b) => (b.level || 0) - (a.level || 0));
 
-    // 4. Save it against the member's GuildCraft account.
-    const save = await fetch(`${SUPABASE_URL}/rest/v1/bnet_links?on_conflict=user_id`, {
-      method: "POST",
-      headers: { apikey: cfg.secretKey, "content-type": "application/json", Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify({
-        user_id: state.u, battletag: me.battletag || "", bnet_id: me.id || null, region: cfg.region,
-        characters: characters.slice(0, 200), linked_at: new Date().toISOString(),
-      }),
+    return page(cfg, characters.length ? "linked" : "linked-nochars", {
+      u: state.u, battletag: me.battletag || "", bnetId: me.id || null, region: cfg.region, characters: characters.slice(0, 200),
     });
-    if (!save.ok) { console.error("save failed", save.status, await save.text()); return back("failed"); }
-    return back(characters.length ? "linked" : "linked-nochars");
   } catch (e) {
     console.error(e);
-    return back("failed");
+    return page(cfg, "failed");
   }
 };

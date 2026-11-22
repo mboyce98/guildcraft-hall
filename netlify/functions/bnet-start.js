@@ -1,17 +1,12 @@
 // Starts "Link Battle.net": checks the member is signed in, then returns Blizzard's sign-in URL.
-const { SUPABASE_URL, SUPABASE_PUBLISHABLE, env, json, makeState } = require("./_shared");
+const { SUPABASE_URL, SUPABASE_PUBLISHABLE, env, ready, json, makeState } = require("./_shared");
 
 exports.handler = async (event) => {
   const cfg = env();
-  if (!cfg.clientId || !cfg.clientSecret || !cfg.secretKey) {
-    return json(503, { error: "Battle.net linking isn't switched on yet. The site owner needs to finish the Battle.net steps in SETUP.md." });
-  }
-  // ?check=1 shows the public client ID and whether the other settings are present (never their values).
+
+  // ?check=1 shows the public client ID and tests the Blizzard secret (pass/fail only, never the value).
   if ((event.queryStringParameters || {}).check) {
-    // Test the secrets by using them (an app-only Blizzard token and a read from Supabase), reporting only pass/fail.
-    let blizzardSecretWorks = false, supabaseSecretWorks = false, supabaseStatus = 0;
-    const supabaseKeyKind = cfg.secretKey.startsWith("sb_secret_") ? "secret key" : cfg.secretKey.startsWith("sb_publishable_") ? "publishable key (wrong kind)"
-      : cfg.secretKey.startsWith("eyJ") ? "legacy JWT key" : "not a Supabase key";
+    let blizzardSecretWorks = false;
     try {
       const r = await fetch("https://oauth.battle.net/token", {
         method: "POST",
@@ -20,17 +15,14 @@ exports.handler = async (event) => {
       });
       blizzardSecretWorks = r.ok;
     } catch {}
-    try {
-      const r = await fetch(SUPABASE_URL + "/rest/v1/bnet_links?select=user_id&limit=1", { headers: { apikey: cfg.secretKey } });
-      supabaseSecretWorks = r.ok; supabaseStatus = r.status;
-    } catch {}
     return json(200, {
-      blizzardSecretWorks, supabaseSecretWorks, supabaseStatus, supabaseKeyKind, supabaseKeyLength: cfg.secretKey.length,
-      clientId: cfg.clientId, clientIdLooksRight: /^[0-9a-f]{32}$/.test(cfg.clientId),
-      hasClientSecret: cfg.clientSecret.length > 0, clientSecretLength: cfg.clientSecret.length,
-      hasSupabaseSecret: cfg.secretKey.length > 0, region: cfg.region,
+      ready: ready(cfg), blizzardSecretWorks, clientId: cfg.clientId, region: cfg.region,
       redirectUri: cfg.site + "/.netlify/functions/bnet-callback",
     });
+  }
+
+  if (!ready(cfg)) {
+    return json(503, { error: "Battle.net linking isn't switched on yet. The site owner needs to finish the Battle.net steps in SETUP.md." });
   }
   const token = String(event.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return json(401, { error: "Please sign in first." });
@@ -43,7 +35,7 @@ exports.handler = async (event) => {
     redirect_uri: cfg.site + "/.netlify/functions/bnet-callback",
     response_type: "code",
     scope: "openid wow.profile",
-    state: makeState(user.id, cfg.secretKey),
+    state: makeState(user.id, cfg.clientSecret),
   });
   return json(200, { url });
 };

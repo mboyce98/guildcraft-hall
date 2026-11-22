@@ -9,10 +9,10 @@ const v = (name) => String(process.env[name] || "").trim();
 const env = () => ({
   clientId: v("BNET_CLIENT_ID"),
   clientSecret: v("BNET_CLIENT_SECRET"),
-  secretKey: v("SUPABASE_SECRET_KEY"),
   region: (v("BNET_REGION") || "us").toLowerCase(),
   site: (process.env.URL || "https://guildcraft-hall.netlify.app").replace(/\/$/, ""),
 });
+const ready = (cfg) => !!(cfg.clientId && cfg.clientSecret);
 
 const json = (statusCode, body) => ({
   statusCode,
@@ -20,6 +20,7 @@ const json = (statusCode, body) => ({
   body: JSON.stringify(body),
 });
 
+// The sign-in "state" is signed with the Blizzard secret so nobody can forge a return trip.
 const sign = (payload, key) => crypto.createHmac("sha256", key).update(payload).digest("base64url");
 
 function makeState(userId, key) {
@@ -37,4 +38,4 @@ function readState(state, key) {
   return data.e > Date.now() ? data : null;
 }
 
-module.exports = { SUPABASE_URL, SUPABASE_PUBLISHABLE, env, json, makeState, readState };
+module.exports = { SUPABASE_URL, SUPABASE_PUBLISHABLE, env, ready, json, makeState, readState };

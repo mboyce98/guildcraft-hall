@@ -60,6 +60,13 @@ function defaultChar() { const saved = lsGet("gc.char"); const mine = myChars();
   // Coming back from Battle.net: say how it went, then tidy the address bar.
   const bnetResult = new URLSearchParams(location.search).get("bnet");
   if (bnetResult) {
+    // The Battle.net details come back through sessionStorage; save them under this member's own sign-in.
+    let saved = null;
+    try { saved = JSON.parse(sessionStorage.getItem("gc.bnet") || "null"); sessionStorage.removeItem("gc.bnet"); } catch {}
+    if (saved && S.uid) {
+      try { await S.B.saveBnet(saved); await refresh(); }
+      catch (e) { note("Battle.net details came back but couldn't be saved: " + e.message); history.replaceState(null, "", location.pathname + "#mine"); return; }
+    }
     const msgs = {
       linked: "Battle.net linked. Your characters are listed on My crafter; add the ones you craft on.",
       "linked-nochars": "Battle.net linked. Blizzard didn't list any WoW Forever characters for this account, so add your characters by hand.",

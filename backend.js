@@ -74,6 +74,7 @@ function demoDb() {
     },
     async linkBnet() { throw new Error("Battle.net linking works once the site is connected to Supabase."); },
     async unlinkBnet() {},
+    async saveBnet() {},
     async saveMine(doc) { const u = need(); data.crafters[u.id] = { chars: doc.chars, note: doc.note }; persist(); },
     async createRequest(o) { const u = need(); data.requests.push({ ...o, id: String(data.seq++), from: u.id, status: "pending", created: Date.now() }); persist(); },
     async setRequestStatus(id, status) { const r = data.requests.find((x) => x.id === id); if (r) { r.status = status; persist(); } },
@@ -171,6 +172,14 @@ async function supabaseDb() {
       try { body = await r.json(); } catch {}
       if (!r.ok || !body.url) throw new Error(body.error || "Battle.net linking isn't available right now.");
       location.href = body.url;
+    },
+    async saveBnet(d) {
+      const id = await need();
+      if (d.u && d.u !== id) throw new Error("That Battle.net sign-in was started from a different GuildCraft account.");
+      ok(await sb.from("bnet_links").upsert({
+        user_id: id, battletag: String(d.battletag || "").slice(0, 40), bnet_id: d.bnetId || null, region: String(d.region || "us").slice(0, 4),
+        characters: Array.isArray(d.characters) ? d.characters.slice(0, 200) : [], linked_at: new Date().toISOString(),
+      }));
     },
     async unlinkBnet() { const id = await need(); ok(await sb.from("bnet_links").delete().eq("user_id", id)); },
     async saveMine(doc) {
