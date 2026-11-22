@@ -104,3 +104,17 @@ The "Sign in with Discord" button appears on the site's sign-in box by itself on
 ## Discord feed channel
 
 Run `supabase-feed.sql` and `supabase-feed-bot.sql` once (already done for the live site). **No Discord admin needed:** a website admin can pick the feed and events channels on the Admin page → Discord bot → Channels, and the bot posts there itself. Discord admins can also type `/feedchannel` in the channel that should get new market listings, Request Board jobs, guild news, guides, events and new members. The bot needs the **Manage Webhooks** permission for that (re-invite it from the Admin page, or give its role the permission). Choose what gets posted on the Admin page → Discord bot.
+
+## In-game addon (Bark and Stone)
+
+The addon lives in `addon/BarkAndStone/`, and a ready-to-install zip is at `downloads/BarkAndStone.zip` (linked from the **My recipes** page).
+
+- **Install:** unzip into `World of Warcraft\_forever_\Interface\AddOns\` so you get `AddOns\BarkAndStone\BarkAndStone.toc`. The TOC says `## Interface: 16001`. If the game shows it as out of date, check the number with `/dump select(4, GetBuildInfo())` and change that line, or tick "Load out of date AddOns".
+- **/bas** opens the window:
+  - **Near my level:** online and offline guildmates within 4 levels, plus dungeons that fit you and them.
+  - **Dungeons:** every dungeon from 13 to 60, coloured for your level, with quests to grab first and which guildmates fit.
+  - **Send to website:** text to copy and paste into *My recipes → Import from the game*. It adds your characters, skill levels and known recipes, and updates your profile level when the character is your main.
+- Recipes are saved each time a profession window is opened, so open each one once per character.
+- **/bas ding** turns the automatic "Ding! Level N." guild message on or off. It's on by default. The addon also reminds you about the class trainer on even levels and tells you when a new dungeon opens up.
+- After changing the addon files, rebuild the zip:
+  `Compress-Archive -Path addon\BarkAndStone -DestinationPath downloads\BarkAndStone.zip -Force`

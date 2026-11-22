@@ -440,6 +440,59 @@ function queueSave() {
 }
 function updateSaved() { const el = $("#saved"); if (el) el.textContent = S.saveState; }
 
+/* ---------- Import from the Bark and Stone in-game addon (/bas export) ---------- */
+// Lines: "BAS1~version", then per character "C~name~realm~class~level~race~faction~zone~copper",
+// "P~profession~skill~id;id;…" (recipe spell IDs) and "N~profession~name;name;…" (recipes without an ID).
+function parseAddonExport(text) {
+  const lines = String(text || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
+  const start = lines.findIndex((l) => /^BAS1~/.test(l));
+  if (start < 0) throw new Error("That isn't text from the addon. In game, type /bas export and copy everything in the box.");
+  const chars = []; let cur = null;
+  for (const l of lines.slice(start + 1)) {
+    const f = l.split("~");
+    if (f[0] === "C" && f[1]) { cur = { name: f[1].trim().slice(0, 24), realm: f[2] || "", cls: f[3] || "", level: Number(f[4]) || 0, faction: f[6] || "", profs: {} }; chars.push(cur); }
+    else if (cur && (f[0] === "P" || f[0] === "N") && f[1]) {
+      const p = cur.profs[f[1]] || (cur.profs[f[1]] = { skill: 0, ids: [], names: [] });
+      if (f[0] === "P") { p.skill = Number(f[2]) || 0; p.ids = (f[3] || "").split(";").map(Number).filter(Boolean); }
+      else p.names = (f[2] || "").split(";").map((s) => s.trim().toLowerCase()).filter(Boolean);
+    }
+  }
+  if (!chars.length) throw new Error("No characters found in that text. Log in to each character once with the addon on, then export again.");
+  return chars;
+}
+function importAddon(text) {
+  const chars = parseAddonExport(text), doc = ensureMyDoc(), report = [];
+  const siteProf = (n) => (n === "Mining" ? "Mining (Smelting)" : n);
+  let main = null;
+  for (const c of chars) {
+    const ch = doc.chars[c.name] || (doc.chars[c.name] = { profs: {} }); ch.profs = ch.profs || {};
+    if (c.realm) ch.realm = c.realm; if (c.level) ch.level = c.level; if (CLASSES.includes(c.cls)) ch.cls = c.cls;
+    const done = [];
+    for (const [raw, v] of Object.entries(c.profs)) {
+      const prof = siteProf(raw), pi = profIndex(prof);
+      if (pi < 0) continue; // gathering skills the site doesn't list recipes for
+      const mine = RECIPES.filter((r) => r.p === pi);
+      const byName = new Map();
+      mine.forEach((r) => { byName.set(r.name.toLowerCase(), r.id); const it = ITEMS[r.cr]; if (it && !byName.has(it[0].toLowerCase())) byName.set(it[0].toLowerCase(), r.id); });
+      const ids = new Set(mine.map((r) => r.id));
+      const found = new Set();
+      v.ids.forEach((id) => { if (ids.has(id)) found.add(id); });
+      v.names.forEach((n) => { if (byName.has(n)) found.add(byName.get(n)); });
+      if (!found.size && !v.skill) continue;
+      const p = ch.profs[prof] || (ch.profs[prof] = { skill: 1, known: [] });
+      if (v.skill) p.skill = Math.min(300, v.skill);
+      const before = new Set(p.known || []); found.forEach((id) => before.add(id)); p.known = [...before];
+      done.push(`${prof} ${p.skill} (${found.size} recipe${found.size === 1 ? "" : "s"})`);
+    }
+    report.push(`${c.name}${c.level ? " · level " + c.level : ""}: ${done.length ? done.join(", ") : "no crafting professions yet"}`);
+    const pr = S.profiles[S.uid] || {};
+    if (pr.mainChar && pr.mainChar.toLowerCase() === c.name.toLowerCase()) main = c;
+  }
+  if (!S.editChar || !doc.chars[S.editChar]) S.editChar = chars[0].name;
+  queueSave();
+  return { report, main };
+}
+
 function renderMine() {
   const root = $("#view-mine");
   if (!S.uid) { root.innerHTML = signInPrompt("list what you can craft"); return; }
@@ -461,6 +514,11 @@ function renderMine() {
       <h3>Crafter note</h3>
       <textarea id="mynote" rows="3" maxlength="200" placeholder="e.g. Bring mats, free for guildies. Online most evenings.">${esc(doc.note || "")}</textarea>
       <p class="saved" id="saved">${esc(S.saveState)}</p>
+      <h3>Import from the game</h3>
+      <p class="muted" style="margin:0 0 6px">Install the <a href="downloads/BarkAndStone.zip" download>Bark and Stone addon</a>, open each profession window once, then type <code>/bas export</code>. Copy the text (Ctrl+A, Ctrl+C) and paste it here. It fills in your characters, skill levels and every recipe they know.</p>
+      <form id="addonimport"><textarea id="addon-text" rows="3" placeholder="BAS1~1.0.0 …" aria-label="Text from the addon">${esc(S.addonText || "")}</textarea>
+        <button class="btn" type="submit" style="margin-top:6px">Import</button></form>
+      ${S.addonResult ? `<p class="saved" style="white-space:pre-line">${esc(S.addonResult)}</p>` : ""}
     </div>`;
   let right;
   if (!ch) right = `<div class="card empty"><strong>Add a character to start.</strong>Then add their professions and tick the recipes they know.</div>`;
@@ -1460,6 +1518,23 @@ document.addEventListener("submit", async (e) => {
     catch (x) { saved.textContent = "Couldn't save: " + x.message; }
     btn.disabled = false;
   }
+  else if (f.id === "addonimport") {
+    const text = $("#addon-text").value;
+    try {
+      const { report, main } = importAddon(text);
+      S.addonText = "";
+      S.addonResult = "Imported:\n" + report.join("\n");
+      // Keep the main character's level and class on the profile up to date.
+      const p = S.profiles[S.uid];
+      if (main && p && (main.level !== p.mainLevel || (!p.mainClass && CLASSES.includes(main.cls)))) {
+        const fields = { mainChar: p.mainChar, mainRealm: p.mainRealm || "", mainClass: p.mainClass || (CLASSES.includes(main.cls) ? main.cls : ""),
+          mainLevel: Math.max(0, Math.min(80, main.level)), faction: p.faction || (["Alliance", "Horde"].includes(main.faction) ? main.faction : ""),
+          discord: p.discord || "", playTimes: p.playTimes || "", bio: p.bio || "" };
+        try { await S.B.saveProfile(fields); Object.assign(p, fields); S.addonResult += `\nYour profile now shows ${main.name} at level ${main.level}.`; } catch {}
+      }
+    } catch (x) { S.addonResult = x.message; }
+    renderMine();
+  }
   else if (f.id === "addchar") {
     const name = $("#newchar").value.trim().slice(0, 24); if (!name) return;
     const d = ensureMyDoc(); if (!d.chars[name]) d.chars[name] = { profs: {} };
@@ -2043,4 +2118,6 @@ window.GC_AI = {
 };
 
 route();
+// Keep pasted addon text if the page redraws before Import is pressed.
+document.addEventListener("input", (e) => { if (e.target.id === "addon-text") S.addonText = e.target.value; });
 })();
