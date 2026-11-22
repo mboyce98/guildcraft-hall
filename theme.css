@@ -536,3 +536,53 @@ h3{margin:12px 0 6px}
 .dc-ready{margin:0 0 12px; padding:8px 12px; border:1px solid #2b5a37; border-radius:8px; background:rgb(95 212 126 / .08); color:#bff0cc}
 .dc-checks{display:flex; flex-wrap:wrap; gap:6px 16px}
 code{font-family:ui-monospace, SFMono-Regular, Consolas, monospace; font-size:.88em; padding:1px 5px; border-radius:4px; background:rgb(227 181 91 / .1); color:var(--gold-hi)}
+
+/* ---------- Coin entry (g / s / c) ---------- */
+.coin-input{display:inline-flex; gap:6px; flex-wrap:wrap}
+.coin-input .ci{display:inline-flex; align-items:center; gap:4px; padding:0 8px 0 0; border:1px solid var(--line); border-radius:6px; background:rgb(10 12 18 / .7)}
+.coin-input .ci:focus-within{border-color:var(--brass)}
+.coin-input input{width:64px; border:0; background:none; text-align:right; padding:7px 4px 7px 8px; color:var(--ink); font-variant-numeric:tabular-nums}
+.coin-input .ci.s input, .coin-input .ci.c input{width:46px}
+.coin-input input:focus{outline:none}
+.coin-input .ci span{font-weight:700; font-size:.85rem}
+.coin-input .ci.g span{color:#ffd65c} .coin-input .ci.s span{color:#d4d8de} .coin-input .ci.c span{color:#e39a5c}
+.coin-input .ci span::after{content:""; display:inline-block; width:9px; height:9px; border-radius:50%; margin-left:3px; vertical-align:-1px}
+.coin-input .ci.g span::after{background:radial-gradient(circle at 35% 35%, #fff1a8, #d9a520)}
+.coin-input .ci.s span::after{background:radial-gradient(circle at 35% 35%, #ffffff, #9aa3ad)}
+.coin-input .ci.c span::after{background:radial-gradient(circle at 35% 35%, #ffc79a, #a85a24)}
+.coins{font-weight:600}
+
+/* ---------- Guild market ---------- */
+.mk-post{margin:0 0 18px; padding:14px 16px; border:1px solid var(--brass); border-radius:10px; background:var(--panel)}
+.mk-type{display:flex; gap:8px; margin-bottom:12px}
+.mk-grid{display:grid; grid-template-columns:2fr 1fr; gap:12px 16px}
+.mk-f{display:flex; flex-direction:column; gap:5px}
+.mk-f label{font-family:var(--f-display); font-size:.85rem; color:#c9b994}
+.mk-f input[type=text], .mk-f input[type=number]:not(.coin-input input){width:100%}
+.mk-price small{font-size:.75rem}
+.mk-note{grid-column:1 / -1}
+.mk-post .actions{display:flex; justify-content:flex-end; align-items:center; gap:8px; margin-top:12px}
+.mk-post #pf-total{margin-right:auto}
+.mk-bar{display:flex; flex-wrap:wrap; gap:8px; align-items:center; margin:0 0 6px}
+.mk-bar input[type=search]{flex:1 1 240px}
+.mk-sec{margin:18px 0 10px}
+.mk-grid-cards{display:grid; grid-template-columns:repeat(auto-fill, minmax(270px, 1fr)); gap:12px}
+.mk-card{display:flex; flex-direction:column; gap:8px; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:var(--panel); box-shadow:inset 3px 0 0 var(--ok)}
+.mk-card.want{box-shadow:inset 3px 0 0 var(--warn)}
+.mk-card:hover{border-color:#8a6d33}
+.mk-top{display:flex; justify-content:space-between; align-items:center; font-size:.75rem}
+.mk-badge{font-family:var(--f-display); letter-spacing:.07em; text-transform:uppercase; font-size:.68rem; padding:1px 8px; border-radius:999px; color:var(--ok); border:1px solid rgb(95 212 126 / .4); background:rgb(95 212 126 / .08)}
+.mk-card.want .mk-badge{color:var(--warn); border-color:rgb(242 169 59 / .4); background:rgb(242 169 59 / .08)}
+.mk-name{margin:0; font-size:1.05rem; line-height:1.3}
+.mk-name a{text-decoration:none}
+.mk-qty{color:var(--muted); font-weight:400; font-size:.9rem}
+.mk-price-row{display:flex; gap:18px; flex-wrap:wrap; padding:8px 10px; border-radius:6px; background:rgb(0 0 0 / .3)}
+.mk-price-row > div{display:flex; flex-direction:column; gap:2px}
+.mk-price-row .muted{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em}
+.mk-price-row .coins{font-size:1.05rem}
+.mk-offer{color:var(--muted); font-style:italic}
+.mk-note{margin:0; font-size:.88rem; color:var(--muted)}
+.mk-foot{display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap; margin-top:auto; padding-top:8px; border-top:1px solid rgb(75 60 34 / .5); font-size:.85rem}
+.mk-who{display:inline-flex; align-items:center; gap:6px; min-width:0}
+.mk-btns{display:flex; gap:6px; flex-wrap:wrap}
+@media (max-width:620px){ .mk-grid{grid-template-columns:1fr} }

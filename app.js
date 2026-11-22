@@ -6,7 +6,26 @@ const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "
 const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 const fmt = (n) => Number(n).toLocaleString("en-US");
-const gold = (g) => { g = Number(g) || 0; if (g <= 0) return '<span class="muted">—</span>'; return `<span class="gold">${fmt(Math.round(g * 100) / 100)}g</span>`; };
+// Money is stored in gold (1g = 100s = 10,000c) and shown like the game: 1g 25s 50c with coin icons.
+const toCopper = (g) => Math.max(0, Math.round((Number(g) || 0) * 10000));
+const gold = (g, empty) => {
+  const c = toCopper(g); if (!c) return empty != null ? empty : '<span class="muted">—</span>';
+  const gg = Math.floor(c / 10000), s = Math.floor((c % 10000) / 100), cc = c % 100;
+  const label = [gg && gg + " gold", s && s + " silver", cc && cc + " copper"].filter(Boolean).join(" ");
+  return `<span class="coins" title="${label}" aria-label="${label}">${gg ? `<span class="g">${fmt(gg)}</span>` : ""}${s ? `<span class="s">${s}</span>` : ""}${cc ? `<span class="c">${cc}</span>` : ""}</span>`;
+};
+// Gold / silver / copper input boxes; readCoins() turns them back into gold.
+const coinInput = (id, g, label) => {
+  const c = toCopper(g), gg = Math.floor(c / 10000), s = Math.floor((c % 10000) / 100), cc = c % 100;
+  return `<span class="coin-input" role="group" aria-label="${esc(label || "Price")}">
+    <label class="ci g"><input type="number" id="${id}-g" min="0" max="999999" step="1" inputmode="numeric" value="${gg || ""}" placeholder="0" aria-label="Gold"><span>g</span></label>
+    <label class="ci s"><input type="number" id="${id}-s" min="0" max="99" step="1" inputmode="numeric" value="${s || ""}" placeholder="0" aria-label="Silver"><span>s</span></label>
+    <label class="ci c"><input type="number" id="${id}-c" min="0" max="99" step="1" inputmode="numeric" value="${cc || ""}" placeholder="0" aria-label="Copper"><span>c</span></label></span>`;
+};
+const readCoins = (id) => {
+  const n = (k) => Math.max(0, Math.floor(Number(($("#" + id + "-" + k) || {}).value) || 0));
+  return (n("g") * 10000 + Math.min(99, n("s")) * 100 + Math.min(99, n("c"))) / 10000;
+};
 const ago = (t) => { if (!t) return ""; const s = (Date.now() - t) / 1000; if (s < 60) return "just now"; if (s < 3600) return Math.floor(s / 60) + "m ago"; if (s < 86400) return Math.floor(s / 3600) + "h ago"; return Math.floor(s / 86400) + "d ago"; };
 // Guild settings. Paste the guild's Discord invite (e.g. "https://discord.gg/abc123") to show a Join button on the front page.
 const GUILD = { discordInvite: "" };
@@ -20,7 +39,7 @@ const S = {
   crafters: new Map(), requests: [], listings: [], profiles: {}, bnet: {}, board: [], messages: [], online: [], chatOpen: new Set(), onlineOpen: false,
   boardTab: "open", boardCat: "", viewUser: null, notifOpen: false, seenOverride: 0, postOpen: false,
   myDoc: null, pendingSave: false, editChar: lsGet("gc.editChar"), editProf: null, mineQ: "", saveState: "",
-  reqTab: "open", mq: "", mtype: "", authTab: "in",
+  reqTab: "open", mq: "", mtype: "", msort: "new", authTab: "in",
   news: [], newsAll: false, dms: [], settings: {}, dmWith: null, memQ: "", memClass: "", memRank: "", adminTab: "members",
 };
 let PROFS = [], ITEMS = {}, RECIPES = [], BYID = new Map(), INDEX = new Map(), DATA_OK = false;
@@ -387,7 +406,7 @@ function requestForm() {
   return `<form class="form" id="reqform">
     <div class="row"><label for="rf-char">Your character</label><input type="text" id="rf-char" value="${esc(defaultChar())}" required maxlength="24" placeholder="Who should receive it"></div>
     <div class="row"><label for="rf-qty">Quantity</label><input type="number" id="rf-qty" value="1" min="1" max="999"></div>
-    <div class="row"><label for="rf-tip">Tip (gold)</label><input type="number" id="rf-tip" min="0" step="0.01" placeholder="0"></div>
+    <div class="row"><label for="rf-tip-g">Tip</label>${coinInput("rf-tip", 0, "Tip")}</div>
     <div class="row"><label for="rf-note">Note</label><input type="text" id="rf-note" maxlength="140" placeholder="I'll bring the mats / when you're online"></div>
     <div class="actions"><button type="button" class="btn" data-act="cancel-ask">Cancel</button><button class="btn primary" type="submit">Send request</button></div>
   </form>`;
@@ -526,42 +545,74 @@ function renderMarket() {
     root.dataset.built = "1";
     const itemNames = [...new Set(Object.values(ITEMS).map((x) => x[0]))].sort();
     root.innerHTML = `
-      <div class="cols">
-        <div class="card">
-          <h2>Post a listing</h2>
-          <form class="form" id="postform" style="margin:0">
-            <div class="row"><label for="pf-type">Type</label><select id="pf-type"><option value="S">I'm selling</option><option value="B">I want to buy</option></select></div>
-            <div class="row"><label for="pf-item">Item</label><input type="text" id="pf-item" list="itemlist" maxlength="60" required placeholder="e.g. Arcanite Bar"></div>
-            <div class="row"><label for="pf-qty">Quantity</label><input type="number" id="pf-qty" min="1" max="9999" value="1"></div>
-            <div class="row"><label for="pf-price">Price each (gold)</label><input type="number" id="pf-price" min="0" step="0.01" placeholder="Leave empty for offers"></div>
-            <div class="row"><label for="pf-char">Character</label><input type="text" id="pf-char" maxlength="24" required></div>
-            <div class="row"><label for="pf-note">Note</label><input type="text" id="pf-note" maxlength="140" placeholder="Optional"></div>
-            <div class="actions"><button class="btn primary" type="submit">Post</button></div>
-          </form>
-          <datalist id="itemlist">${itemNames.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+      <div class="map-head board-head"><div><p class="eyebrow">Bark and Stone · Trade</p><h2 class="hero-title">Guild market</h2>
+        <p class="muted map-intro">Buy and sell with guildmates. Press <strong>Buy</strong> or <strong>Sell to them</strong> and they get a request to arrange the trade in game.</p></div>
+        <button class="btn primary" data-act="mk-post">Post a listing</button></div>
+      <form class="form mk-post" id="postform" hidden>
+        <div class="mk-type" role="radiogroup" aria-label="Selling or buying">
+          <button type="button" class="chip" data-act="mk-type" data-t="S" aria-pressed="true">I'm selling</button>
+          <button type="button" class="chip" data-act="mk-type" data-t="B" aria-pressed="false">I want to buy</button></div>
+        <input type="hidden" id="pf-type" value="S">
+        <div class="mk-grid">
+          <div class="mk-f mk-item"><label for="pf-item">Item</label><input type="text" id="pf-item" list="itemlist" maxlength="60" required placeholder="e.g. Arcanite Bar"></div>
+          <div class="mk-f"><label for="pf-qty">How many</label><input type="number" id="pf-qty" min="1" max="9999" value="1"></div>
+          <div class="mk-f mk-price"><label for="pf-price-g">Price each</label>${coinInput("pf-price", 0, "Price each")}<small class="muted">Leave at 0 to take offers.</small></div>
+          <div class="mk-f"><label for="pf-char">Your character</label><input type="text" id="pf-char" maxlength="24" required></div>
+          <div class="mk-f mk-note"><label for="pf-note">Note <span class="muted">(optional)</span></label><input type="text" id="pf-note" maxlength="140" placeholder="e.g. Can craft more on request"></div>
         </div>
-        <div>
-          <div class="filters"><input type="search" id="mq" placeholder="Search listings" aria-label="Search listings">
-            <div class="chips"><button class="chip" data-act="mtype" data-t="">All</button><button class="chip" data-act="mtype" data-t="S">Selling</button><button class="chip" data-act="mtype" data-t="B">Wanted</button></div></div>
-          <div class="table-wrap"><table><thead><tr><th>Item</th><th>Qty</th><th>Each</th><th class="hide-sm">By</th><th></th></tr></thead><tbody id="mbody"></tbody></table></div>
-        </div>
-      </div>`;
+        <div class="actions"><span class="saved" id="pf-total"></span><button class="btn" type="button" data-act="mk-post">Cancel</button><button class="btn primary" type="submit">Post listing</button></div>
+      </form>
+      <datalist id="itemlist">${itemNames.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+      <div class="mk-bar">
+        <input type="search" id="mq" placeholder="Search items, sellers or notes" aria-label="Search listings">
+        <div class="chips" id="mk-tabs"></div>
+        <select id="msort" aria-label="Sort"><option value="new">Newest first</option><option value="cheap">Cheapest first</option><option value="az">Item A–Z</option></select>
+      </div>
+      <div id="mk-list"></div>`;
     $("#mq").addEventListener("input", (e) => { S.mq = e.target.value; renderMarket(); });
+    $("#msort").addEventListener("change", (e) => { S.msort = e.target.value; renderMarket(); });
+    // Live total while typing a price.
+    root.addEventListener("input", (e) => {
+      if (!e.target.closest("#postform")) return;
+      const each = readCoins("pf-price"), qty = Math.max(1, Number($("#pf-qty").value) || 1);
+      $("#pf-total").innerHTML = each > 0 ? `${qty > 1 ? `${qty} × ${gold(each)} = ` : ""}<strong>${gold(each * qty)}</strong> in total` : "Offers welcome";
+    });
   }
   const pc = $("#pf-char"); if (pc && !pc.value) pc.value = defaultChar();
-  root.querySelectorAll('[data-act="mtype"]').forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === S.mtype));
-  const q = S.mq.trim().toLowerCase();
-  const rows = S.listings.filter((l) => (!S.mtype || l.type === S.mtype) && (!q || String(l.item).toLowerCase().includes(q)))
-    .sort((a, b) => String(a.item).localeCompare(String(b.item)) || (a.price || 0) - (b.price || 0));
-  const byName = {}; for (const v of Object.values(ITEMS)) byName[v[0].toLowerCase()] = v[1];
-  $("#mbody").innerHTML = rows.map((l) => {
-    const mine = l.seller === S.uid; const un = userName(l.seller); const qcls = byName[String(l.item).toLowerCase()];
-    const act = mine || (S.me && S.me.isAdmin && S.B.mode === "live") ? `<button class="btn small danger" data-act="unlist" data-id="${esc(l.id)}">Remove</button>` : "";
-    const deal = !mine ? `<button class="btn small primary" data-act="deal" data-id="${esc(l.id)}">${l.type === "B" ? "Sell to them" : "Buy"}</button>` : "";
-    return `<tr><td><span class="tag" style="margin:0 6px 0 0;color:${l.type === "B" ? "var(--warn)" : "var(--ok)"}">${l.type === "B" ? "WTB" : "WTS"}</span><span class="${qcls != null ? "q" + qcls : ""}">${esc(l.item)}</span>${l.note ? `<div class="muted" style="font-size:.8rem">${esc(l.note)}</div>` : ""}</td>
-      <td class="num">${l.qty || 1}</td><td>${l.price > 0 ? gold(l.price) : '<span class="muted">offer</span>'}</td>
-      <td class="hide-sm">${esc(l.char || "?")}${un ? `<div class="muted" style="font-size:.78rem">${esc(un)}</div>` : ""}</td><td style="text-align:right;white-space:nowrap">${deal} ${act}</td></tr>`;
-  }).join("") || `<tr><td colspan="5"><div class="empty"><strong>No listings yet.</strong>Post something you're selling or looking for.</div></td></tr>`;
+  const q = S.mq.trim().toLowerCase(), tab = S.mtype || "";
+  const counts = { "": S.listings.length, S: S.listings.filter((l) => l.type === "S").length, B: S.listings.filter((l) => l.type === "B").length, mine: S.listings.filter((l) => l.seller === S.uid).length };
+  $("#mk-tabs").innerHTML = [["", "Everything"], ["S", "For sale"], ["B", "Wanted"], ["mine", "My listings"]]
+    .map(([k, l]) => `<button class="chip" data-act="mtype" data-t="${k}" aria-pressed="${tab === k}">${l} <span class="n">${counts[k]}</span></button>`).join("");
+  const byName = {}; for (const [id, v] of Object.entries(ITEMS)) byName[v[0].toLowerCase()] = { id, q: v[1] };
+  const rows = S.listings.filter((l) => (tab === "mine" ? l.seller === S.uid : !tab || l.type === tab)
+      && (!q || [l.item, l.char, l.note, userName(l.seller)].join(" ").toLowerCase().includes(q)))
+    .sort(S.msort === "az" ? (a, b) => String(a.item).localeCompare(String(b.item))
+      : S.msort === "cheap" ? (a, b) => (a.price || Infinity) - (b.price || Infinity) || String(a.item).localeCompare(String(b.item))
+      : (a, b) => (b.created || 0) - (a.created || 0));
+  const card = (l) => {
+    const mine = l.seller === S.uid, un = userName(l.seller), it = byName[String(l.item).toLowerCase()];
+    const name = it ? `<a class="q${it.q}" href="https://www.wowhead.com/forever/item=${it.id}" target="_blank" rel="noopener">${esc(l.item)}</a>` : `<span>${esc(l.item)}</span>`;
+    const qty = l.qty || 1;
+    const btns = [
+      !mine ? `<button class="btn small primary" data-act="deal" data-id="${esc(l.id)}">${l.type === "B" ? "Sell to them" : "Buy"}</button>` : "",
+      !mine ? `<a class="btn small" href="#messages-${esc(l.seller)}">Message</a>` : "",
+      mine || (S.me && S.me.isAdmin && S.B.mode === "live") ? `<button class="btn small danger" data-act="unlist" data-id="${esc(l.id)}">Remove</button>` : "",
+    ].join("");
+    return `<article class="mk-card ${l.type === "B" ? "want" : "sell"}">
+      <div class="mk-top"><span class="mk-badge">${l.type === "B" ? "Wanted" : "For sale"}</span><span class="muted mk-when">${ago(l.created)}</span></div>
+      <h3 class="mk-name">${name} <span class="mk-qty">×${qty}</span></h3>
+      <div class="mk-price-row">${l.price > 0 ? `<div><span class="muted">Each</span>${gold(l.price)}</div>${qty > 1 ? `<div><span class="muted">All ${qty}</span>${gold(l.price * qty)}</div>` : ""}` : `<div><span class="muted">Price</span><span class="mk-offer">Open to offers</span></div>`}</div>
+      ${l.note ? `<p class="mk-note">${esc(l.note)}</p>` : ""}
+      <div class="mk-foot"><span class="mk-who">${avatarImg(l.seller, 22)}<span><strong>${esc(l.char || "?")}</strong>${un ? ` <span class="muted">· ${memberLink(l.seller, un)}</span>` : ""}${mine ? ' <span class="muted">(you)</span>' : ""}</span></span>
+        <span class="mk-btns">${btns}</span></div>
+    </article>`;
+  };
+  const group = (title, list) => (list.length ? `<h3 class="sec mk-sec">${title} <span class="muted num">${list.length}</span></h3><div class="mk-grid-cards">${list.map(card).join("")}</div>` : "");
+  const empty = `<div class="empty"><strong>${q ? "Nothing matches that search." : tab === "mine" ? "You haven't listed anything." : "No listings yet."}</strong>${q ? "Try another word." : "Press “Post a listing” to sell something or ask for what you need."}</div>`;
+  $("#mk-list").innerHTML = !rows.length ? empty
+    : tab ? `<div class="mk-grid-cards">${rows.map(card).join("")}</div>`
+    : group("For sale", rows.filter((l) => l.type === "S")) + group("Wanted", rows.filter((l) => l.type === "B"));
+  refreshWowhead();
 }
 
 /* ---------- Members & profiles ---------- */
@@ -1017,7 +1068,7 @@ function renderBoard() {
       <div class="row"><label for="bf-cat">What kind</label><select id="bf-cat">${Object.entries(CATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
       <div class="row"><label for="bf-title">What you need</label><input type="text" id="bf-title" list="recipelist" maxlength="80" required placeholder="e.g. Elixir of Lion's Strength, 10 Copper Bars, help with a quest"></div>
       <div class="row"><label for="bf-qty">Quantity</label><input type="number" id="bf-qty" min="1" max="9999" value="1"></div>
-      <div class="row"><label for="bf-offer">Offer (gold)</label><input type="number" id="bf-offer" min="0" step="0.01" placeholder="0"></div>
+      <div class="row"><label for="bf-offer-g">Offer</label>${coinInput("bf-offer", 0, "Offer")}</div>
       <div class="row"><label for="bf-char">Your character</label><input type="text" id="bf-char" maxlength="24" value="${esc(defaultChar() || prof(S.uid).mainChar || "")}" required></div>
       <div class="row"><label for="bf-note">Details</label><textarea id="bf-note" rows="2" maxlength="300" placeholder="I'll bring the mats, need it by Friday raid, etc."></textarea></div>
       <div class="actions"><button class="btn primary" type="submit">Post to the board</button></div>
@@ -1227,6 +1278,8 @@ document.addEventListener("click", async (e) => {
     } catch (err) { note("Couldn't update that request: " + err.message); t.disabled = false; }
   }
   else if (act === "mtype") { S.mtype = t.dataset.t; renderMarket(); }
+  else if (act === "mk-post") { const f = $("#postform"); f.hidden = !f.hidden; if (!f.hidden) $("#pf-item").focus(); }
+  else if (act === "mk-type") { $("#pf-type").value = t.dataset.t; document.querySelectorAll('[data-act="mk-type"]').forEach((b) => b.setAttribute("aria-pressed", String(b === t))); }
   else if (act === "unlist") { t.disabled = true; try { await S.B.deleteListing(t.dataset.id); await refresh(); } catch (err) { note("Couldn't remove that listing: " + err.message); t.disabled = false; } }
   else if (act === "deal") {
     const l = S.listings.find((x) => x.id === t.dataset.id); if (!l) return;
@@ -1282,7 +1335,7 @@ document.addEventListener("submit", async (e) => {
     lsSet("gc.char", ch); btn.disabled = true;
     try {
       await S.B.createRequest({ kind: "craft", recipeId: S.sel, label: (BYID.get(S.sel) || {}).name || "", qty: Math.max(1, Math.min(999, Number($("#rf-qty").value) || 1)),
-        tip: Math.max(0, Number($("#rf-tip").value) || 0), note: $("#rf-note").value.trim().slice(0, 140), fromChar: ch, to: S.reqFor.uid, toChar: S.reqFor.char });
+        tip: readCoins("rf-tip"), note: $("#rf-note").value.trim().slice(0, 140), fromChar: ch, to: S.reqFor.uid, toChar: S.reqFor.char });
       S.reqFor = null; renderSheet(); note("Request sent. Track it on the Requests tab."); refresh();
     } catch (x) { note("Couldn't send the request: " + x.message); btn.disabled = false; }
   }
@@ -1341,7 +1394,7 @@ document.addEventListener("submit", async (e) => {
     const rec = DATA_OK && RECIPES.find((r) => r.name.toLowerCase() === title.toLowerCase());
     try {
       await S.B.createPost({ category: $("#bf-cat").value, title, recipeId: rec ? rec.id : null, qty: Math.max(1, Math.min(9999, Number($("#bf-qty").value) || 1)),
-        offer: Math.max(0, Number($("#bf-offer").value) || 0), note: $("#bf-note").value.trim().slice(0, 300), authorChar: ch });
+        offer: readCoins("bf-offer"), note: $("#bf-note").value.trim().slice(0, 300), authorChar: ch });
       S.postOpen = false; S.boardTab = "open"; await refresh(); note("Posted. The whole guild can see it on the Request Board.");
     } catch (x) { note("Couldn't post that: " + x.message); btn.disabled = false; }
   }
@@ -1365,8 +1418,8 @@ document.addEventListener("submit", async (e) => {
     if (!item || !ch) return;
     lsSet("gc.char", ch); btn.disabled = true;
     try {
-      await S.B.createListing({ char: ch, type: $("#pf-type").value, item, qty: Math.max(1, Number($("#pf-qty").value) || 1), price: Math.max(0, Number($("#pf-price").value) || 0), note: $("#pf-note").value.trim().slice(0, 140) });
-      $("#pf-item").value = ""; $("#pf-note").value = ""; $("#pf-price").value = ""; $("#pf-qty").value = "1";
+      await S.B.createListing({ char: ch, type: $("#pf-type").value, item, qty: Math.max(1, Number($("#pf-qty").value) || 1), price: readCoins("pf-price"), note: $("#pf-note").value.trim().slice(0, 140) });
+      $("#pf-item").value = ""; $("#pf-note").value = ""; ["g", "s", "c"].forEach((k) => { $("#pf-price-" + k).value = ""; }); $("#pf-qty").value = "1"; $("#pf-total").textContent = ""; $("#postform").hidden = true; note("Listed. It's on the guild market now.");
       refresh();
     } catch (x) { note("Couldn't post the listing: " + x.message); }
     btn.disabled = false;

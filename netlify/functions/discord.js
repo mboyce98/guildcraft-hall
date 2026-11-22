@@ -7,7 +7,7 @@ const json = (body) => ({ statusCode: 200, headers: { "content-type": "applicati
 const reply = (data) => json({ type: 4, data: { allowed_mentions: { parse: [] }, ...data } });
 const oops = (text) => reply({ content: text, flags: 64 }); // only the person who asked sees it
 const clip = (s, n) => { s = String(s || ""); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
-const gold = (g) => (Number(g) > 0 ? `${Math.round(Number(g) * 100) / 100}g` : "—");
+const gold = (g) => { const c = Math.round((Number(g) || 0) * 10000); if (c <= 0) return "—"; return [Math.floor(c / 10000) && Math.floor(c / 10000) + "g", Math.floor((c % 10000) / 100) && Math.floor((c % 10000) / 100) + "s", c % 100 && (c % 100) + "c"].filter(Boolean).join(" "); };
 const opt = (it, name) => ((it.data.options || []).find((o) => o.name === name) || {}).value;
 const withTimeout = (p, ms) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error("timeout")), ms))]);
 
