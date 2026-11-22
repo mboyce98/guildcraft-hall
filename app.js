@@ -21,7 +21,7 @@ const S = {
   boardTab: "open", boardCat: "", viewUser: null, notifOpen: false, seenOverride: 0, postOpen: false,
   myDoc: null, pendingSave: false, editChar: lsGet("gc.editChar"), editProf: null, mineQ: "", saveState: "",
   reqTab: "open", mq: "", mtype: "", authTab: "in",
-  dms: [], settings: {}, dmWith: null, memQ: "", memClass: "", memRank: "", adminTab: "members",
+  news: [], newsAll: false, dms: [], settings: {}, dmWith: null, memQ: "", memClass: "", memRank: "", adminTab: "members",
 };
 let PROFS = [], ITEMS = {}, RECIPES = [], BYID = new Map(), INDEX = new Map(), DATA_OK = false;
 let renderQueued = false;
@@ -113,6 +113,7 @@ let refreshTimer = null;
 function queueRefresh(now) { clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, now ? 0 : 400); }
 async function refresh() {
   S.B.loadSettings().then((s) => { S.settings = s || {}; renderHome(); }).catch(() => {});
+  S.B.loadNews().then((n) => { S.news = n || []; renderNews(); if (S.view === "admin" && S.adminTab === "news") renderAdmin(); }).catch(() => {});
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
   try {
     const d = await S.B.loadAll();
@@ -253,6 +254,20 @@ function renderHome() {
   const stat = (n, label) => `<div><span class="num">${fmt(n)}</span><span>${label}</span></div>`;
   st.innerHTML = stat(crafters, crafters === 1 ? "crafter listed" : "crafters listed") + stat(known, "recipes covered")
     + stat(listings, listings === 1 ? "market listing" : "market listings") + stat(open, open === 1 ? "request for you" : "requests for you");
+}
+
+/* ---------- Guild news (home page, above the gallery) ---------- */
+const NEWS_TAGS = ["News", "Coming soon", "Event", "Update"];
+const newsDate = (t) => new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
+function renderNews() {
+  const box = $("#guild-news"); if (!box) return;
+  const list = S.news;
+  const shown = S.newsAll ? list : list.slice(0, 3);
+  box.innerHTML = shown.length ? shown.map((n) => `<article class="gnews ${n.pinned ? "pinned" : ""}">
+      <div class="gnews-top"><span class="ntag ntag-${esc(n.tag.toLowerCase().replace(/\s+/g, "-"))}">${esc(n.tag)}</span>${n.pinned ? '<span class="npin" title="Pinned">📌 Pinned</span>' : ""}<span class="muted ndate">${newsDate(n.t)}</span></div>
+      <h4>${esc(n.title)}</h4>${n.body ? `<p>${esc(n.body)}</p>` : ""}
+    </article>`).join("") + (list.length > 3 ? `<button class="linkish news-more" data-act="news-more">${S.newsAll ? "Show less" : `Show all ${list.length} posts`}</button>` : "")
+    : `<p class="muted">No guild news yet.</p>`;
 }
 
 const signInPrompt = (what) => `<div class="card empty"><strong>Sign in to ${what}.</strong>Guild members share recipes, requests and listings once they're signed in.<div style="margin-top:12px"><button class="btn primary" data-act="signin">Sign in or create an account</button></div></div>`;
@@ -794,9 +809,21 @@ function renderAdmin() {
   const rankNo = (id) => { const i = RANKS.indexOf(prof(id).rank); return i < 0 ? 99 : i; };
   const openPosts = S.board.filter((b) => b.status === "open" || b.status === "claimed");
   const stat = (n, label) => `<div><span class="num">${fmt(n)}</span><span>${label}</span></div>`;
-  const tabs = [["members", "Members & ranks"], ["site", "Announcement & Discord"], ["mod", "Moderation"]];
+  const tabs = [["members", "Members & ranks"], ["news", "Guild news"], ["site", "Announcement & Discord"], ["mod", "Moderation"]];
   let body = "";
-  if (S.adminTab === "members") {
+  if (S.adminTab === "news") {
+    body = `<form class="form" id="newsform" style="margin:0 0 16px">
+      <div class="row"><label for="nf-title">Headline</label><input type="text" id="nf-title" maxlength="120" required placeholder="e.g. Raid night this Friday"></div>
+      <div class="row"><label for="nf-tag">Label</label><select id="nf-tag">${NEWS_TAGS.map((t) => `<option>${t}</option>`).join("")}</select></div>
+      <div class="row"><label for="nf-body">Details</label><textarea id="nf-body" rows="4" maxlength="1500" placeholder="What's happening, when and where."></textarea></div>
+      <div class="row"><label for="nf-pin">Pin to top</label><label class="adm-check"><input type="checkbox" id="nf-pin"> keep this first in the feed</label></div>
+      <div class="actions"><span class="saved" id="nf-saved"></span><button class="btn primary" type="submit">Post to the news feed</button></div>
+    </form>
+    <h3 class="sec">Posted (${S.news.length})</h3>
+    <ul class="adm-list">${S.news.map((n) => `<li><span><span class="ntag ntag-${esc(n.tag.toLowerCase().replace(/\s+/g, "-"))}">${esc(n.tag)}</span> <strong>${esc(n.title)}</strong> <span class="muted">${newsDate(n.t)}${n.pinned ? " · pinned" : ""}</span></span>
+      <span class="adm-btns"><button class="btn small" data-act="adm-news-pin" data-id="${esc(n.id)}">${n.pinned ? "Unpin" : "Pin"}</button><button class="btn small danger" data-act="adm-news-del" data-id="${esc(n.id)}">Delete</button></span></li>`).join("") || '<li class="muted">No posts yet.</li>'}</ul>
+    <p class="muted small">Guild news shows on the home page above the picture gallery, for everyone, signed in or not. Pinned posts stay first.</p>`;
+  } else if (S.adminTab === "members") {
     const sorted = ids.slice().sort((a, b) => rankNo(a) - rankNo(b) || (userName(a) || "").localeCompare(userName(b) || ""));
     body = `<div class="table-wrap"><table class="adm-table"><thead><tr><th>Member</th><th>Main character</th><th>Joined</th><th>Rank</th><th>Admin</th><th></th></tr></thead><tbody>
       ${sorted.map((id) => { const p = prof(id); const self = id === S.uid; return `<tr>
@@ -1056,6 +1083,14 @@ document.addEventListener("click", async (e) => {
   }
   else if (act === "dm-del") { t.disabled = true; try { await S.B.deleteDm(t.dataset.id); await refresh(); } catch (err) { note("Couldn't delete that message: " + err.message); } }
   else if (act === "adm-tab") { S.adminTab = t.dataset.t; renderAdmin(); }
+  else if (act === "news-more") { S.newsAll = !S.newsAll; renderNews(); }
+  else if (act === "adm-news-pin" || act === "adm-news-del") {
+    const n = S.news.find((x) => x.id === t.dataset.id); if (!n) return;
+    if (act === "adm-news-del" && !confirm(`Delete “${n.title}” from the news feed?`)) return;
+    t.disabled = true;
+    try { act === "adm-news-del" ? await S.B.deleteNews(n.id) : await S.B.updateNews(n.id, { pinned: !n.pinned }); S.news = await S.B.loadNews(); renderNews(); renderAdmin(); }
+    catch (err) { note("Couldn't change that post: " + err.message); t.disabled = false; }
+  }
   else if (act === "adm-post-del" || act === "adm-listing-del") {
     if (!confirm("Remove this for everyone?")) return;
     t.disabled = true;
@@ -1196,6 +1231,15 @@ document.addEventListener("submit", async (e) => {
       await refresh(); renderMessages();
       const again = document.querySelector(".dm-form input"); if (again) again.focus();
     } catch (x) { note("Couldn't send that message: " + x.message); btn.disabled = false; }
+  }
+  else if (f.id === "newsform") {
+    const title = $("#nf-title").value.trim().slice(0, 120); if (!title) return;
+    btn.disabled = true;
+    try {
+      await S.B.createNews({ title, tag: $("#nf-tag").value, body: $("#nf-body").value.trim().slice(0, 1500), pinned: $("#nf-pin").checked });
+      S.news = await S.B.loadNews(); renderNews(); renderAdmin();
+      const s = $("#nf-saved"); if (s) s.textContent = "Posted. It's on the home page now.";
+    } catch (x) { $("#nf-saved").textContent = "Couldn't post: " + x.message; btn.disabled = false; }
   }
   else if (f.id === "adminset") {
     const ann = $("#as-ann").value.trim().slice(0, 500), inv = $("#as-discord").value.trim().slice(0, 200), saved = $("#as-saved");

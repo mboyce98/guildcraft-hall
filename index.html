@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=13">
+<link rel="stylesheet" href="theme.css?v=14">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -71,6 +71,38 @@
         <a class="btn primary" href="#rules">Read the guild rules</a>
       </div>
     </div>
+
+    <!-- Alliance-style crest, drawn for this site and reused below with <use href="#crest"> -->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <defs>
+        <linearGradient id="crest-blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2f62c9"/><stop offset="1" stop-color="#0d2254"/></linearGradient>
+        <linearGradient id="crest-gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe9a8"/><stop offset=".55" stop-color="#e3b55b"/><stop offset="1" stop-color="#9c6a1c"/></linearGradient>
+      </defs>
+      <symbol id="crest" viewBox="0 0 64 80">
+        <path d="M20 9 26 2 32 8 38 2 44 9" fill="none" stroke="url(#crest-gold)" stroke-width="3" stroke-linejoin="round"/>
+        <path d="M5 12h54v24c0 21-13.5 33-27 40C18.5 69 5 57 5 36z" fill="url(#crest-blue)" stroke="url(#crest-gold)" stroke-width="3.2"/>
+        <path d="M11 17h42v19c0 17-10.5 27-21 33-10.5-6-21-16-21-33z" fill="none" stroke="#e3b55b" stroke-opacity=".45" stroke-width="1.2"/>
+        <rect x="30.2" y="20" width="3.6" height="40" rx="1.2" fill="url(#crest-gold)"/>
+        <path d="M22 30h20l-2 3.4H24z" fill="url(#crest-gold)"/>
+        <circle cx="32" cy="20" r="3" fill="url(#crest-gold)"/>
+        <path d="M32 36c-7 0-12 4-12 10 0 4 2 7 5 9l-1 6 4-3h8l4 3-1-6c3-2 5-5 5-9 0-6-5-10-12-10z" fill="#e3b55b" fill-opacity=".9"/>
+        <path d="M27 45h3m4 0h3M29 51c2 1.5 4 1.5 6 0" stroke="#0d2254" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+      </symbol>
+    </svg>
+
+    <section class="newsfeed" id="news" aria-label="News">
+      <div class="news-banner">
+        <svg class="crest" width="44" height="55" aria-hidden="true"><use href="#crest"/></svg>
+        <div class="news-title"><p class="eyebrow">For the Alliance</p><h3 class="sec">Guild news</h3></div>
+        <svg class="crest crest-r" width="44" height="55" aria-hidden="true"><use href="#crest"/></svg>
+      </div>
+      <div class="guild-news" id="guild-news"><p class="muted">Loading guild news…</p></div>
+      <div class="world-head">
+        <div><h3 class="sec">World news</h3><span class="muted small" id="wn-when"></span></div>
+        <div class="chips" id="wn-filter"></div>
+      </div>
+      <div class="world-news" id="world-news"></div>
+    </section>
 
     <section class="gallery" id="gallery" aria-roledescription="carousel" aria-label="Guild gallery">
       <div class="gal-head"><h3 class="sec">From our adventures</h3><span class="muted gal-count" id="gal-count"></span></div>
@@ -456,12 +488,13 @@
   </div>
 </div>
 
-<script src="backend.js?v=9"></script>
-<script src="app.js?v=18"></script>
+<script src="backend.js?v=10"></script>
+<script src="app.js?v=19"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=6"></script>
 <script src="gallery.js?v=1"></script>
 <script src="music.js?v=1"></script>
+<script src="news.js?v=1"></script>
 </body>
 </html>

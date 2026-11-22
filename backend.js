@@ -114,6 +114,10 @@ function demoDb() {
     async markDmsRead(from) { const u = need(); (data.dms || []).forEach((m) => { if (m.to === u.id && m.from === from) m.read = true; }); persist(); },
     async deleteDm(id) { data.dms = (data.dms || []).filter((m) => m.id !== id); persist(); },
     async loadSettings() { return { ...(data.settings || {}) }; },
+    async loadNews() { return (data.news || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.t - a.t).map((n) => ({ ...n })); },
+    async createNews(o) { const u = need(); (data.news = data.news || []).push({ ...o, pinned: !!o.pinned, id: String(data.seq++), author: u.id, t: Date.now() }); persist(); },
+    async updateNews(id, f) { const n = (data.news || []).find((x) => x.id === id); if (n) { Object.assign(n, f); persist(); } },
+    async deleteNews(id) { data.news = (data.news || []).filter((x) => x.id !== id); persist(); },
     async saveSetting(key, value) { (data.settings = data.settings || {})[key] = value; persist(); },
     async adminSetMember(id, f) { const u = data.users.find((x) => x.id === id); if (u) { u.profile = { ...(u.profile || {}), ...("rank" in f ? { rank: f.rank } : {}) }; if ("isAdmin" in f) u.isAdmin = !!f.isAdmin; persist(); } },
     async createPost(o) { const u = need(); (data.board = data.board || []).push({ ...o, id: String(data.seq++), author: u.id, status: "open", created: Date.now(), updated: Date.now() }); persist(); },
@@ -228,6 +232,14 @@ async function supabaseDb() {
     async sendDm(to, body) { await need(); ok(await sb.from("direct_messages").insert({ recipient_id: to, body })); },
     async markDmsRead(from) { const id = await need(); ok(await sb.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("recipient_id", id).eq("sender_id", from).is("read_at", null)); },
     async deleteDm(id) { ok(await sb.from("direct_messages").delete().eq("id", Number(id))); },
+    // ---- Guild news (anyone reads; admins post) ----
+    async loadNews() {
+      const r = await sb.from("guild_news").select("*").order("pinned", { ascending: false }).order("created_at", { ascending: false }).limit(50);
+      return r.error ? [] : r.data.map((n) => ({ id: String(n.id), title: n.title, body: n.body, tag: n.tag, pinned: n.pinned, author: n.author_id, t: Date.parse(n.created_at) }));
+    },
+    async createNews(o) { await need(); ok(await sb.from("guild_news").insert({ title: o.title, body: o.body, tag: o.tag, pinned: !!o.pinned })); },
+    async updateNews(id, f) { ok(await sb.from("guild_news").update(f).eq("id", Number(id))); },
+    async deleteNews(id) { ok(await sb.from("guild_news").delete().eq("id", Number(id))); },
     // ---- Site settings (anyone can read; admins write) ----
     async loadSettings() { const r = await sb.from("site_settings").select("key,value"); return r.error ? {} : Object.fromEntries(r.data.map((x) => [x.key, x.value])); },
     async saveSetting(key, value) { await need(); ok(await sb.from("site_settings").upsert({ key, value, updated_at: new Date().toISOString() })); },
