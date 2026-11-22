@@ -280,3 +280,20 @@ h3{margin:12px 0 6px}
 .pin.tip-below .pin-tip{bottom:auto; top:calc(100% + 8px)}
 .pin.tip-right .pin-tip{left:0; transform:none}
 .pin.tip-left .pin-tip{left:auto; right:0; transform:none}
+
+/* ---------- City NPC pop-up ---------- */
+.npc-modal{z-index:60}
+.npc-card{width:min(640px, 100%); max-height:min(84vh, 820px); overflow:auto; padding:16px}
+.npc-card h2{margin:0}
+.ware-wrap{display:grid; gap:12px; margin-top:12px}
+.ware{width:100%; border-collapse:collapse; font-size:.88rem}
+.ware th{text-align:left; padding:6px 8px}
+.ware td{padding:6px 8px; border-bottom:1px solid rgb(75 60 34 / .55); vertical-align:top}
+.ware td:nth-child(2), .ware td:nth-child(3), .ware th:nth-child(2), .ware th:nth-child(3){text-align:right; white-space:nowrap}
+.ware-note{font-size:.78rem; margin:10px 0 4px}
+.coins{display:inline-flex; gap:6px; font-variant-numeric:tabular-nums}
+.coins span::after{content:""; display:inline-block; width:9px; height:9px; border-radius:50%; margin-left:3px; vertical-align:-1px; box-shadow:inset 0 -1px 0 rgb(0 0 0 / .35)}
+.coins .g{color:#ffd65c} .coins .g::after{background:radial-gradient(circle at 35% 35%, #fff1a8, #d9a520)}
+.coins .s{color:#d4d8de} .coins .s::after{background:radial-gradient(circle at 35% 35%, #ffffff, #9aa3ad)}
+.coins .c{color:#e39a5c} .coins .c::after{background:radial-gradient(circle at 35% 35%, #ffc79a, #a85a24)}
+.npc-modal .npc-card{width:min(680px, 100%)}

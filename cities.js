@@ -27,7 +27,7 @@ let DATA = null, loading = null;
 const st = { city: "ironforge", cats: new Set(["class", "prof", "vendor", "service"]), q: "", sel: null };
 
 function load() {
-  if (!loading) loading = fetch("city-npcs.json?v=2").then((r) => r.json()).then((d) => {
+  if (!loading) loading = fetch("city-npcs.json?v=3").then((r) => r.json()).then((d) => {
     DATA = d;
     for (const c of Object.values(d.cities)) c.npcs.forEach((n) => { n.cat = category(n[2]); n.s = (n[1] + " " + n[2]).toLowerCase(); });
   });
@@ -78,14 +78,52 @@ function draw() {
     return `<details class="dd" open><summary><span class="cdot2 cat-${k}"></span>${l} <span class="muted num">${rows.length}</span></summary>
       <ul class="npc-list">${rows.map((n) => `<li><button class="npc-row ${st.sel === n[0] ? "sel" : ""}" data-npc="${n[0]}"><span><strong>${esc(n[2])}</strong>${esc(n[1])}${n[5] ? ' <span class="tag new">New</span>' : ""}</span><span class="num muted">${n[3]}, ${n[4]}</span></button></li>`).join("")}</ul></details>`;
   }).join("");
-  const sel = st.sel && city.npcs.find((n) => n[0] === st.sel);
-  $("#city-list").innerHTML = (sel ? `<div class="npc-pick"><h2>${esc(sel[1])}</h2><div class="sub">${esc(sel[2])} · ${sel[3]}, ${sel[4]}</div>
-      <p><a href="https://www.wowhead.com/forever/npc=${sel[0]}" target="_blank" rel="noopener">${esc(sel[1])} on Wowhead</a> <span class="muted">(what they sell or teach)</span></p></div>` : "")
-    + (groups || `<div class="empty"><strong>Nothing to show.</strong>${city.npcs.length ? "Try another search or turn a category back on." : "This city's markers are still being added."}</div>`);
+  $("#city-list").innerHTML = groups || `<div class="empty"><strong>Nothing to show.</strong>${city.npcs.length ? "Try another search or turn a category back on." : "This city's markers are still being added."}</div>`;
+  popup();
 }
 
+// Gold / silver / copper, like the in-game money display.
+function coins(copper) {
+  copper = Number(copper) || 0;
+  if (!copper) return '<span class="muted">free</span>';
+  const g = Math.floor(copper / 10000), s = Math.floor((copper % 10000) / 100), c = copper % 100;
+  return `<span class="coins">${g ? `<span class="g">${g}</span>` : ""}${s ? `<span class="s">${s}</span>` : ""}${c ? `<span class="c">${c}</span>` : ""}</span>`;
+}
+
+// Pop-up for the clicked NPC: what they sell (with prices) or teach (with costs).
+function popup() {
+  let box = document.getElementById("npc-modal");
+  const city = DATA.cities[st.city];
+  const n = st.sel && city.npcs.find((x) => x[0] === st.sel);
+  if (!n) { if (box) box.hidden = true; return; }
+  if (!box) { box = document.createElement("div"); box.id = "npc-modal"; box.className = "modal npc-modal"; box.setAttribute("role", "dialog"); box.setAttribute("aria-modal", "true"); document.body.appendChild(box); }
+  const sells = n[6] || [], teach = n[7] || [];
+  const stock = (a) => (a > 0 ? `<span class="muted">limited (${a})</span>` : "");
+  const sellsTable = sells.length ? `<table class="ware"><thead><tr><th>Item</th><th>Req</th><th>Price</th></tr></thead><tbody>${sells.map((it) => `<tr>
+      <td><a class="wh q${it[2]}" href="https://www.wowhead.com/forever/item=${it[0]}" target="_blank" rel="noopener">${esc(it[1])}</a> ${stock(it[4])}</td>
+      <td class="num muted">${it[5] || ""}</td><td class="num">${coins(it[3])}</td></tr>`).join("")}</tbody></table>` : "";
+  const teachTable = teach.length ? `<table class="ware"><thead><tr><th>Teaches</th><th>Level</th><th>Cost</th></tr></thead><tbody>${teach.map((sp) => `<tr>
+      <td><a class="wh" href="https://www.wowhead.com/forever/spell=${sp[0]}" target="_blank" rel="noopener">${esc(sp[1])}</a> <span class="muted">${esc(sp[2])}</span></td>
+      <td class="num muted">${sp[3] || ""}</td><td class="num">${coins(sp[4])}</td></tr>`).join("")}</tbody></table>` : "";
+  const none = n[6] === undefined
+    ? `<p class="muted">Their wares and prices are still being added. <a href="https://www.wowhead.com/forever/npc=${n[0]}" target="_blank" rel="noopener">See ${esc(n[1])} on Wowhead</a>.</p>`
+    : `<p class="muted">${n.cat === "service" ? "Offers a service rather than goods." : "Nothing listed for sale or training."}</p>`;
+  box.innerHTML = `<div class="card npc-card">
+    <div class="head"><div><h2>${esc(n[1])}</h2><div class="sub">${esc(n[2])} · ${esc(city.name)} ${n[3]}, ${n[4]}${n[5] ? ' · <span style="color:var(--brass)">New in Forever</span>' : ""}</div></div>
+      <button class="btn small" data-npc-close aria-label="Close">Close</button></div>
+    ${sellsTable || teachTable ? `<div class="ware-wrap">${sellsTable}${teachTable}</div>` : none}
+    <p class="muted ware-note">Prices are the base cost before reputation discounts. Hover an item for its Wowhead details.</p>
+    <p><a href="https://www.wowhead.com/forever/npc=${n[0]}" target="_blank" rel="noopener">${esc(n[1])} on Wowhead</a></p>
+  </div>`;
+  box.hidden = false;
+  try { if (window.$WowheadPower && window.$WowheadPower.refreshLinks) window.$WowheadPower.refreshLinks(); } catch {}
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && st.sel && $("#view-cities") && !$("#view-cities").hidden) { st.sel = null; draw(); } });
 document.addEventListener("click", (e) => {
   const v = $("#view-cities"); if (!v || v.hidden) return;
+  if (e.target.closest("[data-npc-close]") || e.target.id === "npc-modal") { st.sel = null; draw(); return; }
+  if (e.target.closest("#npc-modal")) return;
   const c = e.target.closest("[data-city]"); if (c) { st.city = c.dataset.city; st.sel = null; draw(); return; }
   const k = e.target.closest("[data-cat]"); if (k) { const x = k.dataset.cat; st.cats.has(x) ? st.cats.delete(x) : st.cats.add(x); if (!st.cats.size) CATS.forEach(([y]) => st.cats.add(y)); draw(); return; }
   const n = e.target.closest("[data-npc]");
