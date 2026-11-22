@@ -100,3 +100,7 @@ So Discord sign-ups count as the right guild member, members link Discord on the
 2. Supabase → Authentication → Sign In / Providers → **Discord**: turn it on and paste the Client ID and Secret.
 3. Supabase → Authentication → Sign In / Providers → turn on **Allow manual linking** (lets existing members link Discord from their profile).
 The "Sign in with Discord" button appears on the site's sign-in box by itself once Discord is turned on.
+
+## Discord feed channel
+
+Run `supabase-feed.sql` once (already done for the live site). Then in Discord, type `/feedchannel` in the channel that should get new market listings, Request Board jobs, guild news, guides, events and new members. The bot needs the **Manage Webhooks** permission for that (re-invite it from the Admin page, or give its role the permission). Choose what gets posted on the Admin page → Discord bot.

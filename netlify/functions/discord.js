@@ -70,6 +70,25 @@ async function command(cfg, it) {
       ].filter(Boolean), footer: { text: "From Blizzard's Armory" } }] });
   }
 
+  // ---- /feedchannel: new market posts, board jobs, news, guides, events and members get posted in this channel ----
+  if (name === "feedchannel") {
+    const channel = String(it.channel_id);
+    let hook;
+    try {
+      // Reuse the bot's own webhook in this channel if it made one before.
+      const existing = await withTimeout(discordApi(cfg, "GET", `/channels/${channel}/webhooks`), 1500).catch(() => []);
+      hook = (existing || []).find((w) => w.application_id === cfg.appId && w.token)
+        || await withTimeout(discordApi(cfg, "POST", `/channels/${channel}/webhooks`, { name: "Bark and Stone" }), 1500);
+    } catch (e) {
+      if (e.status === 403 || e.status === 50013) return oops("I'm not allowed to set this channel up. Give the **Bark and Stone** bot the **Manage Webhooks** permission (Server Settings → Roles, or this channel's Edit Channel → Permissions), then run `/feedchannel` again.");
+      return oops("Discord didn't answer in time. Try `/feedchannel` again.");
+    }
+    try { await withTimeout(rpc("bot_set_feed", { p_key: dataKey(cfg), p_url: `https://discord.com/api/webhooks/${hook.id}/${hook.token}`, p_channel: channel }), 1500); }
+    catch (e) { return oops(/Not allowed/.test(e.message) ? "The bot isn't linked to the website yet. An admin needs to press “Set up slash commands” on the site's Admin page." : "The website didn't save that. Try again in a moment."); }
+    return reply({ embeds: [{ title: "This is now the guild feed", url: cfg.site + "/", color: GOLD,
+      description: "New **market listings**, **Request Board jobs**, **guild news**, **guides**, **events** and **new members** from the Bark and Stone website will be posted here.\n\nAdmins can choose what gets posted on the website's Admin page → Discord bot." }] });
+  }
+
   // ---- Guild events ----
   if (name === "event" || name === "events" || name === "eventchannel") {
     const key = dataKey(cfg);

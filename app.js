@@ -907,17 +907,21 @@ function renderAdmin() {
         <li><code>/whocan</code> who in the guild can craft a recipe (with suggestions as you type)</li>
         <li><code>/board</code> open jobs on the Request Board</li><li><code>/market</code> what's for sale or wanted</li>
         <li><code>/member</code> a member's rank, main character and crafting</li><li><code>/armory</code> a WoW Forever character's level, gear and professions</li>
-        <li><code>/news</code> guild news · <code>/wownews</code> WoW Forever headlines · <code>/site</code> links to the website</li></ul></details>
+        <li><code>/news</code> guild news · <code>/wownews</code> WoW Forever headlines · <code>/site</code> links to the website</li>
+        <li><code>/event</code> plan an event with sign-up buttons · <code>/events</code> what's coming up · <code>/eventchannel</code> where site events are posted · <code>/feedchannel</code> the channel for new market posts, jobs, news, guides and members</li></ul></details>
 
       <h3 class="sec">Channel announcements</h3>
       ${D.cfgErr ? `<p class="dc-err">${esc(D.cfgErr)}${/function|schema/i.test(D.cfgErr) ? " (the Discord database update hasn't been run yet)" : ""}</p>` : ""}
       <form class="form" id="dcform" style="margin:0">
-        <p class="muted" style="margin:0 0 10px">Posts new guild news, Request Board jobs and market listings to a Discord channel. In Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL, and paste it here.</p>
+        <p class="muted" style="margin:0 0 10px">Posts new market listings, Request Board jobs, guild news, guides, events and members to one Discord channel. Easiest: type <code>/feedchannel</code> in that channel in Discord. (Or make a webhook in the channel settings → Integrations → Webhooks, and paste its link here.)</p>${c.feed_channel ? `<p class="dc-ready" style="margin:0 0 10px">✓ Posting to the channel picked with <code>/feedchannel</code>.</p>` : ""}
         <div class="row"><label for="dc-hook">Webhook link</label><input type="url" id="dc-hook" autocomplete="off" placeholder="${c.webhook_set ? "A webhook is saved. Paste a new one to replace it." : "https://discord.com/api/webhooks/…"}"></div>
         <div class="row"><label>Announce</label><div class="dc-checks">
           <label class="adm-check"><input type="checkbox" id="dc-news" ${c.news !== false ? "checked" : ""}> guild news</label>
           <label class="adm-check"><input type="checkbox" id="dc-board" ${c.board !== false ? "checked" : ""}> Request Board jobs</label>
-          <label class="adm-check"><input type="checkbox" id="dc-market" ${c.market !== false ? "checked" : ""}> market listings</label></div></div>
+          <label class="adm-check"><input type="checkbox" id="dc-market" ${c.market !== false ? "checked" : ""}> market listings</label>
+          <label class="adm-check"><input type="checkbox" id="dc-guides" ${c.guides !== false ? "checked" : ""}> new guides</label>
+          <label class="adm-check"><input type="checkbox" id="dc-events" ${c.events !== false ? "checked" : ""}> new events</label>
+          <label class="adm-check"><input type="checkbox" id="dc-members" ${c.members !== false ? "checked" : ""}> new members</label></div></div>
         <div class="actions"><span class="saved" id="dc-saved">${c.webhook_set ? "✓ Webhook saved." : ""}</span>
           ${c.webhook_set ? '<button class="btn small danger" type="button" data-act="dc-hook-clear">Remove webhook</button><button class="btn small" type="button" data-act="dc-test">Send a test message</button>' : ""}
           <button class="btn primary" type="submit">Save</button></div>
@@ -1373,7 +1377,7 @@ document.addEventListener("submit", async (e) => {
     if (hook && !/^https:\/\/(canary\.|ptb\.)?(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(hook)) { s.textContent = "That should be a Discord webhook link starting with https://discord.com/api/webhooks/"; return; }
     btn.disabled = true;
     try {
-      await S.B.discordConfigSet(hook || null, $("#dc-news").checked, $("#dc-board").checked, $("#dc-market").checked);
+      await S.B.discordConfigSet(hook || null, $("#dc-news").checked, $("#dc-board").checked, $("#dc-market").checked, { guides: $("#dc-guides").checked, events: $("#dc-events").checked, members: $("#dc-members").checked });
       S.dc = { ...(S.dc || {}), cfg: await S.B.discordConfig() }; renderAdmin();
       const s2 = $("#dc-saved"); if (s2) s2.textContent = hook ? "✓ Saved. Press “Send a test message” to check it." : "✓ Saved.";
     } catch (x) { s.textContent = "Couldn't save: " + x.message; btn.disabled = false; }

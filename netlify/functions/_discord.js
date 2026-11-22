@@ -66,6 +66,7 @@ const COMMANDS = [
     { type: 3, name: "note", description: "Anything people should know or bring", required: false, max_length: 500 },
   ] },
   { name: "events", description: "Upcoming guild events and who's going" },
+  { name: "feedchannel", description: "Post new market listings, board jobs, news, guides, events and members in this channel", default_member_permissions: "32" },
   { name: "eventchannel", description: "Post guild events from the website in this channel", default_member_permissions: "32", options: [
     { type: 3, name: "timezone", description: "Guild time zone for event times typed in Discord", required: false, choices: require("./_events").TIMEZONES },
   ] },

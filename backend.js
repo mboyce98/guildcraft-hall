@@ -287,7 +287,7 @@ async function supabaseDb() {
     async deleteDm(id) { ok(await sb.from("direct_messages").delete().eq("id", Number(id))); },
     // ---- Discord (admins) ----
     async discordConfig() { return ok(await sb.rpc("discord_config_get")); },
-    async discordConfigSet(webhook, news, board, market) { ok(await sb.rpc("discord_config_set", { p_webhook: webhook, p_news: news, p_board: board, p_market: market })); },
+    async discordConfigSet(webhook, news, board, market, more) { ok(await sb.rpc("discord_config_set", { p_webhook: webhook, p_news: news, p_board: board, p_market: market, p_guides: more ? more.guides : null, p_events: more ? more.events : null, p_members: more ? more.members : null })); },
     async discordTest() { ok(await sb.rpc("discord_test")); },
     async discordBot(action) {
       const { data } = await sb.auth.getSession();

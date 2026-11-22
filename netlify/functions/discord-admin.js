@@ -24,7 +24,7 @@ exports.handler = async (event) => {
   const out = {
     configured: { appId: !!cfg.appId, publicKey: /^[0-9a-f]{64}$/.test(cfg.publicKey), token: !!cfg.token },
     interactionsUrl,
-    inviteUrl: cfg.appId ? `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(cfg.appId)}&scope=bot%20applications.commands&permissions=19456` : "",
+    inviteUrl: cfg.appId ? `https://discord.com/oauth2/authorize?client_id=${encodeURIComponent(cfg.appId)}&scope=bot%20applications.commands&permissions=536890368` : "",
   };
   if (!out.configured.appId || !out.configured.publicKey || !out.configured.token) {
     out.step = "keys";
