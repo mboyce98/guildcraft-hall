@@ -809,9 +809,57 @@ function renderAdmin() {
   const rankNo = (id) => { const i = RANKS.indexOf(prof(id).rank); return i < 0 ? 99 : i; };
   const openPosts = S.board.filter((b) => b.status === "open" || b.status === "claimed");
   const stat = (n, label) => `<div><span class="num">${fmt(n)}</span><span>${label}</span></div>`;
-  const tabs = [["members", "Members & ranks"], ["news", "Guild news"], ["site", "Announcement & Discord"], ["mod", "Moderation"]];
+  const tabs = [["members", "Members & ranks"], ["news", "Guild news"], ["discord", "Discord bot"], ["site", "Announcement & Discord link"], ["mod", "Moderation"]];
   let body = "";
-  if (S.adminTab === "news") {
+  if (S.adminTab === "discord") {
+    const D = S.dc || (S.dc = { loading: true });
+    if (D.loading && !D.started) {
+      D.started = true;
+      Promise.allSettled([S.B.discordBot("status"), S.B.discordConfig()]).then(([a, b]) => {
+        S.dc = { bot: a.status === "fulfilled" ? a.value : null, botErr: a.status === "rejected" ? a.reason.message : "", cfg: b.status === "fulfilled" ? b.value : null, cfgErr: b.status === "rejected" ? b.reason.message : "" };
+        if (S.view === "admin" && S.adminTab === "discord") renderAdmin();
+      });
+    }
+    const b = D.bot || {}, c = D.cfg || {}, k = b.configured || {};
+    const tick = (ok) => (ok ? '<span class="dc-ok">✓</span>' : '<span class="dc-no">✗</span>');
+    const stepCls = (n) => ({ keys: 1, invite: 2, setup: 3, ready: 4 }[b.step] || 1) > n ? "done" : ({ keys: 1, invite: 2, setup: 3, ready: 4 }[b.step] || 1) === n ? "now" : "";
+    body = D.loading ? `<div class="empty"><strong>Checking the bot…</strong></div>` : `
+      ${D.botErr ? `<p class="dc-err">${esc(D.botErr)}</p>` : ""}${b.error ? `<p class="dc-err">${esc(b.error)}</p>` : ""}${b.warning ? `<p class="dc-err">${esc(b.warning)}</p>` : ""}
+      ${b.step === "ready" ? `<p class="dc-ready">✓ <strong>${esc((b.bot || {}).name || "The bot")}</strong> is live in ${b.servers.map((s) => esc(s.name)).join(", ")}. Type <code>/</code> in Discord to use it.</p>` : ""}
+      <ol class="dc-steps">
+        <li class="${stepCls(1)}"><h4>1. Create the bot on Discord and add its keys to Netlify</h4>
+          <p class="muted">In the <a href="https://discord.com/developers/applications" target="_blank" rel="noopener">Discord Developer Portal</a>, make a New Application (e.g. “Bark and Stone”). Then add these to Netlify → Site configuration → Environment variables, and redeploy:</p>
+          <ul class="dc-keys"><li>${tick(k.appId)} <code>DISCORD_APP_ID</code> <span class="muted">General Information → Application ID</span></li>
+            <li>${tick(k.publicKey)} <code>DISCORD_PUBLIC_KEY</code> <span class="muted">General Information → Public Key</span></li>
+            <li>${tick(k.token)} <code>DISCORD_BOT_TOKEN</code> <span class="muted">Bot → Reset Token (keep it secret)</span></li></ul></li>
+        <li class="${stepCls(2)}"><h4>2. Invite the bot to the guild's server</h4>
+          ${b.inviteUrl ? `<p><a class="btn small" href="${esc(b.inviteUrl)}" target="_blank" rel="noopener">Invite the bot</a> <span class="muted">Pick the Bark and Stone server, then come back and press Check again.</span></p>` : '<p class="muted">Available once the keys are in.</p>'}
+          ${(b.servers || []).length ? `<p class="muted">In: ${b.servers.map((s) => `<strong>${esc(s.name)}</strong>${s.commands ? ` (${s.commands} commands)` : ""}`).join(", ")}</p>` : ""}</li>
+        <li class="${stepCls(3)}"><h4>3. Set up the slash commands</h4>
+          <p><button class="btn small primary" data-act="dc-setup" ${(b.servers || []).length ? "" : "disabled"}>Set up slash commands</button> <span class="muted">Points Discord at the website and adds the commands. Run it again after inviting the bot to another server.</span></p>
+          ${(b.done || []).length ? `<ul class="dc-done">${b.done.map((d) => `<li>✓ ${esc(d)}</li>`).join("")}</ul>` : ""}</li>
+      </ol>
+      <p><button class="btn small" data-act="dc-check">Check again</button></p>
+      <details class="dd"><summary>What the bot can do</summary><ul class="dc-cmds">
+        <li><code>/whocan</code> who in the guild can craft a recipe (with suggestions as you type)</li>
+        <li><code>/board</code> open jobs on the Request Board</li><li><code>/market</code> what's for sale or wanted</li>
+        <li><code>/member</code> a member's rank, main character and crafting</li><li><code>/armory</code> a WoW Forever character's level, gear and professions</li>
+        <li><code>/news</code> guild news · <code>/wownews</code> WoW Forever headlines · <code>/site</code> links to the website</li></ul></details>
+
+      <h3 class="sec">Channel announcements</h3>
+      ${D.cfgErr ? `<p class="dc-err">${esc(D.cfgErr)}${/function|schema/i.test(D.cfgErr) ? " (the Discord database update hasn't been run yet)" : ""}</p>` : ""}
+      <form class="form" id="dcform" style="margin:0">
+        <p class="muted" style="margin:0 0 10px">Posts new guild news, Request Board jobs and market listings to a Discord channel. In Discord: channel settings → Integrations → Webhooks → New Webhook → Copy Webhook URL, and paste it here.</p>
+        <div class="row"><label for="dc-hook">Webhook link</label><input type="url" id="dc-hook" autocomplete="off" placeholder="${c.webhook_set ? "A webhook is saved. Paste a new one to replace it." : "https://discord.com/api/webhooks/…"}"></div>
+        <div class="row"><label>Announce</label><div class="dc-checks">
+          <label class="adm-check"><input type="checkbox" id="dc-news" ${c.news !== false ? "checked" : ""}> guild news</label>
+          <label class="adm-check"><input type="checkbox" id="dc-board" ${c.board !== false ? "checked" : ""}> Request Board jobs</label>
+          <label class="adm-check"><input type="checkbox" id="dc-market" ${c.market !== false ? "checked" : ""}> market listings</label></div></div>
+        <div class="actions"><span class="saved" id="dc-saved">${c.webhook_set ? "✓ Webhook saved." : ""}</span>
+          ${c.webhook_set ? '<button class="btn small danger" type="button" data-act="dc-hook-clear">Remove webhook</button><button class="btn small" type="button" data-act="dc-test">Send a test message</button>' : ""}
+          <button class="btn primary" type="submit">Save</button></div>
+      </form>`;
+  } else if (S.adminTab === "news") {
     body = `<form class="form" id="newsform" style="margin:0 0 16px">
       <div class="row"><label for="nf-title">Headline</label><input type="text" id="nf-title" maxlength="120" required placeholder="e.g. Raid night this Friday"></div>
       <div class="row"><label for="nf-tag">Label</label><select id="nf-tag">${NEWS_TAGS.map((t) => `<option>${t}</option>`).join("")}</select></div>
@@ -1083,6 +1131,22 @@ document.addEventListener("click", async (e) => {
   }
   else if (act === "dm-del") { t.disabled = true; try { await S.B.deleteDm(t.dataset.id); await refresh(); } catch (err) { note("Couldn't delete that message: " + err.message); } }
   else if (act === "adm-tab") { S.adminTab = t.dataset.t; renderAdmin(); }
+  else if (act === "dc-check") { S.dc = null; renderAdmin(); }
+  else if (act === "dc-setup") {
+    t.disabled = true; t.textContent = "Setting up…";
+    try { const r = await S.B.discordBot("setup"); S.dc = { ...(S.dc || {}), bot: r, botErr: "" }; }
+    catch (err) { S.dc = { ...(S.dc || {}), botErr: err.message }; }
+    renderAdmin();
+  }
+  else if (act === "dc-test") {
+    t.disabled = true; const s = $("#dc-saved");
+    try { await S.B.discordTest(); if (s) s.textContent = "Test sent. Check the Discord channel."; } catch (err) { if (s) s.textContent = "Couldn't send: " + err.message; }
+    t.disabled = false;
+  }
+  else if (act === "dc-hook-clear") {
+    if (!confirm("Stop posting to the Discord channel?")) return;
+    try { await S.B.discordConfigSet("", null, null, null); S.dc = { ...(S.dc || {}), cfg: await S.B.discordConfig() }; renderAdmin(); } catch (err) { note(err.message); }
+  }
   else if (act === "news-more") { S.newsAll = !S.newsAll; renderNews(); }
   else if (act === "adm-news-pin" || act === "adm-news-del") {
     const n = S.news.find((x) => x.id === t.dataset.id); if (!n) return;
@@ -1231,6 +1295,16 @@ document.addEventListener("submit", async (e) => {
       await refresh(); renderMessages();
       const again = document.querySelector(".dm-form input"); if (again) again.focus();
     } catch (x) { note("Couldn't send that message: " + x.message); btn.disabled = false; }
+  }
+  else if (f.id === "dcform") {
+    const hook = $("#dc-hook").value.trim(), s = $("#dc-saved");
+    if (hook && !/^https:\/\/(canary\.|ptb\.)?(discord|discordapp)\.com\/api\/webhooks\/\d+\/[\w-]+$/.test(hook)) { s.textContent = "That should be a Discord webhook link starting with https://discord.com/api/webhooks/"; return; }
+    btn.disabled = true;
+    try {
+      await S.B.discordConfigSet(hook || null, $("#dc-news").checked, $("#dc-board").checked, $("#dc-market").checked);
+      S.dc = { ...(S.dc || {}), cfg: await S.B.discordConfig() }; renderAdmin();
+      const s2 = $("#dc-saved"); if (s2) s2.textContent = hook ? "✓ Saved. Press “Send a test message” to check it." : "✓ Saved.";
+    } catch (x) { s.textContent = "Couldn't save: " + x.message; btn.disabled = false; }
   }
   else if (f.id === "newsform") {
     const title = $("#nf-title").value.trim().slice(0, 120); if (!title) return;

@@ -114,6 +114,10 @@ function demoDb() {
     async markDmsRead(from) { const u = need(); (data.dms || []).forEach((m) => { if (m.to === u.id && m.from === from) m.read = true; }); persist(); },
     async deleteDm(id) { data.dms = (data.dms || []).filter((m) => m.id !== id); persist(); },
     async loadSettings() { return { ...(data.settings || {}) }; },
+    async discordConfig() { return { webhook_set: false, news: true, board: true, market: true, bot_linked: false }; },
+    async discordConfigSet() { throw new Error("Discord works once the site is connected to Supabase."); },
+    async discordTest() { throw new Error("Discord works once the site is connected to Supabase."); },
+    async discordBot() { throw new Error("The Discord bot works on the live site."); },
     async loadNews() { return (data.news || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.t - a.t).map((n) => ({ ...n })); },
     async createNews(o) { const u = need(); (data.news = data.news || []).push({ ...o, pinned: !!o.pinned, id: String(data.seq++), author: u.id, t: Date.now() }); persist(); },
     async updateNews(id, f) { const n = (data.news || []).find((x) => x.id === id); if (n) { Object.assign(n, f); persist(); } },
@@ -232,6 +236,18 @@ async function supabaseDb() {
     async sendDm(to, body) { await need(); ok(await sb.from("direct_messages").insert({ recipient_id: to, body })); },
     async markDmsRead(from) { const id = await need(); ok(await sb.from("direct_messages").update({ read_at: new Date().toISOString() }).eq("recipient_id", id).eq("sender_id", from).is("read_at", null)); },
     async deleteDm(id) { ok(await sb.from("direct_messages").delete().eq("id", Number(id))); },
+    // ---- Discord (admins) ----
+    async discordConfig() { return ok(await sb.rpc("discord_config_get")); },
+    async discordConfigSet(webhook, news, board, market) { ok(await sb.rpc("discord_config_set", { p_webhook: webhook, p_news: news, p_board: board, p_market: market })); },
+    async discordTest() { ok(await sb.rpc("discord_test")); },
+    async discordBot(action) {
+      const { data } = await sb.auth.getSession();
+      const token = data.session?.access_token; if (!token) throw new Error("Please sign in first.");
+      const r = await fetch("/.netlify/functions/discord-admin?action=" + action, { method: action === "setup" ? "POST" : "GET", headers: { Authorization: "Bearer " + token } });
+      let body = {}; try { body = await r.json(); } catch {}
+      if (!r.ok) throw new Error(body.error || "The Discord helper didn't answer.");
+      return body;
+    },
     // ---- Guild news (anyone reads; admins post) ----
     async loadNews() {
       const r = await sb.from("guild_news").select("*").order("pinned", { ascending: false }).order("created_at", { ascending: false }).limit(50);
