@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>GuildCraft Hall</title>
+<meta name="description" content="Guild crafting hall for WoW Forever: every recipe, who in the guild can craft it, craft requests and a guild market.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d9a441'/%3E%3Cpath d='M8 22l9-9 3 3-9 9zM15 9l4-4 8 8-4 4z' fill='%231b1306'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="styles.css?v=1">
+</head>
+<body>
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>GuildCraft</h1><span>Guild crafting hall · WoW Forever</span></div>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#recipes" data-tab="recipes">Recipes</a>
+      <a href="#mine" data-tab="mine">My crafter</a>
+      <a href="#requests" data-tab="requests">Requests <span class="badge" id="req-badge" hidden></span></a>
+      <a href="#market" data-tab="market">Market</a>
+    </nav>
+    <div class="who" id="who"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div id="demo-note" class="notice demo" hidden><strong>Demo mode.</strong> Accounts and data are saved only in this browser until the site is connected to Supabase (see SETUP.md).</div>
+  <div id="status-note" class="notice" hidden></div>
+  <section id="view-recipes"></section>
+  <section id="view-mine" hidden></section>
+  <section id="view-requests" hidden></section>
+  <section id="view-market" hidden></section>
+  <p class="foot">Recipe data: Wowhead's WoW Forever database (2,215 craftable recipes across 9 professions). Recipe links open on Wowhead. Not affiliated with Blizzard Entertainment.</p>
+</main>
+
+<div class="modal" id="auth" hidden role="dialog" aria-modal="true" aria-labelledby="auth-title">
+  <div class="card">
+    <div class="inline" style="justify-content:space-between"><h2 id="auth-title" style="margin:0">Guild sign-in</h2><button class="btn small" data-act="auth-close">Close</button></div>
+    <div class="chips tabs2" style="margin-top:12px">
+      <button class="chip" data-act="auth-tab" data-t="in">Sign in</button>
+      <button class="chip" data-act="auth-tab" data-t="up">Create account</button>
+      <button class="chip" data-act="auth-tab" data-t="reset">Forgot password</button>
+    </div>
+    <form id="authform" novalidate>
+      <label class="f" id="f-user">Username<input type="text" id="a-user" autocomplete="username" maxlength="24" placeholder="Letters, numbers, _ (3–24)"></label>
+      <label class="f">Email<input type="text" id="a-email" autocomplete="email" inputmode="email"></label>
+      <label class="f" id="f-pass">Password<input type="password" id="a-pass" autocomplete="current-password" minlength="8"></label>
+      <div class="err" id="a-err" role="alert"></div>
+      <div class="actions" style="display:flex;justify-content:flex-end"><button class="btn primary" type="submit" id="a-go">Sign in</button></div>
+    </form>
+  </div>
+</div>
+
+<div class="modal" id="newpass" hidden role="dialog" aria-modal="true" aria-labelledby="np-title">
+  <div class="card">
+    <h2 id="np-title">Set a new password</h2>
+    <form id="npform"><label class="f">New password<input type="password" id="np-pass" autocomplete="new-password" minlength="8" required></label>
+      <div class="err" id="np-err" role="alert"></div>
+      <div style="display:flex;justify-content:flex-end"><button class="btn primary" type="submit">Save password</button></div></form>
+  </div>
+</div>
+
+<script src="backend.js?v=1"></script>
+<script src="app.js?v=1"></script>
+</body>
+</html>
