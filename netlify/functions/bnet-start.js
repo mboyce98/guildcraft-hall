@@ -9,7 +9,9 @@ exports.handler = async (event) => {
   // ?check=1 shows the public client ID and whether the other settings are present (never their values).
   if ((event.queryStringParameters || {}).check) {
     // Test the secrets by using them (an app-only Blizzard token and a read from Supabase), reporting only pass/fail.
-    let blizzardSecretWorks = false, supabaseSecretWorks = false;
+    let blizzardSecretWorks = false, supabaseSecretWorks = false, supabaseStatus = 0;
+    const supabaseKeyKind = cfg.secretKey.startsWith("sb_secret_") ? "secret key" : cfg.secretKey.startsWith("sb_publishable_") ? "publishable key (wrong kind)"
+      : cfg.secretKey.startsWith("eyJ") ? "legacy JWT key" : "not a Supabase key";
     try {
       const r = await fetch("https://oauth.battle.net/token", {
         method: "POST",
@@ -20,10 +22,10 @@ exports.handler = async (event) => {
     } catch {}
     try {
       const r = await fetch(SUPABASE_URL + "/rest/v1/bnet_links?select=user_id&limit=1", { headers: { apikey: cfg.secretKey } });
-      supabaseSecretWorks = r.ok;
+      supabaseSecretWorks = r.ok; supabaseStatus = r.status;
     } catch {}
     return json(200, {
-      blizzardSecretWorks, supabaseSecretWorks,
+      blizzardSecretWorks, supabaseSecretWorks, supabaseStatus, supabaseKeyKind, supabaseKeyLength: cfg.secretKey.length,
       clientId: cfg.clientId, clientIdLooksRight: /^[0-9a-f]{32}$/.test(cfg.clientId),
       hasClientSecret: cfg.clientSecret.length > 0, clientSecretLength: cfg.clientSecret.length,
       hasSupabaseSecret: cfg.secretKey.length > 0, region: cfg.region,
