@@ -1,0 +1,114 @@
+/* =========================================================
+   Bark and Stone — WoW theme: obsidian panels, guild gold, Azeroth backdrop.
+   Loaded after styles.css. One dark look by design: the artwork only works on dark.
+   ========================================================= */
+:root:not(.theme-off){
+  --bg:#0a0c12; --panel:rgb(15 18 27 / .9); --panel-2:rgb(22 26 38 / .92); --ink:#efe5cf; --muted:#ad9f86; --line:#4b3c22; --hover:rgb(227 181 91 / .08);
+  --brass:#e3b55b; --brass-soft:rgb(227 181 91 / .14); --brass-ink:#1c1306; --gold-hi:#f8dc8c; --gold-lo:#b98228;
+  --q0:#9d9d9d; --q1:#ffffff; --q2:#1eff00; --q3:#3b93ff; --q4:#b85cff; --q5:#ff8000;
+  --sk-o:#ff8040; --sk-y:#ffe14a; --sk-g:#4fd15a; --sk-x:#8d939b;
+  --ok:#5fd47e; --warn:#f2a93b; --bad:#ff6b5c; --info:#6cb4ff;
+  --ally:#4f8fdc; --horde:#e0574c; --contest:#a8996f; --heat:#ff8a3d;
+  --f-display:"Cinzel", "Trajan Pro", Georgia, serif; --f-deco:"Cinzel Decorative", "Cinzel", Georgia, serif;
+  color-scheme:dark;
+}
+body{background:var(--bg); color:var(--ink)}
+.backdrop{position:fixed; inset:0; z-index:-1; overflow:hidden; background:var(--bg)}
+.backdrop::before{content:""; position:absolute; inset:-20px; background:url("images/background.jpg?v=1") center 30% / cover no-repeat; filter:blur(3px) saturate(1.15) brightness(.42)}
+.backdrop::after{content:""; position:absolute; inset:0; background:radial-gradient(ellipse at 50% 0%, rgb(10 12 18 / .1), rgb(10 12 18 / .7) 70%), linear-gradient(180deg, rgb(10 12 18 / .15), rgb(10 12 18 / .8) 60%, var(--bg))}
+::selection{background:rgb(227 181 91 / .35)}
+a{color:var(--info)}
+
+/* ---------- Header ---------- */
+.top{background:linear-gradient(180deg, rgb(24 18 10 / .97), rgb(12 13 19 / .95)); border-bottom:1px solid #6b5426; box-shadow:0 1px 0 #000, 0 6px 24px rgb(0 0 0 / .55)}
+body::before{background:#18120a}
+.brand h1{font-family:var(--f-deco); font-weight:700; font-size:1.45rem; letter-spacing:.03em; background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 1px 0 rgb(0 0 0 / .8))}
+.brand span{color:#b8a682}
+nav.tabs a{font-family:var(--f-display); font-weight:600; letter-spacing:.04em; color:#c9b994; border-radius:4px; border-bottom:2px solid transparent; padding:6px 10px}
+nav.tabs a:hover{background:rgb(227 181 91 / .08); color:var(--gold-hi)}
+nav.tabs a[aria-current="page"]{background:linear-gradient(180deg, rgb(227 181 91 / .2), rgb(227 181 91 / .04)); color:var(--gold-hi); border-bottom-color:var(--brass)}
+.online-btn, .bell{background:linear-gradient(180deg, #2a2f3d, #171a24); border-color:#5a4a2b; color:var(--ink)}
+.me-link{color:var(--gold-hi)}
+
+/* ---------- Headings ---------- */
+h2, h3.sec, .hero-title, .rank{font-family:var(--f-display)}
+.hero-title{background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); -webkit-background-clip:text; background-clip:text; color:transparent; filter:drop-shadow(0 2px 2px rgb(0 0 0 / .7))}
+.eyebrow{color:#c9a965; letter-spacing:.16em}
+.eyebrow::before{content:"◆ "; color:var(--brass); opacity:.7}
+h3{color:#c9a965}
+h3.sec{color:var(--gold-hi)}
+
+/* ---------- Framed panels ---------- */
+.card, .box, .table-wrap, .sheet, .post, .rule, .member, .tile, .notif-panel, .continent, .worldmap, .form, .loot-filters, .home-stats div, .consequences{
+  background:var(--panel); border:1px solid var(--line);
+  box-shadow:inset 0 0 0 1px rgb(0 0 0 / .55), inset 0 1px 0 rgb(255 225 160 / .06), 0 10px 28px rgb(0 0 0 / .45);
+  -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.card, .sheet, .loot-filters, .rule, .consequences{border-radius:6px; outline:1px solid rgb(227 181 91 / .1); outline-offset:-5px}
+.member.big{box-shadow:none; background:transparent; border:0; -webkit-backdrop-filter:none; backdrop-filter:none}
+.box{border-radius:6px}
+.box .req{border-bottom-color:var(--line)}
+details.dd, .chat{background:var(--panel-2); border-color:var(--line); box-shadow:inset 0 0 0 1px rgb(0 0 0 / .5)}
+.rule.key{border-color:var(--brass); box-shadow:inset 4px 0 0 var(--brass), 0 10px 28px rgb(0 0 0 / .45)}
+.rule-n{background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); color:#1c1306; box-shadow:0 0 0 2px rgb(0 0 0 / .5)}
+.tile:hover{border-color:var(--brass); background:linear-gradient(180deg, rgb(227 181 91 / .12), var(--panel))}
+.tile strong{font-family:var(--f-display); color:var(--gold-hi)}
+.msg-b{background:var(--panel)}
+.msg.me .msg-b{background:rgb(227 181 91 / .14); border-color:#7a5f2e}
+
+/* ---------- Buttons and inputs ---------- */
+.btn{background:linear-gradient(180deg, #2a2f3d, #171a24); border:1px solid #5a4a2b; color:var(--ink); border-radius:4px; box-shadow:inset 0 1px 0 rgb(255 255 255 / .06), 0 1px 2px rgb(0 0 0 / .6)}
+.btn:hover{background:linear-gradient(180deg, #343a4b, #1d212d); border-color:#8a6c35}
+.btn.primary{background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); border-color:#7a5518; color:#1c1306; font-weight:700; text-shadow:0 1px 0 rgb(255 240 200 / .5); box-shadow:inset 0 1px 0 rgb(255 255 255 / .45), 0 2px 6px rgb(0 0 0 / .5)}
+.btn.primary:hover{filter:brightness(1.08); background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo))}
+.btn.danger{color:#ff8a7c}
+.btn.discord, .btn.discord:hover{background:#5865F2; border-color:#5865F2; color:#fff; text-shadow:none}
+.chip{background:rgb(22 26 38 / .85); border-color:#4b3c22; color:#d8c9a6}
+.chip[aria-pressed="true"]{background:linear-gradient(180deg, rgb(227 181 91 / .28), rgb(227 181 91 / .1)); border-color:var(--brass); color:var(--gold-hi)}
+.list-btn[aria-pressed="true"]{background:rgb(227 181 91 / .14); border-color:var(--brass)}
+input[type=text], input[type=number], input[type=search], input[type=password], select, textarea{background:rgb(8 10 16 / .85); border:1px solid #4b3c22; color:var(--ink)}
+input:focus, select:focus, textarea:focus{border-color:var(--brass); outline:none; box-shadow:0 0 0 2px rgb(227 181 91 / .25)}
+option, optgroup{background:#141822; color:var(--ink)}
+.badge{background:#c0392b; box-shadow:0 0 0 2px rgb(0 0 0 / .5)}
+
+/* ---------- Tables ---------- */
+th{background:linear-gradient(180deg, rgb(40 31 16 / .95), rgb(24 20 13 / .95)); color:#d8b86c; border-bottom-color:#6b5426; font-family:var(--f-display); letter-spacing:.06em}
+td{border-bottom-color:rgb(75 60 34 / .55)}
+tbody tr.click:hover{background:rgb(227 181 91 / .06)}
+tbody tr[aria-selected="true"]{background:rgb(227 181 91 / .14)}
+.notice{background:rgb(20 17 10 / .92); border-color:#6b5426}
+.notice.demo{background:rgb(60 40 10 / .8)}
+.foot{color:#8f846e}
+
+/* ---------- Front-page banner with the guild art ---------- */
+.hero{position:relative; isolation:isolate; margin-top:6px; padding:clamp(130px, 22vw, 240px) clamp(16px, 4vw, 40px) 28px; border:1px solid #6b5426; border-radius:8px; overflow:hidden; box-shadow:0 14px 40px rgb(0 0 0 / .6); outline:1px solid rgb(227 181 91 / .15); outline-offset:-6px}
+.hero::before{content:""; position:absolute; inset:0; z-index:-2; background:url("images/background.jpg?v=1") center 35% / cover no-repeat}
+.hero::after{content:""; position:absolute; inset:0; z-index:-1; background:linear-gradient(180deg, rgb(10 12 18 / 0) 0%, rgb(10 12 18 / .3) 35%, rgb(10 12 18 / .9) 72%, rgb(10 12 18 / .97))}
+.hero .lede{color:#f1e7d2; text-shadow:0 1px 2px rgb(0 0 0 / .85)}
+.hero .pledge{background:rgb(227 181 91 / .16); color:#f6e8c4; border-left-color:var(--brass)}
+.home-grid{margin-top:18px}
+
+/* ---------- Page heads ---------- */
+.page-head, .map-head, .rules-head{padding-block:22px 10px}
+.page-intro{max-width:72ch; margin:0}
+
+/* ---------- Loot Vault ---------- */
+.loot-filters{padding:14px; margin-bottom:14px; display:grid; gap:12px}
+.loot-filters input[type=search]{width:100%}
+.selects{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px}
+.selects label{display:grid; gap:4px; font-size:.74rem; text-transform:uppercase; letter-spacing:.08em; color:#c9a965}
+.selects select, .selects input{text-transform:none; letter-spacing:0; font-size:.9rem; width:100%; min-width:0}
+.lvl{display:flex; align-items:center; gap:6px; color:var(--muted)}
+.filter-foot{display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap}
+.sorth{background:none; border:0; color:inherit; font:inherit; text-transform:inherit; letter-spacing:inherit; cursor:pointer; padding:0}
+.sorth[aria-sort="ascending"]::after{content:" ▲"}
+.sorth[aria-sort="descending"]::after{content:" ▼"}
+.loot-table td{vertical-align:top}
+.sub-cell{font-size:.78rem; color:var(--muted); margin-top:2px}
+.src{font-size:.84rem}
+.stats{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; margin:12px 0 0}
+.stats div{background:var(--panel-2); border:1px solid var(--line); border-radius:4px; padding:8px 10px}
+.stats dt{font-size:.7rem; text-transform:uppercase; letter-spacing:.08em; color:#c9a965}
+.stats dd{margin:2px 0 0; font-size:1.05rem; font-variant-numeric:tabular-nums}
+.sheet-actions{margin-top:14px}
+@media (max-width: 960px){ .sheet{background:rgb(12 14 21 / .98); -webkit-backdrop-filter:none; backdrop-filter:none} }
+@media (prefers-reduced-motion: reduce){ .backdrop::before{filter:brightness(.42)} }

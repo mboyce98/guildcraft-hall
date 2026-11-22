@@ -143,7 +143,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "board", "recipes", "mine", "requests", "market", "profile"];
+  const VIEWS = ["home", "rules", "map", "loot", "board", "recipes", "mine", "requests", "market", "profile"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -180,6 +180,7 @@ function render() {
     }, 0);
     renderBell(); renderOnline();
     if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
+    else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "recipes") renderRecipes();
@@ -200,6 +201,18 @@ window.GC_ITEMS = () => {
     ITEM_INDEX = { byName };
   }
   return ITEM_INDEX;
+};
+// From the Loot Vault: open the Request Board with a request already filled in.
+window.GC_POST = (title, category) => {
+  if (!S.uid) { openAuth("in"); return; }
+  S.postOpen = true; S.boardTab = "open";
+  location.hash = "#board";
+  setTimeout(() => {
+    renderBoard();
+    const t = $("#bf-title"), c = $("#bf-cat");
+    if (t) { t.value = String(title).slice(0, 80); t.focus(); }
+    if (c && category) c.value = category;
+  }, 50);
 };
 window.GC_SEARCH_RECIPES = (name) => {
   S.q = name; S.prof = -1; S.limit = 150; S.sel = null;
@@ -564,7 +577,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
