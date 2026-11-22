@@ -169,3 +169,81 @@ tbody tr[aria-selected="true"]{background:rgb(227 181 91 / .14)}
 .matrix .ally-h{color:#8fc0ff} .matrix .horde-h{color:#ff8f80}
 .matrix td.y{color:var(--ok); font-weight:700}
 @media (max-width: 640px){ .factions{grid-template-columns:minmax(0,1fr)} .timeline{padding-left:20px} .era::before{left:-19px} .chron-h{scroll-margin-top:12px} }
+
+/* =========================================================
+   Condensed layout: grouped menu, tighter spacing
+   ========================================================= */
+/* Menu groups */
+nav.tabs{gap:2px; align-items:center}
+.navgrp{position:relative}
+.navbtn{font-family:var(--f-display); font-weight:600; letter-spacing:.04em; color:#c9b994; background:none; border:0; border-bottom:2px solid transparent; border-radius:4px; padding:6px 10px; cursor:pointer; display:inline-flex; align-items:center; gap:5px; font-size:inherit}
+.navbtn::after{content:""; width:0; height:0; border-left:4px solid transparent; border-right:4px solid transparent; border-top:5px solid currentColor; opacity:.7; transition:transform .15s}
+.navbtn:hover, .navgrp.open .navbtn{background:rgb(227 181 91 / .08); color:var(--gold-hi)}
+.navbtn.active{background:linear-gradient(180deg, rgb(227 181 91 / .2), rgb(227 181 91 / .04)); color:var(--gold-hi); border-bottom-color:var(--brass)}
+.navgrp.open .navbtn::after{transform:rotate(180deg)}
+.navmenu{position:absolute; top:calc(100% + 6px); left:0; z-index:50; min-width:180px; display:none; padding:6px; background:rgb(14 16 24 / .98); border:1px solid #6b5426; border-radius:6px; box-shadow:0 14px 34px rgb(0 0 0 / .6); outline:1px solid rgb(227 181 91 / .1); outline-offset:-4px}
+.navmenu::before{content:""; position:absolute; top:-7px; left:0; right:0; height:7px}
+.navgrp.open .navmenu{display:grid}
+@media (hover: hover){ .navgrp:hover .navmenu, .navgrp:focus-within .navmenu{display:grid} }
+nav.tabs .navmenu a{display:block; padding:8px 12px; border-bottom:0; border-radius:4px; white-space:nowrap}
+nav.tabs .navmenu a[aria-current="page"]{background:rgb(227 181 91 / .16); border-bottom:0}
+.navbtn .badge{margin-left:2px}
+
+/* Tighter header */
+.top .wrap{padding-block:6px; gap:6px 14px}
+.brand h1{font-size:1.25rem}
+.brand span{font-size:.7rem}
+nav.tabs{margin-left:auto}
+
+/* Tighter pages */
+main{padding-block:10px 32px}
+.page-head, .map-head, .rules-head, .board-head{padding-block:12px 6px}
+.hero-title{font-size:clamp(1.5rem, 3.4vw, 2.2rem); margin:0 0 8px}
+.page-intro, .map-intro, .lede{font-size:.95rem; line-height:1.55}
+.card{padding:12px}
+h2{margin-bottom:8px}
+h3{margin:12px 0 6px}
+.chron-h{margin:22px 0 10px; font-size:1.2rem}
+.timeline{gap:10px}
+.era{padding:12px 14px}
+.era p{line-height:1.55}
+.races, .classes{gap:10px}
+.race, .klass{padding:12px}
+.rule{padding:12px 14px}
+.rule-list{gap:10px}
+.posts{gap:8px}
+.post{padding:12px 14px}
+.notice{margin-top:8px}
+.foot{margin-top:18px}
+
+/* Front page: shorter banner, compact blocks */
+.hero{padding:clamp(80px, 13vw, 150px) clamp(14px, 3vw, 28px) 18px; margin-top:4px}
+.hero .lede{font-size:.95rem; margin-bottom:8px}
+.hero .pledge{padding:7px 12px; margin-bottom:12px; font-size:.9rem}
+.home-grid{margin-top:12px; gap:12px}
+.steps{gap:5px; font-size:.92rem}
+.ranks-list li{padding:6px 0}
+.home-stats{margin-top:12px}
+.tiles{margin-top:12px; gap:10px}
+.tiles.groups{grid-template-columns:repeat(auto-fit, minmax(210px, 1fr))}
+.tiles.groups .tile{padding:12px 14px}
+.tiles.groups .tile span{color:var(--muted)}
+.tiles.groups .tile a{color:var(--gold-hi); text-decoration:none}
+.tiles.groups .tile a:hover{text-decoration:underline}
+
+@media (max-width: 640px){
+  .top .wrap{gap:4px 8px}
+  nav.tabs{margin-left:0; width:100%; justify-content:space-between}
+  .navbtn, nav.tabs > a{padding:6px 7px; font-size:.82rem}
+  .navmenu{min-width:160px}
+  .navgrp:last-child .navmenu{left:auto; right:0}
+  .hero{padding-top:90px}
+}
+@media (max-width: 640px){
+  nav.tabs{position:relative; flex-wrap:nowrap; gap:0}
+  .navgrp{position:static}
+  .navbtn, nav.tabs > a{padding:6px 5px; font-size:.76rem; letter-spacing:.02em}
+  .navbtn::after{border-left-width:3px; border-right-width:3px; border-top-width:4px}
+  .navmenu, .navgrp:last-child .navmenu{left:0; right:0; top:calc(100% + 4px); min-width:0}
+  nav.tabs .navmenu a{padding:10px 12px; font-size:.9rem}
+}

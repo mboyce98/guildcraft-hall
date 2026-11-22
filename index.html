@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=2">
+<link rel="stylesheet" href="theme.css?v=4">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -21,15 +21,22 @@
     <a class="brand" href="#home"><h1>Bark and Stone</h1><span>WoW Forever guild · GuildCraft</span></a>
     <nav class="tabs" aria-label="Sections">
       <a href="#home" data-tab="home">Home</a>
-      <a href="#rules" data-tab="rules">Rules</a>
-      <a href="#map" data-tab="map">Map</a>
-      <a href="#chronicle" data-tab="chronicle">Chronicle</a>
-      <a href="#loot" data-tab="loot">Loot</a>
-      <a href="#board" data-tab="board">Board</a>
-      <a href="#recipes" data-tab="recipes">Recipes</a>
-      <a href="#mine" data-tab="mine">My crafter</a>
-      <a href="#requests" data-tab="requests">Requests <span class="badge" id="req-badge" hidden></span></a>
-      <a href="#market" data-tab="market">Market</a>
+      <div class="navgrp">
+        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Guild</button>
+        <div class="navmenu"><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Chronicle</a><a href="#profile" data-tab="profile">Members</a></div>
+      </div>
+      <div class="navgrp">
+        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">World</button>
+        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
+      </div>
+      <div class="navgrp">
+        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Crafting <span class="badge" id="req-badge" hidden></span></button>
+        <div class="navmenu"><a href="#recipes" data-tab="recipes">Recipes</a><a href="#mine" data-tab="mine">My crafter</a><a href="#requests" data-tab="requests">Requests</a></div>
+      </div>
+      <div class="navgrp">
+        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Trade</button>
+        <div class="navmenu"><a href="#board" data-tab="board">Request Board</a><a href="#market" data-tab="market">Market</a></div>
+      </div>
     </nav>
     <div class="bell-wrap">
       <button class="online-btn" id="online-btn" data-act="online" aria-label="Who's online" title="Who's online" hidden><span class="online-dot"></span><span id="online-count">0</span> online</button>
@@ -62,13 +69,11 @@
 
     <div class="home-grid">
       <div class="card">
-        <h3 class="sec">New here? Start with these</h3>
+        <h3 class="sec">New here?</h3>
         <ol class="steps">
-          <li><strong>Read the rules.</strong> Rule 1 is the one that really matters: respect your fellow Guildies.</li>
-          <li><strong>Create your account</strong>, link your Battle.net, and fill in your profile from your WoW character.</li>
-          <li><strong>Need something?</strong> Post it on the Request Board, and anyone in the guild can take the job.</li>
-          <li><strong>List what you can craft</strong> on My crafter, so others can send you requests.</li>
-          <li><strong>Browse recipes and the market</strong> to find a crafter or a deal.</li>
+          <li><strong>Read the rules.</strong> Rule 1 matters most: respect your fellow Guildies.</li>
+          <li><strong>Make an account</strong>, link Battle.net and fill in your profile.</li>
+          <li><strong>List what you craft</strong>, and post anything you need on the Request Board.</li>
         </ol>
         <div class="home-stats" id="home-stats"></div>
         <div class="home-online" id="home-online"></div>
@@ -87,16 +92,11 @@
       </div>
     </div>
 
-    <div class="tiles">
-      <a class="tile" href="#board"><strong>Request Board</strong><span>Ask the whole guild for something, or pick up a job.</span></a>
-      <a class="tile" href="#profile"><strong>Your profile</strong><span>Your main character, Discord and play times.</span></a>
-      <a class="tile" href="#chronicle"><strong>Chronicles of Azeroth</strong><span>The history of the world, races, racials and classes.</span></a>
-      <a class="tile" href="#loot"><strong>Loot Vault</strong><span>10,000+ weapons and armor, and which boss drops them.</span></a>
-      <a class="tile" href="#map"><strong>World map</strong><span>Where herbs, ore and treasure chests are found.</span></a>
-      <a class="tile" href="#recipes"><strong>Recipes</strong><span>Every WoW Forever recipe and who in the guild can craft it.</span></a>
-      <a class="tile" href="#mine"><strong>My crafter</strong><span>Your characters, professions and known recipes.</span></a>
-      <a class="tile" href="#requests"><strong>Requests</strong><span>Craft orders you've sent and received.</span></a>
-      <a class="tile" href="#market"><strong>Market</strong><span>Buy, sell and ask for items within the guild.</span></a>
+    <div class="tiles groups">
+      <div class="tile"><strong>Guild</strong><span><a href="#rules">Rules</a> · <a href="#chronicle">Chronicle</a> · <a href="#profile">Members</a></span></div>
+      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#loot">Loot Vault</a></span></div>
+      <div class="tile"><strong>Crafting</strong><span><a href="#recipes">Recipes</a> · <a href="#mine">My crafter</a> · <a href="#requests">Requests</a></span></div>
+      <div class="tile"><strong>Trade</strong><span><a href="#board">Request Board</a> · <a href="#market">Market</a></span></div>
     </div>
   </section>
 
@@ -382,7 +382,7 @@
   <section id="view-mine" hidden></section>
   <section id="view-requests" hidden></section>
   <section id="view-market" hidden></section>
-  <p class="foot">Recipe data: Wowhead's WoW Forever database (2,215 craftable recipes across 9 professions) , its herb, ore and chest locations, and 10,926 items in the Loot Vault. Background art and world map © Blizzard Entertainment. Links open on Wowhead. Not affiliated with Blizzard Entertainment.</p>
+  <p class="foot">Recipe data: Wowhead's WoW Forever database (2,215 craftable recipes across 9 professions), its herb, ore and chest locations, and 10,926 items in the Loot Vault. Background art and world map © Blizzard Entertainment. Links open on Wowhead. Not affiliated with Blizzard Entertainment.</p>
 </main>
 
 <div class="modal" id="auth" hidden role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -419,7 +419,7 @@
 </div>
 
 <script src="backend.js?v=8"></script>
-<script src="app.js?v=14"></script>
+<script src="app.js?v=15"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 </body>

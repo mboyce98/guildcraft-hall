@@ -153,6 +153,11 @@ function route() {
   const changed = S.view !== view;
   S.view = view;
   document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === view ? "page" : "false"));
+  // Light up the menu group holding the current page, and close any open menu.
+  document.querySelectorAll("nav.tabs .navgrp").forEach((g) => {
+    g.querySelector(".navbtn").classList.toggle("active", !!g.querySelector(`a[data-tab="${view}"]`));
+    g.classList.remove("open"); g.querySelector(".navbtn").setAttribute("aria-expanded", "false");
+  });
   VIEWS.forEach((v) => ($("#view-" + v).hidden = v !== view));
   if (view === "rules" && h !== "rules") { const el = document.getElementById(h); if (el) el.scrollIntoView(); }
   else if (changed) window.scrollTo(0, 0);
@@ -786,6 +791,10 @@ function openAuth(tab) {
 
 /* ---------- events ---------- */
 document.addEventListener("click", async (e) => {
+  // Menu groups: tap to open (hover also opens on desktop), tap elsewhere to close.
+  const nb = e.target.closest(".navbtn");
+  document.querySelectorAll("nav.tabs .navgrp.open").forEach((g) => { if (!nb || g !== nb.parentElement) { g.classList.remove("open"); g.querySelector(".navbtn").setAttribute("aria-expanded", "false"); } });
+  if (nb) { const g = nb.parentElement; const open = !g.classList.contains("open"); g.classList.toggle("open", open); nb.setAttribute("aria-expanded", String(open)); return; }
   // Chronicle: jump to a section, or open a raid's loot.
   const jump = e.target.closest("[data-chron]");
   if (jump) {
@@ -897,6 +906,8 @@ document.addEventListener("click", async (e) => {
 document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && e.target.matches("tr[data-recipe]")) e.target.click();
   if (e.key === "Escape") {
+    const openGrp = document.querySelector("nav.tabs .navgrp.open");
+    if (openGrp) { openGrp.classList.remove("open"); const b = openGrp.querySelector(".navbtn"); b.setAttribute("aria-expanded", "false"); b.focus(); return; }
     if (!$("#auth").hidden) { $("#auth").hidden = true; return; }
     if (S.sel && S.view === "recipes") { S.sel = null; S.reqFor = null; renderRecipes(); }
   }
