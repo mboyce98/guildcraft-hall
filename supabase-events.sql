@@ -42,6 +42,9 @@ create unique index if not exists event_signups_discord on public.event_signups 
 
 alter table public.events enable row level security;
 alter table public.event_signups enable row level security;
+grant select on public.events to anon, authenticated;
+grant insert, update, delete on public.events to authenticated;
+grant select, delete on public.event_signups to authenticated;
 
 drop policy if exists "anyone reads events" on public.events;
 create policy "anyone reads events" on public.events for select using (true);
@@ -243,6 +246,7 @@ create table if not exists public.price_alerts (
   check (below is not null or above is not null)
 );
 alter table public.price_alerts enable row level security;
+grant select, insert, delete on public.price_alerts to authenticated;
 drop policy if exists "own price alerts" on public.price_alerts;
 create policy "own price alerts" on public.price_alerts for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
 
