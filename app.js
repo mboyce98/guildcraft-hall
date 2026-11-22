@@ -878,8 +878,9 @@ function renderAdmin() {
     const D = S.dc || (S.dc = { loading: true });
     if (D.loading && !D.started) {
       D.started = true;
-      Promise.allSettled([S.B.discordBot("status"), S.B.discordConfig()]).then(([a, b]) => {
-        S.dc = { bot: a.status === "fulfilled" ? a.value : null, botErr: a.status === "rejected" ? a.reason.message : "", cfg: b.status === "fulfilled" ? b.value : null, cfgErr: b.status === "rejected" ? b.reason.message : "" };
+      Promise.allSettled([S.B.discordBot("status"), S.B.discordConfig(), S.B.discordChannels()]).then(([a, b, c]) => {
+        S.dc = { bot: a.status === "fulfilled" ? a.value : null, botErr: a.status === "rejected" ? a.reason.message : "", cfg: b.status === "fulfilled" ? b.value : null, cfgErr: b.status === "rejected" ? b.reason.message : "",
+          ch: c.status === "fulfilled" ? c.value : null, chErr: c.status === "rejected" ? c.reason.message : "" };
         if (S.view === "admin" && S.adminTab === "discord") renderAdmin();
       });
     }
@@ -910,6 +911,25 @@ function renderAdmin() {
         <li><code>/news</code> guild news · <code>/wownews</code> WoW Forever headlines · <code>/site</code> links to the website</li>
         <li><code>/event</code> plan an event with sign-up buttons · <code>/events</code> what's coming up · <code>/eventchannel</code> where site events are posted · <code>/feedchannel</code> the channel for new market posts, jobs, news, guides and members</li></ul></details>
 
+      <h3 class="sec">Channels</h3>
+      ${(() => {
+        const ch = D.ch, conf = (ch && ch.config) || {};
+        if (D.chErr) return `<p class="dc-err">${esc(D.chErr)}</p>`;
+        if (!ch) return `<p class="muted">Loading the server's channels…</p>`;
+        const groups = {}; (ch.channels || []).forEach((c) => { (groups[c.group || "Channels"] = groups[c.group || "Channels"] || []).push(c); });
+        const opts = (cur) => `<option value="">Not set</option>` + Object.entries(groups).map(([g, list]) => `<optgroup label="${esc(g)}">${list.map((c) => `<option value="${esc(c.id)}" ${cur === c.id ? "selected" : ""}>#${esc(c.name)}</option>`).join("")}</optgroup>`).join("");
+        const TZ = [["America/New_York", "Eastern (New York)"], ["America/Chicago", "Central (Chicago)"], ["America/Denver", "Mountain (Denver)"], ["America/Phoenix", "Arizona (Phoenix)"], ["America/Los_Angeles", "Pacific (Los Angeles)"], ["Europe/London", "UK (London)"], ["Europe/Berlin", "Central Europe (Berlin)"], ["Australia/Sydney", "Australia East (Sydney)"]];
+        return `<form class="form" id="dcchform" style="margin:0 0 18px">
+          <p class="muted" style="margin:0 0 10px">Pick where the bot posts. You don't need to be a Discord admin: the bot posts as itself, so it only needs to be allowed to send messages in those channels.</p>
+          <div class="row"><label for="dc-feed">Guild feed</label><select id="dc-feed">${opts(conf.feed_webhook ? "" : conf.feed_channel)}</select></div>
+          <p class="muted small" style="margin:-4px 0 10px">New market listings, Request Board jobs, guild news, guides, events and members.${conf.feed_webhook ? " Right now a webhook is used; picking a channel here replaces it." : ""}</p>
+          <div class="row"><label for="dc-evch">Events</label><select id="dc-evch">${opts(conf.events_channel)}</select></div>
+          <p class="muted small" style="margin:-4px 0 10px">Events planned on the website are posted here with sign-up buttons.</p>
+          <div class="row"><label for="dc-tz">Guild time zone</label><select id="dc-tz">${TZ.map(([v, l]) => `<option value="${v}" ${(conf.tz || "America/New_York") === v ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+          <p class="muted small" style="margin:-4px 0 10px">Used to read times typed in Discord, like <code>/event when:Sat 8pm</code>.</p>
+          <div class="actions"><span class="saved" id="dcch-saved">${esc(D.chMsg || "")}</span><button class="btn primary" type="submit">Save channels</button></div>
+        </form>`;
+      })()}
       <h3 class="sec">Channel announcements</h3>
       ${D.cfgErr ? `<p class="dc-err">${esc(D.cfgErr)}${/function|schema/i.test(D.cfgErr) ? " (the Discord database update hasn't been run yet)" : ""}</p>` : ""}
       <form class="form" id="dcform" style="margin:0">
@@ -1371,6 +1391,16 @@ document.addEventListener("submit", async (e) => {
       await refresh(); renderMessages();
       const again = document.querySelector(".dm-form input"); if (again) again.focus();
     } catch (x) { note("Couldn't send that message: " + x.message); btn.disabled = false; }
+  }
+  else if (f.id === "dcchform") {
+    const conf = (S.dc.ch && S.dc.ch.config) || {}, feed = $("#dc-feed").value, events = $("#dc-evch").value, tz = $("#dc-tz").value;
+    const feedChanged = feed !== (conf.feed_webhook ? "" : conf.feed_channel || "");
+    btn.disabled = true; $("#dcch-saved").textContent = "Saving…";
+    try {
+      const r = await S.B.discordChannels({ feed: feedChanged ? feed : null, events, tz, announce: feedChanged && !!feed });
+      S.dc = { ...S.dc, ch: r, chMsg: r.warning || (feedChanged && feed ? "✓ Saved. The bot posted a hello in the feed channel." : "✓ Saved."), cfg: await S.B.discordConfig().catch(() => S.dc.cfg) };
+      renderAdmin();
+    } catch (x) { $("#dcch-saved").textContent = "Couldn't save: " + x.message; btn.disabled = false; }
   }
   else if (f.id === "dcform") {
     const hook = $("#dc-hook").value.trim(), s = $("#dc-saved");

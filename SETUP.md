@@ -103,4 +103,4 @@ The "Sign in with Discord" button appears on the site's sign-in box by itself on
 
 ## Discord feed channel
 
-Run `supabase-feed.sql` once (already done for the live site). Then in Discord, type `/feedchannel` in the channel that should get new market listings, Request Board jobs, guild news, guides, events and new members. The bot needs the **Manage Webhooks** permission for that (re-invite it from the Admin page, or give its role the permission). Choose what gets posted on the Admin page → Discord bot.
+Run `supabase-feed.sql` and `supabase-feed-bot.sql` once (already done for the live site). **No Discord admin needed:** a website admin can pick the feed and events channels on the Admin page → Discord bot → Channels, and the bot posts there itself. Discord admins can also type `/feedchannel` in the channel that should get new market listings, Request Board jobs, guild news, guides, events and new members. The bot needs the **Manage Webhooks** permission for that (re-invite it from the Admin page, or give its role the permission). Choose what gets posted on the Admin page → Discord bot.

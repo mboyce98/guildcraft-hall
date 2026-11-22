@@ -2,7 +2,7 @@
 // ?action=setup points Discord at the bot, installs the slash commands in each server the bot is in,
 // and links the bot to the guild's data. Only signed-in guild admins can use it.
 const { SUPABASE_URL, SUPABASE_PUBLISHABLE, json } = require("./_shared");
-const { dcfg, dataKeyHash, rpc, discordApi, COMMANDS } = require("./_discord");
+const { dcfg, dataKey, dataKeyHash, rpc, discordApi, COMMANDS } = require("./_discord");
 
 async function adminFrom(event) {
   const jwt = String(event.headers.authorization || "").replace(/^Bearer\s+/i, "");
@@ -43,6 +43,37 @@ exports.handler = async (event) => {
   let guilds = [];
   try { guilds = await discordApi(cfg, "GET", "/users/@me/guilds"); } catch {}
   out.servers = guilds.map((g) => ({ id: g.id, name: g.name }));
+
+  // Channels the bot can post in, so a website admin can pick the feed and events channels without being a Discord admin.
+  if (action === "channels" || action === "channels-save") {
+    const key = dataKey(cfg);
+    if (action === "channels-save") {
+      if (event.httpMethod !== "POST") return json(405, { error: "Use POST." });
+      let b = {}; try { b = JSON.parse(event.body || "{}"); } catch {}
+      const id = (v) => (v == null ? null : /^\d{5,25}$/.test(String(v)) ? String(v) : "");
+      try { await rpc("bot_set_channels", { p_key: key, p_feed: id(b.feed), p_events: id(b.events), p_tz: b.tz || null }); }
+      catch (e) { return json(200, { error: /Not allowed/.test(e.message) ? "Press “Set up slash commands” first so the bot is linked to the website." : e.message }); }
+      // Say hello in the new feed channel; this also checks the bot is allowed to post there.
+      if (b.feed && b.announce) {
+        try {
+          await discordApi(cfg, "POST", `/channels/${b.feed}/messages`, { allowed_mentions: { parse: [] }, embeds: [{ title: "This is now the guild feed", url: cfg.site + "/", color: 0xe3b55b,
+            description: "New **market listings**, **Request Board jobs**, **guild news**, **guides**, **events** and **new members** from the Bark and Stone website will be posted here." }] });
+        } catch (e) { out.warning = e.status === 403 ? "Saved, but the bot isn't allowed to post in that channel. Ask a Discord admin to let the Bark and Stone bot send messages there, or pick another channel." : "Saved, but the test post didn't go through: " + e.message; }
+      }
+    }
+    try { out.config = await rpc("bot_config", { p_key: key }); } catch { out.config = null; }
+    out.channels = [];
+    for (const g of out.servers.slice(0, 5)) {
+      try {
+        const list = await discordApi(cfg, "GET", `/guilds/${g.id}/channels`);
+        const cats = Object.fromEntries(list.filter((c) => c.type === 4).map((c) => [c.id, c.name]));
+        list.filter((c) => c.type === 0 || c.type === 5).sort((a, b) => (a.position - b.position))
+          .forEach((c) => out.channels.push({ id: c.id, name: c.name, group: cats[c.parent_id] || "", server: g.name }));
+      } catch {}
+    }
+    out.step = "ready";
+    return json(200, out);
+  }
 
   if (action === "setup") {
     if (event.httpMethod !== "POST") return json(405, { error: "Use POST." });
