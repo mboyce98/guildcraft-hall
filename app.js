@@ -909,7 +909,7 @@ function renderAdmin() {
         <li><code>/board</code> open jobs on the Request Board</li><li><code>/market</code> what's for sale or wanted</li>
         <li><code>/member</code> a member's rank, main character and crafting</li><li><code>/armory</code> a WoW Forever character's level, gear and professions</li>
         <li><code>/news</code> guild news · <code>/wownews</code> WoW Forever headlines · <code>/site</code> links to the website</li>
-        <li><code>/event</code> plan an event with sign-up buttons · <code>/events</code> what's coming up · <code>/eventchannel</code> where site events are posted · <code>/feedchannel</code> the channel for new market posts, jobs, news, guides and members</li></ul></details>
+        <li><code>/price</code> an item's picture, recent prices, trend and market listings · <code>/event</code> plan an event with sign-up buttons · <code>/events</code> what's coming up · <code>/eventchannel</code> where site events are posted · <code>/feedchannel</code> the channel for new market posts, jobs, news, guides and members</li></ul></details>
 
       <h3 class="sec">Channels</h3>
       ${(() => {

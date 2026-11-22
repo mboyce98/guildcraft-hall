@@ -2,6 +2,7 @@
 // so the bot needs no server of its own. Every reply must go back within 3 seconds.
 const { dcfg, dataKey, verify, rpc, discordApi } = require("./_discord");
 const { eventMessage, parseWhen, roster, TIMEZONES, KIND_ICON } = require("./_events");
+const { items, wowheadItem, priceEmbed } = require("./_prices");
 
 const GOLD = 0xe3b55b;
 const json = (body) => ({ statusCode: 200, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -68,6 +69,19 @@ async function command(cfg, it) {
         prof ? { name: "Professions", value: clip(prof, 1000) } : null,
         gear ? { name: "Best gear", value: clip(gear, 1000) } : null,
       ].filter(Boolean), footer: { text: "From Blizzard's Armory" } }] });
+  }
+
+  // ---- /price: an item's picture, reported prices and trend, and guild market listings ----
+  if (name === "price") {
+    const query = String(opt(it, "item") || "").trim().slice(0, 60);
+    if (!query) return oops("Which item? Try `/price item:Arcanite Bar`.");
+    const map = await withTimeout(items(cfg.site), 2000).catch(() => new Map());
+    const info = map.get(query.toLowerCase()) || null;
+    const [data, wh] = await Promise.all([
+      withTimeout(rpc("bot_prices", { p_key: dataKey(cfg), p_item: info ? info.name : query }), 2000),
+      info ? wowheadItem(info.id) : Promise.resolve(null),
+    ]);
+    return reply({ embeds: [priceEmbed({ query, info, wh, data, site: cfg.site })] });
   }
 
   // ---- /feedchannel: new market posts, board jobs, news, guides, events and members get posted in this channel ----
@@ -196,6 +210,18 @@ async function autocomplete(cfg, it) {
     } else if (it.data.name === "member") {
       const snap = await withTimeout(snapshot(cfg), 2200); const q = String(focused.value || "").toLowerCase();
       choices = snap.members.filter((m) => !q || memberLabel(m).toLowerCase().includes(q)).slice(0, 25).map((m) => ({ name: clip(memberLabel(m), 100), value: m.id }));
+    } else if (it.data.name === "price") {
+      // Items the guild has prices or listings for come first, then any item name in the game data.
+      const q = String(focused.value || "").trim().toLowerCase();
+      const [known, map] = await Promise.all([withTimeout(rpc("bot_prices", { p_key: dataKey(cfg), p_item: "" }), 1800).catch(() => []), withTimeout(items(cfg.site), 1800).catch(() => new Map())]);
+      const out = [], seen = new Set();
+      const add = (n) => { const k = n.toLowerCase(); if (!seen.has(k) && out.length < 25) { seen.add(k); out.push(n); } };
+      (known || []).filter((n) => !q || n.toLowerCase().includes(q)).forEach((n) => add(n));
+      if (q.length >= 2) {
+        for (const v of map.values()) if (v.name.toLowerCase().startsWith(q)) add(v.name);
+        for (const v of map.values()) if (v.name.toLowerCase().includes(q)) add(v.name);
+      }
+      choices = out.map((n) => ({ name: clip(n, 100), value: clip(n, 100) }));
     }
   } catch {}
   return json({ type: 8, data: { choices } });

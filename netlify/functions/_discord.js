@@ -51,6 +51,7 @@ const COMMANDS = [
   { name: "whocan", description: "Find guild members who can craft something", options: [{ type: 3, name: "recipe", description: "Recipe or item name", required: true, autocomplete: true }] },
   { name: "board", description: "Open jobs on the guild Request Board" },
   { name: "market", description: "What's for sale or wanted on the guild market", options: [{ type: 3, name: "item", description: "Only show this item", required: false }] },
+  { name: "price", description: "What an item sells for: picture, recent prices, trend and guild market listings", options: [{ type: 3, name: "item", description: "Item name, e.g. Arcanite Bar", required: true, autocomplete: true, max_length: 60 }] },
   { name: "member", description: "Look up a guild member", options: [{ type: 3, name: "name", description: "Username or character", required: true, autocomplete: true }] },
   { name: "armory", description: "Show a WoW Forever character's gear and level", options: [{ type: 3, name: "character", description: "Name and surname, e.g. Mason Nightwin", required: true }] },
   { name: "news", description: "Latest Bark and Stone guild news" },
