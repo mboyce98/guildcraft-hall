@@ -377,3 +377,49 @@ h3{margin:12px 0 6px}
 .music-dock.mini .md-ctrls{margin:0}
 .music-dock.mini.gone{display:none}
 @media (max-width:560px){ .music-dock{left:8px; right:8px; bottom:8px; width:auto} .music-dock.mini{right:auto} }
+
+/* ---------- Armory panel on profiles ---------- */
+.armory, .armory-empty{margin-top:18px}
+.arm-head{display:flex; gap:14px; align-items:center; margin-bottom:14px}
+.arm-head h2{margin:0}
+.arm-head .sub{color:var(--muted); font-size:.9rem}
+.arm-av{width:60px; height:60px; border-radius:8px; border:1px solid #6b5426; box-shadow:0 0 0 1px #000; object-fit:cover}
+.arm-ilvl{margin-left:auto; text-align:center; padding:6px 12px; border:1px solid #6b5426; border-radius:8px; background:var(--brass-soft)}
+.arm-ilvl strong{display:block; font-family:var(--f-display); font-size:1.6rem; color:var(--gold-hi); line-height:1}
+.arm-ilvl span{font-size:.7rem; color:var(--muted); text-transform:uppercase; letter-spacing:.08em}
+.cls-warrior{color:#c69b6d} .cls-paladin{color:#f48cba} .cls-hunter{color:#aad372} .cls-rogue{color:#fff468} .cls-priest{color:#fff}
+.cls-shaman{color:#0070dd} .cls-mage{color:#3fc7eb} .cls-warlock{color:#8788ee} .cls-druid{color:#ff7c0a}
+.arm-body{display:grid; grid-template-columns:1fr minmax(180px, 1.1fr) 1fr; grid-template-areas:"l r rr" "w w w"; gap:10px; align-items:stretch;
+  background:radial-gradient(ellipse at 50% 40%, rgb(227 181 91 / .12), transparent 65%), linear-gradient(180deg, rgb(0 0 0 / .25), rgb(0 0 0 / .45)); border:1px solid var(--line); border-radius:10px; padding:12px}
+.arm-body > .gear:nth-child(1){grid-area:l} .arm-body > .arm-render{grid-area:r} .arm-body > .gear:nth-child(3){grid-area:rr} .arm-body > .weapons{grid-area:w}
+.gear{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px}
+.gear .gs{display:flex; flex-direction:column; padding:5px 8px; border:1px solid rgb(107 84 38 / .5); border-radius:6px; background:rgb(10 12 18 / .7); min-height:42px; justify-content:center}
+.gear .gs.r{text-align:right; align-items:flex-end}
+.gear .gs a{font-weight:600; text-decoration:none; font-size:.88rem; line-height:1.25}
+.gear .gs .muted{font-size:.72rem; text-transform:capitalize}
+.gear .gs.empty{opacity:.45}
+.gear.weapons{flex-direction:row; justify-content:center; flex-wrap:wrap}
+.gear.weapons .gs{min-width:200px; text-align:center; align-items:center}
+.arm-render{display:flex; align-items:flex-end; justify-content:center; overflow:hidden; min-height:300px}
+.arm-render img{width:170%; max-width:none; margin:0 -35%; object-fit:contain; filter:drop-shadow(0 8px 18px rgb(0 0 0 / .7))}
+.arm-grid{display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:14px 22px; margin-top:16px}
+.arm-grid h3{font-family:var(--f-display); color:var(--gold-hi); margin:0 0 8px; font-size:1rem}
+.arm-stats{display:grid; grid-template-columns:1fr 1fr; gap:2px 14px; margin:0}
+.arm-stats div{display:flex; justify-content:space-between; border-bottom:1px dotted rgb(107 84 38 / .4); padding:3px 0}
+.arm-stats dt{color:var(--muted); font-size:.85rem} .arm-stats dd{margin:0; font-variant-numeric:tabular-nums}
+.talents{list-style:none; margin:6px 0 0; padding:0; columns:2; column-gap:14px; font-size:.85rem}
+.talents li{break-inside:avoid; padding:2px 0}
+.arm-profs, .arm-reps, .arm-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px}
+.arm-profs li, .arm-reps li{display:grid; grid-template-columns:1fr auto; gap:2px 8px; font-size:.9rem}
+.arm-list li{display:flex; justify-content:space-between; gap:8px; font-size:.9rem}
+.pbar{grid-column:1 / -1; height:6px; border-radius:3px; background:#2a2a33; border:1px solid #000; overflow:hidden}
+.pbar i{display:block; height:100%; background:linear-gradient(90deg, var(--gold-lo), var(--brass))}
+.arm-reps{max-height:320px; overflow:auto; margin-top:8px; padding-right:4px}
+.rep{font-size:.8rem} .rep-0,.rep-1,.rep-2{color:var(--bad)} .rep-3{color:var(--sk-y)} .rep-4,.rep-5,.rep-6,.rep-7{color:var(--ok)}
+.arm-foot{font-size:.8rem; margin:14px 0 0}
+@media (max-width:760px){
+  .arm-body{grid-template-columns:1fr 1fr; grid-template-areas:"r r" "l rr" "w w"}
+  .arm-render{min-height:240px} .arm-render img{width:100%; margin:0}
+  .gear .gs.r{text-align:left; align-items:flex-start}
+  .talents{columns:1}
+}

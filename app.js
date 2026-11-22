@@ -648,7 +648,8 @@ function renderProfile() {
       : `<p class="muted" style="margin:0 0 10px">Link your Battle.net account on <a href="#mine">My crafter</a> to fill this in from your WoW character.</p>`}
       <form class="form" id="profform" style="margin:0">
         <div class="row"><label for="pr-char">Main character</label><input type="text" id="pr-char" maxlength="24" value="${esc(p.mainChar || "")}"></div>
-        <div class="row"><label for="pr-realm">Realm</label><input type="text" id="pr-realm" maxlength="40" value="${esc(p.mainRealm || "")}"></div>
+        <div class="row"><label for="pr-realm">Surname</label><input type="text" id="pr-realm" maxlength="40" value="${esc(p.mainRealm || "")}" placeholder="Your WoW Forever surname, e.g. Nightwin"></div>
+        <div class="row"><label for="pr-armory">Armory link</label><input type="url" id="pr-armory" placeholder="Paste your Armory link to fill name and surname"></div>
         <div class="row"><label for="pr-class">Class</label><select id="pr-class"><option value="">—</option>${CLASSES.map((c) => `<option ${p.mainClass === c ? "selected" : ""}>${c}</option>`).join("")}</select></div>
         <div class="row"><label for="pr-level">Level</label><input type="number" id="pr-level" min="0" max="80" value="${p.mainLevel || ""}"></div>
         <div class="row"><label for="pr-faction">Faction</label><select id="pr-faction"><option value="">—</option>${["Alliance", "Horde"].map((f) => `<option ${p.faction === f ? "selected" : ""}>${f}</option>`).join("")}</select></div>
@@ -662,8 +663,73 @@ function renderProfile() {
   root.innerHTML = `
     <div class="map-head"><p class="eyebrow">Bark and Stone · Members</p><h2 class="hero-title">${mine ? "Your profile" : esc(p.username || "Member")}</h2></div>
     <div class="cols prof-cols">${details}${editor || `<div class="card"><h2>Ask them for something</h2><p class="muted">Find a recipe they know on <a href="#recipes">Recipes</a> and press Request, or post on the <a href="#board">Request Board</a> for anyone to pick up.</p></div>`}</div>
+    ${armoryCard(uid, mine)}
     <h3 class="sec" style="margin-top:22px">Guild members (${Object.keys(S.profiles).length})</h3>
     <div class="members">${(mine ? others : [S.uid, ...others.filter((x) => x !== S.uid)]).map((id) => memberCard(id)).join("") || '<p class="muted">You\'re the first one here.</p>'}</div>`;
+}
+
+/* ---------- Armory: the member's WoW Forever character, from Blizzard ---------- */
+const ARM = {};
+const armorySlug = (p) => (p.mainChar && p.mainRealm ? `${p.mainChar}-${p.mainRealm}`.trim().toLowerCase().replace(/\s+/g, "-") : "");
+const QUAL = { poor: 0, common: 1, uncommon: 2, rare: 3, epic: 4, legendary: 5, artifact: 5, heirloom: 5 };
+const GEAR_L = ["HEAD", "NECK", "SHOULDER", "BACK", "CHEST", "SHIRT", "TABARD", "WRIST"];
+const GEAR_R = ["HANDS", "WAIST", "LEGS", "FEET", "FINGER_1", "FINGER_2", "TRINKET_1", "TRINKET_2"];
+const GEAR_W = ["MAIN_HAND", "OFF_HAND", "RANGED"];
+function loadArmory(slug) {
+  if (ARM[slug]) return ARM[slug];
+  ARM[slug] = { state: "loading" };
+  fetch("/.netlify/functions/armory?c=" + encodeURIComponent(slug))
+    .then(async (r) => { const d = await r.json().catch(() => ({})); ARM[slug] = r.ok ? { state: "ok", d } : { state: "err", msg: d.error || "The Armory didn't answer." }; })
+    .catch(() => { ARM[slug] = { state: "err", msg: "The Armory only loads on the live site." }; })
+    .then(() => { if (S.view === "profile") { renderProfile(); refreshWowhead(); } });
+  return ARM[slug];
+}
+function armoryCard(uid, mine) {
+  const p = prof(uid); const slug = armorySlug(p);
+  if (!slug) return mine ? `<div class="card armory-empty"><h2>Your Armory</h2><p class="muted">Add your main character and their <strong>surname</strong> (or paste your Armory link) below, then save. Your gear, stats, talents and professions will show here for the guild.</p></div>` : "";
+  const a = loadArmory(slug);
+  if (a.state === "loading") return `<div class="card armory"><div class="empty"><strong>Opening the Armory…</strong></div></div>`;
+  if (a.state === "err") return `<div class="card armory"><h2>Armory</h2><p class="muted">${esc(a.msg)}</p>${mine ? `<p class="muted">Looking for <strong>${esc(slug)}</strong>. Check the name and surname on your profile match the game.</p>` : ""}</div>`;
+  const d = a.d; const bySlot = Object.fromEntries(d.gear.map((g) => [g.slot, g]));
+  const slot = (k, side) => { const g = bySlot[k]; if (!g) return `<li class="gs empty ${side}"><span class="muted">${esc(k.replace(/_\d/, "").replace("_", " ").toLowerCase())}</span></li>`;
+    return `<li class="gs ${side}"><a class="q${QUAL[g.q] ?? 1}" href="https://www.wowhead.com/forever/item=${g.id}" target="_blank" rel="noopener">${esc(g.name)}</a><span class="muted num">${g.ilvl ? "ilvl " + g.ilvl : ""}${g.enchant ? " · " + esc(g.enchant.replace(/^Enchanted: /, "")) : ""}</span></li>`; };
+  const s = d.stats || {};
+  const statRow = (l, v, suf = "") => (v || v === 0) && v !== null ? `<div><dt>${l}</dt><dd>${typeof v === "number" ? v.toLocaleString() : esc(v)}${suf}</dd></div>` : "";
+  const specLine = d.specs.length ? d.specs.map((x) => x.points).join(" / ") : "";
+  const topSpec = [...d.specs].sort((x, y) => y.points - x.points)[0];
+  const seen = d.lastLogin ? ago(d.lastLogin) : "";
+  return `<div class="card armory">
+    <div class="arm-head">
+      ${d.avatar ? `<img class="arm-av" src="${esc(d.avatar)}" alt="" width="60" height="60" loading="lazy">` : ""}
+      <div><h2>${esc(d.name)} ${esc(d.surname)}</h2>
+        <div class="sub">${d.title && d.title !== d.name ? esc(d.title) + " · " : ""}Level ${d.level} ${esc(d.race)} <span class="cls-${esc(d.cls.toLowerCase())}">${esc(d.cls)}</span>${topSpec && topSpec.points ? ` · ${esc(topSpec.name)}` : ""}</div>
+        <div class="sub">${d.guild ? `&lt;${esc(d.guild)}&gt; · ` : ""}${esc(d.faction)}${seen ? ` · last seen ${seen}` : ""}</div></div>
+      ${d.ilvl ? `<div class="arm-ilvl"><strong>${d.ilvl}</strong><span>item level</span></div>` : ""}
+    </div>
+    <div class="arm-body">
+      <ul class="gear">${GEAR_L.map((k) => slot(k, "l")).join("")}</ul>
+      <div class="arm-render">${d.render ? `<img src="${esc(d.render)}" alt="${esc(d.name)} in their current gear" loading="lazy">` : ""}</div>
+      <ul class="gear">${GEAR_R.map((k) => slot(k, "r")).join("")}</ul>
+      <ul class="gear weapons">${GEAR_W.filter((k) => bySlot[k]).map((k) => slot(k, "w")).join("")}</ul>
+    </div>
+    <div class="arm-grid">
+      ${d.stats ? `<section><h3>Stats</h3><dl class="arm-stats">
+        ${statRow("Health", s.health)}${statRow(s.powerType || "Power", s.power)}
+        ${statRow("Strength", s.strength)}${statRow("Agility", s.agility)}${statRow("Stamina", s.stamina)}${statRow("Intellect", s.intellect)}${statRow("Spirit", s.spirit)}
+        ${statRow("Armor", s.armor)}${statRow("Attack power", s.attackPower)}${s.spellPower ? statRow("Spell power", s.spellPower) : ""}
+        ${statRow("Crit", s.crit, "%")}${s.spellCrit && s.spellCrit !== s.crit ? statRow("Spell crit", s.spellCrit, "%") : ""}${statRow("Dodge", s.dodge, "%")}${s.parry ? statRow("Parry", s.parry, "%") : ""}${s.block ? statRow("Block", s.block, "%") : ""}
+      </dl></section>` : ""}
+      ${d.specs.length ? `<section><h3>Talents <span class="muted num">${specLine}</span></h3>${d.specs.map((x) => `<details class="dd"><summary>${esc(x.name)} <span class="muted num">${x.points} points</span></summary>
+        <ul class="talents">${x.talents.map((t) => `<li><a href="https://www.wowhead.com/forever/spell=${t.spell}" target="_blank" rel="noopener">${esc(t.name)}</a> <span class="muted num">${t.rank}</span></li>`).join("")}</ul></details>`).join("")}</section>` : ""}
+      ${d.professions.length ? `<section><h3>Professions</h3><ul class="arm-profs">${d.professions.map((x) => `<li><span>${esc(x.name)}</span><span class="num muted">${x.skill} / ${x.max}</span>
+        <span class="pbar"><i style="width:${x.max ? Math.round((x.skill / x.max) * 100) : 0}%"></i></span></li>`).join("")}</ul></section>` : ""}
+      ${d.pets.length ? `<section><h3>Hunter pets</h3><ul class="arm-list">${d.pets.map((x) => `<li><span>${esc(x.name)}${x.active ? ' <span class="tag">active</span>' : ""}</span><span class="muted">Level ${x.level} ${esc(x.creature)}</span></li>`).join("")}</ul></section>` : ""}
+      ${d.pvp ? `<section><h3>Player vs player</h3><dl class="arm-stats">${statRow("Honorable kills", d.pvp.kills)}${statRow("Rank", d.pvp.rank)}</dl></section>` : ""}
+      ${d.reputations.length ? `<section><h3>Reputation</h3><details class="dd"><summary>${d.reputations.length} factions</summary><ul class="arm-reps">${d.reputations.map((r) => `<li><span>${esc(r.name)}</span><span class="rep rep-${r.tier ?? 3}">${esc(r.standing)}</span>
+        <span class="pbar"><i style="width:${r.max ? Math.round((r.value / r.max) * 100) : 100}%"></i></span></li>`).join("")}</ul></details></section>` : ""}
+    </div>
+    <p class="muted arm-foot">From Blizzard's Armory, refreshed every half hour or so. <a href="${esc(d.armory)}" target="_blank" rel="noopener">See ${esc(d.name)} on the official Armory</a>.</p>
+  </div>`;
 }
 
 /* ---------- Public request board ---------- */
@@ -1019,7 +1085,7 @@ document.addEventListener("change", (e) => {
   else if (t.id === "pf-fill" && t.value !== "") {
     const c = ((S.bnet[S.uid] || {}).characters || [])[Number(t.value)]; if (!c) return;
     $("#pr-char").value = String(c.name || "").slice(0, 24);
-    $("#pr-realm").value = String(c.realm || "").slice(0, 40);
+    $("#pr-realm").value = String(c.surname || c.realm || "").slice(0, 40);
     if (CLASSES.includes(c.cls)) $("#pr-class").value = c.cls;
     $("#pr-level").value = c.level || "";
     if (c.faction === "Alliance" || c.faction === "Horde") $("#pr-faction").value = c.faction;
@@ -1035,6 +1101,16 @@ document.addEventListener("change", (e) => {
 
 document.addEventListener("input", (e) => {
   if (e.target.id === "mineq") { S.mineQ = e.target.value; S._focusMine = true; renderMine(); S._focusMine = false; }
+  if (e.target.id === "pr-armory") {
+    // .../forever/us/armory/character/mason-nightwin  ->  Mason, Nightwin
+    let v = e.target.value.trim(); try { v = decodeURIComponent(v); } catch {}
+    const m = v.match(/armory\/character\/([^/?#\s]+)/i) || v.match(/^([\p{L}]+-[\p{L}'-]+)$/u);
+    if (!m) return;
+    const cap = (w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase();
+    const [name, ...rest] = m[1].split("-"); const sur = rest.map(cap).join("-");
+    $("#pr-char").value = cap(name).slice(0, 24); $("#pr-realm").value = sur.slice(0, 40);
+    $("#pr-saved").textContent = `Filled in ${cap(name)} ${sur}. Press Save profile to keep it.`;
+  }
 });
 
 route();

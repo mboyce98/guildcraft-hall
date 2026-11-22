@@ -58,6 +58,7 @@ exports.handler = async (event) => {
           characters.push({
             name: c.name, realm: c.realm && c.realm.name, level: c.level,
             cls: c.playable_class && c.playable_class.name, faction: c.faction && c.faction.name, game: g.label,
+            surname: c.surname || "", slug: c.slug || "",
           });
         }
       }
