@@ -6,6 +6,15 @@ exports.handler = async (event) => {
   if (!cfg.clientId || !cfg.clientSecret || !cfg.secretKey) {
     return json(503, { error: "Battle.net linking isn't switched on yet. The site owner needs to finish the Battle.net steps in SETUP.md." });
   }
+  // ?check=1 shows the public client ID and whether the other settings are present (never their values).
+  if ((event.queryStringParameters || {}).check) {
+    return json(200, {
+      clientId: cfg.clientId, clientIdLooksRight: /^[0-9a-f]{32}$/.test(cfg.clientId),
+      hasClientSecret: cfg.clientSecret.length > 0, clientSecretLength: cfg.clientSecret.length,
+      hasSupabaseSecret: cfg.secretKey.length > 0, region: cfg.region,
+      redirectUri: cfg.site + "/.netlify/functions/bnet-callback",
+    });
+  }
   const token = String(event.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return json(401, { error: "Please sign in first." });
   const r = await fetch(SUPABASE_URL + "/auth/v1/user", { headers: { apikey: SUPABASE_PUBLISHABLE, Authorization: "Bearer " + token } });
