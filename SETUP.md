@@ -118,3 +118,15 @@ The addon lives in `addon/BarkAndStone/`, and a ready-to-install zip is at `down
 - **/bas ding** turns the automatic "Ding! Level N." guild message on or off. It's on by default. The addon also reminds you about the class trainer on even levels and tells you when a new dungeon opens up.
 - After changing the addon files, rebuild the zip:
   `Compress-Archive -Path addon\BarkAndStone -DestinationPath downloads\BarkAndStone.zip -Force`
+
+### Publishing the addon on CurseForge
+
+1. Sign in at curseforge.com, go to **Create a project** and pick **World of Warcraft → Addons**. Name it "Bark and Stone". Copy the summary and description from `addon/CURSEFORGE.md`, and upload `addon/logo.png` as the logo.
+2. Once the project is approved, note its **Project ID** (shown on the project page).
+3. First upload, by hand: on the project, go to **Files → Upload file**, choose `downloads/BarkAndStone.zip`, set the game version to **WoW Forever 1.60.1**, and paste `addon/CHANGELOG.md` as the changelog.
+4. Automatic uploads from then on:
+   - Make an API token at curseforge.com → account → **API tokens**.
+   - In GitHub, open the repo → **Settings → Secrets and variables → Actions**. Add the secret `CF_API_KEY` (the token) and the variable `CF_PROJECT_ID` (the Project ID).
+   - To release a new version: add it to `addon/CHANGELOG.md`, then push a tag, for example `git tag addon-v1.0.1` then `git push origin addon-v1.0.1`. The workflow `.github/workflows/addon-release.yml` builds the zip and uploads it.
+   - You can also run it by hand from the **Actions** tab.
+5. Add `## X-Curse-Project-ID: <id>` to both `.toc` files so the CurseForge app recognises installs.
