@@ -55,4 +55,4 @@ Blizzard's API may not list WoW Forever characters yet. If it doesn't, linking s
 
 ## Limits to know
 - Anyone with the link can create an account. Only signed-in members see crafters, requests and listings.
-- Supabase's built-in email sender allows only a few emails per hour. For a big guild, connect a free SMTP service such as Resend under **Authentication → Emails → SMTP Settings**.
+- **Email confirmation is off** (Authentication → Sign In / Providers → Confirm email), because Supabase's built-in sender only allows about 2 emails an hour. Members can sign in right after creating an account. Password-reset emails still use that small allowance; to raise it, connect a free SMTP service such as Resend under **Authentication → Emails → SMTP Settings**.
