@@ -4,11 +4,13 @@ const crypto = require("crypto");
 const SUPABASE_URL = "https://aclhzgtyucqxekzuahyx.supabase.co";
 const SUPABASE_PUBLISHABLE = "sb_publishable_wRsOqGd5oXzvIESdDEOewA_oceG9nd_";
 
+// Trim pasted values: a stray space or newline makes Blizzard reply "Bad client credentials".
+const v = (name) => String(process.env[name] || "").trim();
 const env = () => ({
-  clientId: process.env.BNET_CLIENT_ID,
-  clientSecret: process.env.BNET_CLIENT_SECRET,
-  secretKey: process.env.SUPABASE_SECRET_KEY,
-  region: (process.env.BNET_REGION || "us").toLowerCase(),
+  clientId: v("BNET_CLIENT_ID"),
+  clientSecret: v("BNET_CLIENT_SECRET"),
+  secretKey: v("SUPABASE_SECRET_KEY"),
+  region: (v("BNET_REGION") || "us").toLowerCase(),
   site: (process.env.URL || "https://guildcraft-hall.netlify.app").replace(/\/$/, ""),
 });
 
