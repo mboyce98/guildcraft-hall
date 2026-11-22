@@ -15,7 +15,7 @@ const FINISHED = new Set(["done", "declined", "cancelled"]);
 const S = {
   view: "recipes", q: "", prof: -1, hasCrafter: false, onlyNew: false, limit: 150, sel: null, reqFor: null,
   B: null, me: null, uid: null, loaded: false,
-  crafters: new Map(), requests: [], listings: [], profiles: {},
+  crafters: new Map(), requests: [], listings: [], profiles: {}, bnet: {},
   myDoc: null, pendingSave: false, editChar: lsGet("gc.editChar"), editProf: null, mineQ: "", saveState: "",
   reqTab: "open", mq: "", mtype: "", authTab: "in",
 };
@@ -57,6 +57,20 @@ function defaultChar() { const saved = lsGet("gc.char"); const mine = myChars();
   });
   await loadMe();
   await refresh();
+  // Coming back from Battle.net: say how it went, then tidy the address bar.
+  const bnetResult = new URLSearchParams(location.search).get("bnet");
+  if (bnetResult) {
+    const msgs = {
+      linked: "Battle.net linked. Your characters are listed on My crafter; add the ones you craft on.",
+      "linked-nochars": "Battle.net linked. Blizzard didn't list any WoW Forever characters for this account, so add your characters by hand.",
+      cancelled: "Battle.net linking was cancelled.",
+      expired: "That Battle.net link attempt expired. Try again.",
+      off: "Battle.net linking isn't switched on yet.",
+      failed: "Battle.net linking didn't work. Try again in a moment.",
+    };
+    note(msgs[bnetResult] || msgs.failed);
+    history.replaceState(null, "", location.pathname + (location.hash || "#mine"));
+  }
   setInterval(() => { if (S.uid && document.visibilityState === "visible") refresh(); }, 60000);
 })();
 
@@ -75,7 +89,7 @@ async function refresh() {
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
   try {
     const d = await S.B.loadAll();
-    S.profiles = d.profiles;
+    S.profiles = d.profiles; S.bnet = d.bnet || {};
     S.crafters = new Map(d.crafters.map((c) => [c.uid, c]));
     S.requests = d.requests; S.listings = d.listings;
     if (!S.pendingSave) { const mine = S.crafters.get(S.uid); S.myDoc = mine ? structuredClone({ chars: mine.chars, note: mine.note }) : (S.myDoc || null); }
@@ -196,7 +210,7 @@ function renderSheet() {
   else who = crafters.map((x, i) => {
     const mine = x.uid === S.uid; const un = userName(x.uid);
     return `<div class="crafter"><div><div class="nm">${esc(x.char)}${mine ? ' <span class="muted">(you)</span>' : ""}</div>
-      <div class="rl">${un ? esc(un) + " · " : ""}${esc(x.prof)} ${x.skill || ""}</div>${x.note ? `<div class="note">${esc(x.note)}</div>` : ""}</div>
+      <div class="rl">${un ? esc(un) + " · " : ""}${tagFor(x.uid) ? `<span class="bnet-tag small" title="Verified Battle.net account">✓ ${esc(tagFor(x.uid))}</span> · ` : ""}${esc(x.prof)} ${x.skill || ""}</div>${x.note ? `<div class="note">${esc(x.note)}</div>` : ""}</div>
       ${mine ? "" : `<button class="btn small primary" data-act="ask" data-i="${i}">Request</button>`}</div>
       ${S.reqFor && S.reqFor.uid === x.uid && S.reqFor.char === x.char ? requestForm() : ""}`;
   }).join("");
@@ -262,6 +276,7 @@ function renderMine() {
         return `<button class="list-btn" data-act="pick-char" data-char="${esc(c)}" aria-pressed="${c === S.editChar}"><span>${esc(c)}</span><span class="muted num">${n} recipes</span></button>`;
       }).join("") || `<p class="muted" style="margin:0 0 6px">Add the character that does your crafting.</p>`}</div>
       <form class="inline" id="addchar" style="margin-top:10px"><input type="text" id="newchar" maxlength="24" placeholder="Character name" aria-label="Character name"><button class="btn" type="submit">Add</button></form>
+      ${bnetCard()}
       <h3>Crafter note</h3>
       <textarea id="mynote" rows="3" maxlength="200" placeholder="e.g. Bring mats, free for guildies. Online most evenings.">${esc(doc.note || "")}</textarea>
       <p class="saved" id="saved">${esc(S.saveState)}</p>
@@ -298,6 +313,27 @@ function renderMine() {
   const nq = $("#mineq"); if (nq && S._focusMine) { nq.focus(); nq.setSelectionRange(nq.value.length, nq.value.length); }
 }
 
+function bnetCard() {
+  const link = S.bnet[S.uid];
+  if (!link) {
+    const onNetlify = /netlify\.app$/.test(location.hostname) || location.hostname === "localhost";
+    return `<h3>Battle.net</h3>
+      <p class="muted" style="margin:0 0 8px">Link your Battle.net account so guildmates see your verified BattleTag, and import your characters.</p>
+      ${onNetlify ? `<button class="btn primary" data-act="link-bnet">Link Battle.net account</button>`
+        : `<a class="btn primary" href="https://guildcraft-hall.netlify.app/#mine">Link on guildcraft-hall.netlify.app</a>`}`;
+  }
+  const mine = new Set(myChars().map((c) => c.toLowerCase()));
+  const chars = link.characters || [];
+  return `<h3>Battle.net</h3>
+    <div class="inline" style="justify-content:space-between"><span class="bnet-tag">✓ ${esc(link.battletag || "Linked")}</span><button class="btn small danger" data-act="unlink-bnet">Unlink</button></div>
+    ${chars.length ? `<div class="bnet-chars">${chars.slice(0, 30).map((c, i) => `
+      <div class="bnet-char"><div><strong>${esc(c.name)}</strong> <span class="muted">${esc(c.realm || "")}</span>
+        <div class="muted" style="font-size:.78rem">${c.level ? "Level " + c.level + " " : ""}${esc(c.cls || "")}${c.game ? " · " + esc(c.game) : ""}</div></div>
+        ${mine.has(String(c.name).toLowerCase()) ? '<span class="muted" style="font-size:.8rem">Added</span>' : `<button class="btn small" data-act="import-char" data-i="${i}">Add</button>`}</div>`).join("")}</div>`
+      : `<p class="muted" style="margin:6px 0 0;font-size:.84rem">Blizzard didn't list any characters for this account. Add your WoW Forever characters by hand above.</p>`}`;
+}
+const tagFor = (uid) => (S.bnet[uid] && S.bnet[uid].battletag) || "";
+
 /* ---------- Requests ---------- */
 function renderRequests() {
   const root = $("#view-requests");
@@ -317,7 +353,7 @@ function renderRequests() {
     const mats = rec && dir === "in" && r.status !== "done" ? `<div class="meta">Mats for ×${r.qty}: ${rec.mats.map((m) => `${esc(itemName(m[0]))} ×${m[1] * (r.qty || 1)}`).join(", ")}</div>` : "";
     return `<div class="req">
       <div><div class="what">${verb}: ${rec ? `<a class="q${rec.q}" href="#recipe-${rec.id}">${esc(rec.name)}</a>` : esc(r.label || "Item")} <span class="num">×${r.qty || 1}</span></div>
-        <div class="meta">${dir === "in" ? "From" : "To"} <strong>${esc(otherChar || "?")}</strong>${un ? ` (${esc(un)})` : ""}${dir === "out" && r.fromChar ? ` · for ${esc(r.fromChar)}` : ""}${dir === "in" && r.toChar ? ` · to ${esc(r.toChar)}` : ""} · ${ago(r.created)} · ${r.kind === "craft" ? "Tip" : "Price"} ${gold(r.tip)}</div>
+        <div class="meta">${dir === "in" ? "From" : "To"} <strong>${esc(otherChar || "?")}</strong>${un ? ` (${esc(un)}${tagFor(other) ? " · " + esc(tagFor(other)) : ""})` : ""}${dir === "out" && r.fromChar ? ` · for ${esc(r.fromChar)}` : ""}${dir === "in" && r.toChar ? ` · to ${esc(r.toChar)}` : ""} · ${ago(r.created)} · ${r.kind === "craft" ? "Tip" : "Price"} ${gold(r.tip)}</div>
         ${r.note ? `<div class="meta">“${esc(r.note)}”</div>` : ""}${mats}</div>
       <div class="acts"><span class="pill st-${esc(r.status)}">${esc(r.status)}</span>${acts.map((a) => `<button class="btn small ${a[2]}" data-act="req" data-id="${esc(r.id)}" data-st="${a[0]}">${a[1]}</button>`).join("")}</div>
     </div>`;
@@ -400,6 +436,18 @@ document.addEventListener("click", async (e) => {
   else if (act === "auth-tab") openAuth(t.dataset.t);
   else if (act === "auth-close") $("#auth").hidden = true;
   else if (act === "signout") { try { await S.B.signOut(); } catch {} await loadMe(); refresh(); }
+  else if (act === "link-bnet") { t.disabled = true; t.textContent = "Opening Battle.net…"; try { await S.B.linkBnet(); } catch (err) { note(err.message); t.disabled = false; t.textContent = "Link Battle.net account"; } }
+  else if (act === "unlink-bnet") {
+    if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "Click again to unlink"; return; }
+    try { await S.B.unlinkBnet(); delete S.bnet[S.uid]; renderMine(); } catch (err) { note("Couldn't unlink: " + err.message); }
+  }
+  else if (act === "import-char") {
+    const c = ((S.bnet[S.uid] || {}).characters || [])[Number(t.dataset.i)]; if (!c) return;
+    const d = ensureMyDoc(); const name = String(c.name).slice(0, 24);
+    if (!d.chars[name]) d.chars[name] = { profs: {}, realm: c.realm || "", level: c.level || 0, cls: c.cls || "" };
+    S.editChar = name; lsSet("gc.editChar", name); if (!lsGet("gc.char")) lsSet("gc.char", name);
+    queueSave(); renderMine();
+  }
   else if (act === "more") { S.limit += 300; renderRecipes(); }
   else if (act === "close-sheet") { S.sel = null; S.reqFor = null; history.replaceState(null, "", "#recipes"); renderRecipes(); }
   else if (act === "ask") { const x = $("#sheet")._crafters[Number(t.dataset.i)]; S.reqFor = { uid: x.uid, char: x.char }; renderSheet(); const f = $("#rf-char"); if (f) (f.value ? $("#rf-note") : f).focus(); }

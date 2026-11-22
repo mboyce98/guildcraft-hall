@@ -72,6 +72,8 @@ function demoDb() {
         listings: data.listings.map((l) => ({ ...l })),
       };
     },
+    async linkBnet() { throw new Error("Battle.net linking works once the site is connected to Supabase."); },
+    async unlinkBnet() {},
     async saveMine(doc) { const u = need(); data.crafters[u.id] = { chars: doc.chars, note: doc.note }; persist(); },
     async createRequest(o) { const u = need(); data.requests.push({ ...o, id: String(data.seq++), from: u.id, status: "pending", created: Date.now() }); persist(); },
     async setRequestStatus(id, status) { const r = data.requests.find((x) => x.id === id); if (r) { r.status = status; persist(); } },
@@ -134,16 +136,19 @@ async function supabaseDb() {
     async resetPassword(email) { ok(await sb.auth.resetPasswordForEmail(email, { redirectTo })); },
     async updatePassword(password) { ok(await sb.auth.updateUser({ password })); },
     async loadAll() {
-      const [profiles, crafters, requests, listings] = await Promise.all([
+      const [profiles, crafters, requests, listings, links] = await Promise.all([
         sb.from("profiles").select("id,username,is_admin"),
         sb.from("crafters").select("user_id,chars,note"),
         sb.from("requests").select("*").order("created_at", { ascending: false }).limit(500),
         sb.from("listings").select("*").order("created_at", { ascending: false }).limit(500),
+        sb.from("bnet_links").select("user_id,battletag,characters,linked_at"),
       ].map((p) => p.then(ok)));
-      const pmap = {};
+      const pmap = {}, bnet = {};
       profiles.forEach((p) => { pmap[p.id] = { username: p.username, isAdmin: p.is_admin }; });
+      links.forEach((l) => { bnet[l.user_id] = { battletag: l.battletag, characters: l.characters || [], linkedAt: Date.parse(l.linked_at) }; });
       return {
         profiles: pmap,
+        bnet,
         crafters: crafters.map((c) => ({ uid: c.user_id, chars: c.chars || {}, note: c.note || "" })),
         requests: requests.map((r) => ({
           id: String(r.id), kind: r.kind, recipeId: r.recipe_id, listingId: r.listing_id, label: r.label, qty: r.qty,
@@ -156,6 +161,18 @@ async function supabaseDb() {
         })),
       };
     },
+    // ---- Battle.net link (runs through the site's Netlify function, which holds the Blizzard secret) ----
+    async linkBnet() {
+      const { data } = await sb.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) throw new Error("Please sign in first.");
+      const r = await fetch("/.netlify/functions/bnet-start", { headers: { Authorization: "Bearer " + token } });
+      let body = {};
+      try { body = await r.json(); } catch {}
+      if (!r.ok || !body.url) throw new Error(body.error || "Battle.net linking isn't available right now.");
+      location.href = body.url;
+    },
+    async unlinkBnet() { const id = await need(); ok(await sb.from("bnet_links").delete().eq("user_id", id)); },
     async saveMine(doc) {
       const id = await need();
       ok(await sb.from("crafters").upsert({ user_id: id, chars: doc.chars, note: doc.note, updated_at: new Date().toISOString() }));
