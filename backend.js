@@ -222,7 +222,7 @@ async function supabaseDb() {
       const id = await need();
       const blob = await shrinkImage(file, 256);
       const path = `${id}/avatar-${Date.now()}.jpg`;
-      ok(await sb.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: true }));
+      ok(await sb.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: false }));
       const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
       ok(await sb.from("profiles").update({ avatar_url: url }).eq("id", id));
       return url;

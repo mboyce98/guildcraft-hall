@@ -47,3 +47,5 @@ create policy "avatar update own" on storage.objects for update to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
 create policy "avatar delete own" on storage.objects for delete to authenticated
   using (bucket_id = 'avatars' and (storage.foldername(name))[1] = auth.uid()::text);
+-- Uploads need to read the bucket too (Supabase checks for an existing file first).
+create policy "avatar read" on storage.objects for select to authenticated, anon using (bucket_id = 'avatars');
