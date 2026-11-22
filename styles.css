@@ -223,3 +223,44 @@ h3.sec{font-family:var(--f-display); font-size:1rem; letter-spacing:.04em; text-
 .final{font-weight:600; color:var(--brass)}
 @media (max-width: 760px){ .home-grid{grid-template-columns:minmax(0,1fr)} .who-holds{font-size:.8rem} }
 @media (max-width: 640px){ .top{position:static} .rule, .consequences{scroll-margin-top:12px} }
+
+/* ---------- World map ---------- */
+:root{ --ally:#2f6fb8; --horde:#b8342c; --contest:#8a7a55; --heat:#d9480f }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --ally:#4f8fdc; --horde:#e0574c; --contest:#a8996f; --heat:#ff8a3d } }
+:root[data-theme="dark"]{ --ally:#4f8fdc; --horde:#e0574c; --contest:#a8996f; --heat:#ff8a3d }
+.map-head{padding-block:22px 6px}
+.map-intro{max-width:70ch; margin:0}
+.map-layout{display:grid; grid-template-columns:minmax(0,1fr) 380px; gap:16px; align-items:start}
+.map-board{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px}
+.continent{margin:0; background:var(--panel); border:1px solid var(--line); border-radius:var(--r); padding:10px}
+.continent figcaption{font-family:var(--f-display); font-weight:700; letter-spacing:.04em; margin:2px 4px 6px}
+.continent svg{width:100%; height:auto; display:block}
+.z{cursor:pointer}
+.z rect{fill:var(--panel-2); stroke-width:.5; transition:fill .15s}
+.z.t0 rect{stroke:var(--ally)} .z.t1 rect{stroke:var(--horde)} .z.t2 rect, .z.t3 rect, .z.t4 rect{stroke:var(--contest)}
+.z.t0 rect{fill:color-mix(in oklab, var(--ally) 14%, var(--panel))}
+.z.t1 rect{fill:color-mix(in oklab, var(--horde) 14%, var(--panel))}
+.z:hover rect, .z:focus-visible rect{stroke-width:1; fill:var(--hover)}
+.z:focus{outline:none}
+.z.sel rect{stroke:var(--brass); stroke-width:1.2}
+.z.dim{opacity:.35}
+.z.hit rect{fill:var(--h); stroke:var(--heat); stroke-width:.8}
+.z text{text-anchor:middle; dominant-baseline:middle; fill:var(--ink); pointer-events:none}
+.z .zn{font-size:2.5px; font-weight:600}
+.z.city .zn{font-size:2.1px; font-weight:500}
+.z .zl{font-size:2.1px; fill:var(--muted)}
+.map-legend{font-size:.8rem; color:var(--muted); display:flex; flex-wrap:wrap; align-items:center; gap:4px 8px; margin:10px 0 0}
+.lg{display:inline-block; width:12px; height:12px; border-radius:3px; border:1.5px solid}
+.lg.t0{border-color:var(--ally); background:color-mix(in oklab, var(--ally) 14%, var(--panel))}
+.lg.t1{border-color:var(--horde); background:color-mix(in oklab, var(--horde) 14%, var(--panel))}
+.lg.t2{border-color:var(--contest); background:var(--panel-2)}
+.map-results{margin-bottom:10px}
+.map-picks{max-height:150px; overflow:auto}
+.map-tip{margin:0 0 4px}
+.linkish{background:none; border:0; padding:0; color:var(--info); cursor:pointer; text-decoration:underline; text-underline-offset:2px; font:inherit}
+.heat{width:100%; max-width:320px; height:auto; display:block; margin-top:4px; background:var(--panel-2); border-radius:6px}
+.heat .gl{stroke:var(--line); stroke-width:.3}
+.heat .gt{font-size:3.4px; fill:var(--muted); text-anchor:middle}
+.map-sheet{top:calc(env(safe-area-inset-top,0px) + 76px)}
+@media (max-width: 960px){ .map-layout{grid-template-columns:minmax(0,1fr)} }
+@media (max-width: 640px){ .map-board{grid-template-columns:minmax(0,1fr)} }

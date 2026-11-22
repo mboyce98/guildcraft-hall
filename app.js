@@ -124,7 +124,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "recipes", "mine", "requests", "market"];
+  const VIEWS = ["home", "rules", "map", "recipes", "mine", "requests", "market"];
   let view = "home";
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
   else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
@@ -149,12 +149,32 @@ function render() {
     const b = $("#req-badge"); b.textContent = open; b.hidden = !open;
     const a = document.activeElement;
     const typing = a && a.matches && a.matches("input[type=text],input[type=number],input[type=password],textarea") ? a : null;
-    if (S.view === "recipes") renderRecipes();
+    if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
+    else if (S.view === "recipes") renderRecipes();
     else if (S.view === "mine") { if (!(typing && typing.closest("#view-mine"))) renderMine(); }
     else if (S.view === "requests") renderRequests();
     else renderMarket();
   }, 0);
 }
+/* ---------- Hooks for the map page (map.js) ---------- */
+let ITEM_INDEX = null;
+window.GC_ITEMS = () => {
+  if (!DATA_OK) return null;
+  if (!ITEM_INDEX) {
+    const uses = {};
+    RECIPES.forEach((r) => r.mats.forEach(([id]) => { uses[id] = (uses[id] || 0) + 1; }));
+    const byName = {};
+    for (const [id, v] of Object.entries(ITEMS)) if (uses[id]) byName[v[0].toLowerCase()] = { name: v[0], uses: uses[id] };
+    ITEM_INDEX = { byName };
+  }
+  return ITEM_INDEX;
+};
+window.GC_SEARCH_RECIPES = (name) => {
+  S.q = name; S.prof = -1; S.limit = 150; S.sel = null;
+  location.hash = "#recipes";
+  setTimeout(() => { const box = $("#rq"); if (box) { box.value = name; renderRecipes(); } }, 0);
+};
+
 /* ---------- Home ---------- */
 function renderHome() {
   const act = $("#home-actions"); if (!act) return;

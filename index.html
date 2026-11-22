@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d9a441'/%3E%3Cpath d='M8 22l9-9 3 3-9 9zM15 9l4-4 8 8-4 4z' fill='%231b1306'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=7">
+<link rel="stylesheet" href="styles.css?v=8">
 </head>
 <body>
 <header class="top">
@@ -17,6 +17,7 @@
     <nav class="tabs" aria-label="Sections">
       <a href="#home" data-tab="home">Home</a>
       <a href="#rules" data-tab="rules">Rules</a>
+      <a href="#map" data-tab="map">Map</a>
       <a href="#recipes" data-tab="recipes">Recipes</a>
       <a href="#mine" data-tab="mine">My crafter</a>
       <a href="#requests" data-tab="requests">Requests <span class="badge" id="req-badge" hidden></span></a>
@@ -66,6 +67,7 @@
     </div>
 
     <div class="tiles">
+      <a class="tile" href="#map"><strong>World map</strong><span>Where herbs, ore and treasure chests are found.</span></a>
       <a class="tile" href="#recipes"><strong>Recipes</strong><span>Every WoW Forever recipe and who in the guild can craft it.</span></a>
       <a class="tile" href="#mine"><strong>My crafter</strong><span>Your characters, professions and known recipes.</span></a>
       <a class="tile" href="#requests"><strong>Requests</strong><span>Craft orders you've sent and received.</span></a>
@@ -134,11 +136,12 @@
     </div>
   </section>
 
+  <section id="view-map" hidden></section>
   <section id="view-recipes" hidden></section>
   <section id="view-mine" hidden></section>
   <section id="view-requests" hidden></section>
   <section id="view-market" hidden></section>
-  <p class="foot">Recipe data: Wowhead's WoW Forever database (2,215 craftable recipes across 9 professions). Recipe links open on Wowhead. Not affiliated with Blizzard Entertainment.</p>
+  <p class="foot">Recipe data: Wowhead's WoW Forever database (2,215 craftable recipes across 9 professions) and its herb, ore and chest locations. The world map is a schematic, not Blizzard artwork. Links open on Wowhead. Not affiliated with Blizzard Entertainment.</p>
 </main>
 
 <div class="modal" id="auth" hidden role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -169,6 +172,7 @@
 </div>
 
 <script src="backend.js?v=5"></script>
-<script src="app.js?v=6"></script>
+<script src="app.js?v=7"></script>
+<script src="map.js?v=2"></script>
 </body>
 </html>
