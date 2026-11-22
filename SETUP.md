@@ -117,7 +117,7 @@ The addon lives in `addon/BarkAndStone/`, and a ready-to-install zip is at `down
 - Recipes are saved each time a profession window is opened, so open each one once per character.
 - **/bas ding** turns the automatic "Ding! Level N." guild message on or off. It's on by default. The addon also reminds you about the class trainer on even levels and tells you when a new dungeon opens up.
 - After changing the addon files, rebuild the zip:
-  `powershell -ExecutionPolicy Bypass -File addonbuild-zip.ps1`
+  `powershell -ExecutionPolicy Bypass -File addon/build-zip.ps1`
 
 ### Publishing the addon on CurseForge
 
