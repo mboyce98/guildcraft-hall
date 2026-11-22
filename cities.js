@@ -27,7 +27,7 @@ let DATA = null, loading = null;
 const st = { city: "ironforge", cats: new Set(["class", "prof", "vendor", "service"]), q: "", sel: null };
 
 function load() {
-  if (!loading) loading = fetch("city-npcs.json?v=4").then((r) => r.json()).then((d) => {
+  if (!loading) loading = fetch("city-npcs.json?v=5").then((r) => r.json()).then((d) => {
     DATA = d;
     for (const c of Object.values(d.cities)) c.npcs.forEach((n) => { n.cat = category(n[2]); n.s = (n[1] + " " + n[2]).toLowerCase(); });
   });
