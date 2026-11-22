@@ -8,7 +8,22 @@ exports.handler = async (event) => {
   }
   // ?check=1 shows the public client ID and whether the other settings are present (never their values).
   if ((event.queryStringParameters || {}).check) {
+    // Test the secrets by using them (an app-only Blizzard token and a read from Supabase), reporting only pass/fail.
+    let blizzardSecretWorks = false, supabaseSecretWorks = false;
+    try {
+      const r = await fetch("https://oauth.battle.net/token", {
+        method: "POST",
+        headers: { Authorization: "Basic " + Buffer.from(`${cfg.clientId}:${cfg.clientSecret}`).toString("base64"), "content-type": "application/x-www-form-urlencoded" },
+        body: "grant_type=client_credentials",
+      });
+      blizzardSecretWorks = r.ok;
+    } catch {}
+    try {
+      const r = await fetch(SUPABASE_URL + "/rest/v1/bnet_links?select=user_id&limit=1", { headers: { apikey: cfg.secretKey } });
+      supabaseSecretWorks = r.ok;
+    } catch {}
     return json(200, {
+      blizzardSecretWorks, supabaseSecretWorks,
       clientId: cfg.clientId, clientIdLooksRight: /^[0-9a-f]{32}$/.test(cfg.clientId),
       hasClientSecret: cfg.clientSecret.length > 0, clientSecretLength: cfg.clientSecret.length,
       hasSupabaseSecret: cfg.secretKey.length > 0, region: cfg.region,
