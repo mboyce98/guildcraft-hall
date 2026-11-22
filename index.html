@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=4">
+<link rel="stylesheet" href="theme.css?v=6">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -23,11 +23,11 @@
       <a href="#home" data-tab="home">Home</a>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Guild</button>
-        <div class="navmenu"><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Chronicle</a><a href="#profile" data-tab="profile">Members</a></div>
+        <div class="navmenu"><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Lore</a><a href="#classes" data-tab="classes">Classes &amp; races</a><a href="#profile" data-tab="profile">Members</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">World</button>
-        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
+        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#cities" data-tab="cities">City guide</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Crafting <span class="badge" id="req-badge" hidden></span></button>
@@ -93,8 +93,8 @@
     </div>
 
     <div class="tiles groups">
-      <div class="tile"><strong>Guild</strong><span><a href="#rules">Rules</a> · <a href="#chronicle">Chronicle</a> · <a href="#profile">Members</a></span></div>
-      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#loot">Loot Vault</a></span></div>
+      <div class="tile"><strong>Guild</strong><span><a href="#rules">Rules</a> · <a href="#chronicle">Lore</a> · <a href="#classes">Classes</a> · <a href="#profile">Members</a></span></div>
+      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#cities">Cities</a> · <a href="#loot">Loot Vault</a></span></div>
       <div class="tile"><strong>Crafting</strong><span><a href="#recipes">Recipes</a> · <a href="#mine">My crafter</a> · <a href="#requests">Requests</a></span></div>
       <div class="tile"><strong>Trade</strong><span><a href="#board">Request Board</a> · <a href="#market">Market</a></span></div>
     </div>
@@ -162,6 +162,7 @@
   </section>
 
   <section id="view-map" hidden></section>
+  <section id="view-cities" hidden></section>
 
   <section id="view-chronicle" class="chronicle" hidden>
     <div class="page-head">
@@ -171,9 +172,7 @@
       <nav class="chron-nav" aria-label="Chronicle sections">
         <button class="chip" data-chron="ch-history">The history</button>
         <button class="chip" data-chron="ch-factions">The two factions</button>
-        <button class="chip" data-chron="ch-races">Races and racials</button>
-        <button class="chip" data-chron="ch-classes">Classes</button>
-        <button class="chip" data-chron="ch-matrix">Who can be what</button>
+        <a class="chip" href="#classes">Classes and races →</a>
       </nav>
     </div>
 
@@ -253,6 +252,21 @@
         <p>A coalition of outsiders who survived by standing together: the orcs of Durotar, the tauren of Mulgore, the Darkspear trolls and the Forsaken. Strength, freedom and a fierce loyalty to one another.</p>
         <p class="capitals">Capitals: Orgrimmar, Thunder Bluff, the Undercity</p>
       </div>
+    </div>
+
+    <p class="chron-next">Next: <a href="#classes">Classes and races</a>, with every racial trait and who can play what.</p>
+  </section>
+
+  <section id="view-classes" class="chronicle" hidden>
+    <div class="page-head">
+      <p class="eyebrow">Bark and Stone · Heroes of Azeroth</p>
+      <h2 class="hero-title">Classes and races</h2>
+      <p class="muted page-intro">Pick your hero: what each race brings, what each class does, and which races can play which class.</p>
+      <nav class="chron-nav" aria-label="Classes and races sections">
+        <button class="chip" data-chron="ch-races">Races and racials</button>
+        <button class="chip" data-chron="ch-classes">Classes</button>
+        <button class="chip" data-chron="ch-matrix">Who can be what</button>
+      </nav>
     </div>
 
     <!-- ===== Races ===== -->
@@ -419,8 +433,9 @@
 </div>
 
 <script src="backend.js?v=8"></script>
-<script src="app.js?v=15"></script>
+<script src="app.js?v=16"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
+<script src="cities.js?v=2"></script>
 </body>
 </html>

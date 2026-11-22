@@ -1,0 +1,19 @@
+{
+  "source": "Wowhead WoW Forever database, fetched 22 Nov 2026",
+  "cities": {
+    "ironforge": {
+      "name": "Ironforge",
+      "zone": 1537,
+      "image": "images/ironforge.webp",
+      "complete": false,
+      "npcs": [[5173,"Alexander Calder","Warlock Trainer",50.2,6.2,0],[2461,"Bailey Stonemantle","Banker",35.4,60.4,0],[6291,"Balthus Stoneflayer","Skinning Trainer",39.4,32.4,0],[5110,"Barim Jurgenstaad","Reagent Vendor",19.4,56.2,0],[2460,"Barnum Stonemantle","Banker",34.4,59,0],[5148,"Beldruk Doombrow","Paladin Trainer",24.4,5,0],[10090,"Belia Thundergranite","Pet Trainer",70,84.4,0],[5114,"Bilban Tosslespanner","Warrior Trainer",66.2,88.2,0],[7978,"Bimble Longberry","Fruit Vendor",20.2,23.6,0],[5152,"Bingus","Weapon Merchant",22.4,16.2,0],[5144,"Bink","Mage Trainer",26.4,9.4,0],[13084,"Bixi Wobblebonk","Weapon Master",61.4,87.4,0],[5128,"Bombus Finespindle","Leatherworking Supplies",39.2,32.8,0],[5142,"Braenna Flintcrag","Priest Trainer",24.4,9.2,0],[5149,"Brandur Ironhammer","Paladin Trainer",23.4,6.2,0],[5120,"Brenwyn Wintersteel","Blade Merchant",61.2,89,0],[5123,"Bretta Goldfury","Gun Merchant",72.2,65.8,0],[5172,"Briarthorn","Warlock Trainer",50.2,5.4,0],[5106,"Bromiir Ormsen","Heavy Armor Merchant",30.8,58.4,0],[5101,"Bryllia Ironbrand","General Goods Vendor",39,73.4,0],[14724,"Bubulo Acerbus","Alliance Cloth Quartermaster",73,47.4,0],[11865,"Buliwyf Stonehand","Weapon Master",61.4,89.2,0],[5163,"Burbik Gearspanner","Trade Supplier",46.4,27.2,0],[5115,"Daera Brightspear","Hunter Trainer",70,90.6,0],[5159,"Daryl Riknussun","Cooking Trainer",60,36.8,0],[7312,"Dink","Mage Trainer",26.2,9.2,0],[5125,"Dolkin Craghelm","Mail Armor Merchant",54,88.6,0],[5102,"Dolman Steelfury","Weapon Merchant",36,66,0],[857,"Donal Osgood","Arathi Basin Battlemaster",69.4,89.2,0],[258098,"Eldrun Stormbreaker","Shaman Trainer",47.4,13.4,1],[258548,"Ellie Stonebrow","Tailoring Recipes",43.4,27.4,1],[5160,"Emrul Riknussun","Cooking Supplier",58.8,37.2,0],[5167,"Fenthwick","Rogue Trainer",51.4,15,0]]
+    },
+    "stormwind": {
+      "name": "Stormwind City",
+      "zone": 1519,
+      "image": "images/stormwind.webp",
+      "complete": false,
+      "npcs": []
+    }
+  }
+}
