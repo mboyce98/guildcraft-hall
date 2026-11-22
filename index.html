@@ -3,18 +3,20 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>GuildCraft Hall</title>
-<meta name="description" content="Guild crafting hall for WoW Forever: every recipe, who in the guild can craft it, craft requests and a guild market.">
+<title>Bark and Stone</title>
+<meta name="description" content="Bark and Stone: an Australian, social-first WoW Forever guild. Guild rules, crafting hall, requests and market.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d9a441'/%3E%3Cpath d='M8 22l9-9 3 3-9 9zM15 9l4-4 8 8-4 4z' fill='%231b1306'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=4">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body>
 <header class="top">
   <div class="wrap">
-    <div class="brand"><h1>GuildCraft</h1><span>Guild crafting hall · WoW Forever</span></div>
+    <a class="brand" href="#home"><h1>Bark and Stone</h1><span>WoW Forever guild · GuildCraft</span></a>
     <nav class="tabs" aria-label="Sections">
+      <a href="#home" data-tab="home">Home</a>
+      <a href="#rules" data-tab="rules">Rules</a>
       <a href="#recipes" data-tab="recipes">Recipes</a>
       <a href="#mine" data-tab="mine">My crafter</a>
       <a href="#requests" data-tab="requests">Requests <span class="badge" id="req-badge" hidden></span></a>
@@ -27,7 +29,112 @@
 <main class="wrap">
   <div id="demo-note" class="notice demo" hidden><strong>Demo mode.</strong> Accounts and data are saved only in this browser until the site is connected to Supabase (see SETUP.md).</div>
   <div id="status-note" class="notice" hidden></div>
-  <section id="view-recipes"></section>
+  <section id="view-home" class="home">
+    <div class="hero">
+      <p class="eyebrow">WoW Forever · Australian based · Social first</p>
+      <h2 class="hero-title">Welcome to Bark and Stone</h2>
+      <p class="lede">We're an Australian based group looking to form an inclusive and friendly guild. Our goal is to foster a chill, supportive community that can get up to shenanigans and avoid toxicity (looking at you, trade chat). We do eventually want to work towards raids, but our priority is being a social guild first and foremost.</p>
+      <p class="pledge">As an inclusive guild, we accept all people regardless of background, identity and orientation.</p>
+      <div class="hero-actions" id="home-actions">
+        <a class="btn primary" href="#rules">Read the guild rules</a>
+      </div>
+    </div>
+
+    <div class="home-grid">
+      <div class="card">
+        <h3 class="sec">New here? Start with these</h3>
+        <ol class="steps">
+          <li><strong>Read the rules.</strong> Rule 1 is the one that really matters: respect your fellow Guildies.</li>
+          <li><strong>Create your account</strong> and link your Battle.net so guildmates can find your characters.</li>
+          <li><strong>List what you can craft</strong> on My crafter, so others can send you requests.</li>
+          <li><strong>Browse recipes and the market</strong> to find a crafter or a deal.</li>
+        </ol>
+        <div class="home-stats" id="home-stats"></div>
+      </div>
+
+      <div class="card">
+        <h3 class="sec">Guild titles</h3>
+        <ol class="ranks-list">
+          <li><span class="rank">Thane</span><span class="who-holds">Guildmaster</span></li>
+          <li><span class="rank">Archdruid</span><span class="who-holds">Apricots · co-guildmaster</span></li>
+          <li><span class="rank">Backburner</span><span class="who-holds">Enbi · officer</span></li>
+          <li><span class="rank">Officer</span><span class="who-holds">Officers · themed title to come</span></li>
+          <li><span class="rank">Clansfolk</span><span class="who-holds">Standard members</span></li>
+          <li><span class="rank">Initiate</span><span class="who-holds">New members, not yet vetted</span></li>
+        </ol>
+      </div>
+    </div>
+
+    <div class="tiles">
+      <a class="tile" href="#recipes"><strong>Recipes</strong><span>Every WoW Forever recipe and who in the guild can craft it.</span></a>
+      <a class="tile" href="#mine"><strong>My crafter</strong><span>Your characters, professions and known recipes.</span></a>
+      <a class="tile" href="#requests"><strong>Requests</strong><span>Craft orders you've sent and received.</span></a>
+      <a class="tile" href="#market"><strong>Market</strong><span>Buy, sell and ask for items within the guild.</span></a>
+    </div>
+  </section>
+
+  <section id="view-rules" class="rules" hidden>
+    <div class="rules-head">
+      <p class="eyebrow">Bark and Stone</p>
+      <h2 class="hero-title">Guild rules</h2>
+      <p class="lede">This is a whole lotta text, and you don't need to memorise everything (aside from Rule 1, really don't break that one). If you feel like something could be an issue, this is your first point of contact. Otherwise, feel free to ask the Guildmaster for clarification.</p>
+    </div>
+
+    <ol class="rule-list">
+      <li class="rule key" id="rule-1">
+        <h3><span class="rule-n">1</span>Respect your fellow Guildies</h3>
+        <p>It doesn't matter if you're an officer or a member: we're all equal, and treating others disrespectfully will not be tolerated. Playful banter is one thing, but respecting others' boundaries is even more important.</p>
+        <p>This includes racism, sexism and general bigotry (homophobia, transphobia, etc.). That behaviour will not be tolerated and will get you swiftly kicked from the guild.</p>
+      </li>
+      <li class="rule" id="rule-2">
+        <h3><span class="rule-n">2</span>Keep guild chat family friendly-ish</h3>
+        <p>NSFW topics are not to be explicitly talked about in guild chats. Imagine the guild is rated M for mature: if a topic would be more at home in an MA or R rated film or game, it's probably best not to talk about it here.</p>
+        <p>This ties into Rule 1. If someone is made uncomfortable in chat by a topic, please respect that. You're more than welcome to talk about whatever you like in your DMs.</p>
+        <p class="aside">Where exactly to draw this line is still being worked out, and this rule will be updated as time goes on.</p>
+      </li>
+      <li class="rule" id="rule-3">
+        <h3><span class="rule-n">3</span>Casual and social, but respect organised events</h3>
+        <p>This is a casual, social guild. Nobody is forced to take part in any content, keep to any schedule, or be active for any amount of time to stay in the guild.</p>
+        <p>That said, if you agree to a raid or similar organised event that takes effort from Guildies, please be respectful of that effort: pay attention to the organisers and keep your attendance up to date. It's totally understandable if you can no longer make it, for whatever reason. Just try to say so quickly, so adjustments can be made if needed :)</p>
+      </li>
+      <li class="rule" id="rule-4">
+        <h3><span class="rule-n">4</span>The Guild Bank</h3>
+        <p>Once the guild bank is open, it's free real estate for Clansfolk and up. A few things to keep in mind:</p>
+        <ul>
+          <li><strong>Only take what you need.</strong> Please don't empty out the bank. Use it for gear upgrades, your professions or quests, not to get rich.</li>
+          <li>We don't assume anyone is up to mischief, so the odd stack here or there is no issue (especially for weird quests or recipes). If you're repeatedly taking excessive amounts of things that aren't for your class or professions, you might get a check-in.</li>
+          <li>Don't stress too much about it. As long as you're mindful of other Guildies there will be no issues, and feel free to ask first if you're unsure.</li>
+          <li><strong>Only deposit what you're happy to give to anyone.</strong> Once it's in the bank, any member can take it (following the rule above). If you'd rather an item go to someone specific, trade or mail it to them directly to save any confusion.</li>
+        </ul>
+      </li>
+      <li class="rule" id="rule-5">
+        <h3><span class="rule-n">5</span>Loot</h3>
+        <p>For the most part we follow the standard Need or Greed rolls:</p>
+        <dl class="loot">
+          <div><dt>Need</dt><dd>An upgrade for the character you're currently playing.</dd></div>
+          <div><dt>Greed</dt><dd>For an alt, gold or a profession (e.g. enchanting).</dd></div>
+        </dl>
+        <p>If rolling isn't enough to settle it, the preference order is:</p>
+        <ol class="pref">
+          <li>The organiser (raid leader, or whoever put the party or event together)</li>
+          <li>Lower level or less geared members</li>
+          <li>Already better geared members</li>
+        </ol>
+        <p>That order only applies when rolling doesn't settle it. What you do with loot you rolled for is up to you, as long as you picked Need or Greed honestly. For example, if you needed an item that was an upgrade for your warlock but then gave it to a lower level mage who needed it more, that's totally fine. Just don't Need roll explicitly on behalf of other people.</p>
+      </li>
+    </ol>
+
+    <div class="card consequences" id="consequences">
+      <h3 class="sec">Consequences</h3>
+      <p>If it gets to the point where a member of leadership has to step in, the standard consequence is a <strong>warning</strong>, followed by being <strong>kicked</strong>. Depending on severity, other outcomes include an informal reminder about the rules, demotion, or probation.</p>
+      <p>If you've been warned, demoted or put on probation and repeat the same or a similar offence, you'll be kicked from the guild. The consequence is at leadership's discretion, but if you feel you've been treated unfairly you can appeal to the Guildmaster. No appeal will be seriously considered if you've clearly broken Rule 1.</p>
+      <h3 class="sec">Probation</h3>
+      <p>Probation is a role for someone leadership has reason to keep a closer eye on. It doesn't mean they have done anything or will, so treat them with the same respect as every other member. If they break the rules while on probation, less leniency will be given. Otherwise they have the same rights and powers as every other Clansfolk. It probably won't be used often, if at all; we're not in the name-and-shame business, but it's an option.</p>
+      <p class="final">Warnings and then kicks are the go-to for rule violations. Nobody is above these rules, even the Guildmaster!</p>
+    </div>
+  </section>
+
+  <section id="view-recipes" hidden></section>
   <section id="view-mine" hidden></section>
   <section id="view-requests" hidden></section>
   <section id="view-market" hidden></section>
@@ -62,6 +169,6 @@
 </div>
 
 <script src="backend.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

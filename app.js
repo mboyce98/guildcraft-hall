@@ -124,12 +124,17 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  let view = "recipes";
-  if (/^recipe-\d+$/.test(h)) S.sel = Number(h.slice(7));
-  else if (["recipes", "mine", "requests", "market"].includes(h)) view = h;
+  const VIEWS = ["home", "rules", "recipes", "mine", "requests", "market"];
+  let view = "home";
+  if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
+  else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
+  else if (VIEWS.includes(h)) view = h;
+  const changed = S.view !== view;
   S.view = view;
   document.querySelectorAll("nav.tabs a").forEach((a) => a.setAttribute("aria-current", a.dataset.tab === view ? "page" : "false"));
-  ["recipes", "mine", "requests", "market"].forEach((v) => ($("#view-" + v).hidden = v !== view));
+  VIEWS.forEach((v) => ($("#view-" + v).hidden = v !== view));
+  if (view === "rules" && h !== "rules") { const el = document.getElementById(h); if (el) el.scrollIntoView(); }
+  else if (changed) window.scrollTo(0, 0);
   render();
 }
 window.addEventListener("hashchange", route);
@@ -138,6 +143,7 @@ function render() {
   if (renderQueued) return; renderQueued = true;
   setTimeout(() => {
     renderQueued = false;
+    renderHome();
     if (!DATA_OK) { $("#view-recipes").innerHTML = `<div class="empty"><strong>Loading 2,215 recipes…</strong></div>`; return; }
     const open = S.requests.filter((r) => r.to === S.uid && r.status === "pending").length;
     const b = $("#req-badge"); b.textContent = open; b.hidden = !open;
@@ -149,6 +155,23 @@ function render() {
     else renderMarket();
   }, 0);
 }
+/* ---------- Home ---------- */
+function renderHome() {
+  const act = $("#home-actions"); if (!act) return;
+  act.innerHTML = `<a class="btn primary" href="#rules">Read the guild rules</a>` + (S.uid
+    ? `<a class="btn" href="#mine">Go to my crafter</a>`
+    : `<button class="btn" data-act="signup">Create your account</button><button class="btn" data-act="signin">Sign in</button>`);
+  const st = $("#home-stats");
+  if (!S.uid) { st.innerHTML = ""; return; }
+  const crafters = [...S.crafters.values()].filter((c) => Object.keys(c.chars || {}).length).length;
+  let known = 0; INDEX.forEach(() => known++);
+  const listings = S.listings.length;
+  const open = S.requests.filter((r) => r.to === S.uid && r.status === "pending").length;
+  const stat = (n, label) => `<div><span class="num">${fmt(n)}</span><span>${label}</span></div>`;
+  st.innerHTML = stat(crafters, crafters === 1 ? "crafter listed" : "crafters listed") + stat(known, "recipes covered")
+    + stat(listings, listings === 1 ? "market listing" : "market listings") + stat(open, open === 1 ? "request for you" : "requests for you");
+}
+
 const signInPrompt = (what) => `<div class="card empty"><strong>Sign in to ${what}.</strong>Guild members share recipes, requests and listings once they're signed in.<div style="margin-top:12px"><button class="btn primary" data-act="signin">Sign in or create an account</button></div></div>`;
 
 /* ---------- Recipes ---------- */
@@ -440,6 +463,7 @@ document.addEventListener("click", async (e) => {
   if (t.dataset.prof !== undefined && !t.dataset.act) { S.prof = Number(t.dataset.prof); S.limit = 150; renderRecipes(); return; }
   const act = t.dataset.act;
   if (act === "signin") openAuth("in");
+  else if (act === "signup") openAuth("up");
   else if (act === "auth-tab") openAuth(t.dataset.t);
   else if (act === "auth-close") $("#auth").hidden = true;
   else if (act === "signout") { try { await S.B.signOut(); } catch {} await loadMe(); refresh(); }
