@@ -122,6 +122,21 @@ function demoDb() {
     async createNews(o) { const u = need(); (data.news = data.news || []).push({ ...o, pinned: !!o.pinned, id: String(data.seq++), author: u.id, t: Date.now() }); persist(); },
     async updateNews(id, f) { const n = (data.news || []).find((x) => x.id === id); if (n) { Object.assign(n, f); persist(); } },
     async deleteNews(id) { data.news = (data.news || []).filter((x) => x.id !== id); persist(); },
+    // ---- Guides and prices (demo copy keeps them in this browser) ----
+    async loadGuides() {
+      if (!data.guides) {
+        data.guides = [{ id: String(data.seq++), title: "Copper and Tin: Elwynn, Westfall and Redridge loop", category: "Gathering", zone: "Elwynn Forest, Westfall", lmin: 1, lmax: 25, body: "A starter mining run.\n\n## Route\n1. Start at Goldshire and loop the hills east.\n2. Ride into Westfall and circle the **Jangolode Mine**.\n\n## Tips\n- Smelt as you go.", author: null, t: Date.now() - 86400000, u: Date.now() - 86400000 }];
+        const d = 86400000, now = Date.now(), pts = [["Arcanite Bar", [9, 10, 11, 12.5, 12]], ["Black Lotus", [14, 13, 12.75]], ["Runecloth", [0.15, 0.18, 0.2, 0.22]], ["Linen Cloth", [0.0125, 0.012]]];
+        data.prices = []; pts.forEach(([item, vals]) => vals.forEach((v, i) => data.prices.push({ id: String(data.seq++), item, price: v, source: i % 2 ? "Auction house" : "Trade chat", by: null, t: now - (vals.length - i) * 3 * d })));
+      }
+      return data.guides.map((g) => ({ ...g }));
+    },
+    async saveGuide(o) { const u = need(); if (o.id) { const g = data.guides.find((x) => x.id === o.id); Object.assign(g, o, { u: Date.now() }); } else data.guides.push({ ...o, id: String(data.seq++), author: u.id, t: Date.now(), u: Date.now() }); persist(); },
+    async deleteGuide(id) { data.guides = data.guides.filter((x) => x.id !== id); persist(); },
+    async loadPrices() { return (data.prices || []).map((p) => ({ ...p })); },
+    async reportPrice(o) { const u = need(); (data.prices = data.prices || []).push({ ...o, id: String(data.seq++), by: u.id, t: Date.now() }); persist(); },
+    async deletePrice(id) { data.prices = (data.prices || []).filter((x) => x.id !== id); persist(); },
+    async accessToken() { return null; },
     async saveSetting(key, value) { (data.settings = data.settings || {})[key] = value; persist(); },
     async adminSetMember(id, f) { const u = data.users.find((x) => x.id === id); if (u) { u.profile = { ...(u.profile || {}), ...("rank" in f ? { rank: f.rank } : {}) }; if ("isAdmin" in f) u.isAdmin = !!f.isAdmin; persist(); } },
     async createPost(o) { const u = need(); (data.board = data.board || []).push({ ...o, id: String(data.seq++), author: u.id, status: "open", created: Date.now(), updated: Date.now() }); persist(); },
@@ -256,6 +271,25 @@ async function supabaseDb() {
     async createNews(o) { await need(); ok(await sb.from("guild_news").insert({ title: o.title, body: o.body, tag: o.tag, pinned: !!o.pinned })); },
     async updateNews(id, f) { ok(await sb.from("guild_news").update(f).eq("id", Number(id))); },
     async deleteNews(id) { ok(await sb.from("guild_news").delete().eq("id", Number(id))); },
+    // ---- Guides (anyone reads; members write their own) and reported prices ----
+    async loadGuides() {
+      const r = await sb.from("guides").select("*").order("updated_at", { ascending: false }).limit(300);
+      return r.error ? [] : r.data.map((g) => ({ id: String(g.id), title: g.title, category: g.category, zone: g.zone, lmin: g.level_min, lmax: g.level_max, body: g.body, author: g.author_id, t: Date.parse(g.created_at), u: Date.parse(g.updated_at) }));
+    },
+    async saveGuide(o) {
+      await need();
+      const row = { title: o.title, category: o.category, zone: o.zone || "", level_min: o.lmin || null, level_max: o.lmax || null, body: o.body };
+      ok(o.id ? await sb.from("guides").update(row).eq("id", Number(o.id)) : await sb.from("guides").insert(row));
+    },
+    async deleteGuide(id) { ok(await sb.from("guides").delete().eq("id", Number(id))); },
+    async loadPrices() {
+      const since = new Date(Date.now() - 90 * 86400000).toISOString();
+      const r = await sb.from("price_points").select("*").gte("created_at", since).order("created_at", { ascending: false }).limit(5000);
+      return r.error ? [] : r.data.map((p) => ({ id: String(p.id), item: p.item, price: Number(p.price), source: p.source, by: p.reporter_id, t: Date.parse(p.created_at) }));
+    },
+    async reportPrice(o) { await need(); ok(await sb.from("price_points").insert({ item: o.item, price: o.price, source: o.source })); },
+    async deletePrice(id) { ok(await sb.from("price_points").delete().eq("id", Number(id))); },
+    async accessToken() { const { data } = await sb.auth.getSession(); return data.session?.access_token || null; },
     // ---- Site settings (anyone can read; admins write) ----
     async loadSettings() { const r = await sb.from("site_settings").select("key,value"); return r.error ? {} : Object.fromEntries(r.data.map((x) => [x.key, x.value])); },
     async saveSetting(key, value) { await need(); ok(await sb.from("site_settings").upsert({ key, value, updated_at: new Date().toISOString() })); },

@@ -71,3 +71,13 @@ The button appears in the sign-in box automatically once it's on.
 ## Limits to know
 - Anyone with the link can create an account. Only signed-in members see crafters, requests and listings.
 - **Email confirmation is off** (Authentication → Sign In / Providers → Confirm email), because Supabase's built-in sender only allows about 2 emails an hour. Members can sign in right after creating an account. Password-reset emails still use that small allowance; to raise it, connect a free SMTP service such as Resend under **Authentication → Emails → SMTP Settings**.
+
+## Guild helper (AI chat)
+
+The Ask button on every page uses Claude through `netlify/functions/ai-chat.mjs`.
+
+1. Create an API key at https://platform.claude.com (Settings, API keys) and add billing credit.
+2. In Netlify: Site configuration, Environment variables, add `ANTHROPIC_API_KEY` with that key. Then redeploy.
+3. Run `supabase-guides.sql` in Supabase once (guides, price reports and the 30-questions-a-day limit).
+
+Only signed-in members can ask. Each member gets 30 questions a day.

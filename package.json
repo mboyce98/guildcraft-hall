@@ -1,0 +1,8 @@
+{
+  "name": "guildcraft-hall",
+  "private": true,
+  "description": "Bark and Stone guild site. Static pages plus Netlify functions.",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.12.0"
+  }
+}

@@ -133,6 +133,7 @@ function queueRefresh(now) { clearTimeout(refreshTimer); refreshTimer = setTimeo
 async function refresh() {
   S.B.loadSettings().then((s) => { S.settings = s || {}; renderHome(); }).catch(() => {});
   S.B.loadNews().then((n) => { S.news = n || []; renderNews(); if (S.view === "admin" && S.adminTab === "news") renderAdmin(); }).catch(() => {});
+  if (S.view === "guides" || S.gLoaded) loadGuideData();
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
   try {
     const d = await S.B.loadAll();
@@ -166,13 +167,15 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
   else if (/^member-[0-9a-z_-]+$/i.test(h)) { S.viewUser = h.slice(7); view = "profile"; }
   else if (/^messages-[0-9a-z_-]+$/i.test(h)) { S.dmWith = h.slice(9); view = "messages"; }
   else if (h === "messages") { S.dmWith = null; view = "messages"; }
+  else if (/^guide-\d+$/.test(h)) { S.guideId = h.slice(6); S.gEdit = null; view = "guides"; }
+  else if (h === "guides" || h === "prices") { S.guideId = null; if (h === "prices") S.gTab = "prices"; view = "guides"; }
   else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
   else if (VIEWS.includes(h)) view = h;
   const changed = S.view !== view;
@@ -217,6 +220,7 @@ function render() {
     else if (S.view === "members") { if (!(typing && typing.closest("#view-members"))) renderMembers(); }
     else if (S.view === "messages") renderMessages();
     else if (S.view === "admin") { if (!(typing && typing.closest("#view-admin"))) renderAdmin(); }
+    else if (S.view === "guides") { if (!(typing && typing.closest("#view-guides"))) renderGuides(); }
     else if (S.view === "recipes") renderRecipes();
     else if (S.view === "mine") { if (!(typing && typing.closest("#view-mine"))) renderMine(); }
     else if (S.view === "requests") { if (!(typing && typing.closest("#view-requests"))) { renderRequests(); scrollChats(); } }
@@ -1482,6 +1486,216 @@ document.addEventListener("input", (e) => {
     $("#pr-saved").textContent = `Filled in ${cap(name)} ${sur}. Press Save profile to keep it.`;
   }
 });
+
+/* ---------- Guides: member-written guides plus market price trends ---------- */
+const G_CATS = { Gathering: "Gathering paths", Questing: "Questing", Dungeons: "Dungeons", Market: "Market & gold", Other: "Other" };
+const DAY = 86400000;
+Object.assign(S, { guides: [], prices: [], gLoaded: false, gTab: "all", guideId: null, gEdit: null, gq: "", pq: "", psort: "value", pOpen: null });
+async function loadGuideData() {
+  try { const [g, p] = await Promise.all([S.B.loadGuides(), S.B.loadPrices()]); S.guides = g || []; S.prices = p || []; S.gLoaded = true; }
+  catch (e) { S.gLoaded = true; }
+  if (S.view === "guides") renderGuides();
+}
+// Light formatting for guide text: "## Heading", "- bullet", "1. step", **bold**.
+function mdLite(text) {
+  const inline = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  let html = "", list = null, para = [];
+  const flushP = () => { if (para.length) { html += `<p>${para.map(inline).join("<br>")}</p>`; para = []; } };
+  const flushL = () => { if (list) { html += `<${list.t}>${list.items.map((i) => `<li>${inline(i)}</li>`).join("")}</${list.t}>`; list = null; } };
+  for (const raw of String(text || "").split(/\r?\n/)) {
+    const line = raw.trim(); let m;
+    if (!line) { flushP(); flushL(); }
+    else if ((m = line.match(/^#{1,3}\s+(.*)/))) { flushP(); flushL(); html += `<h3>${inline(m[1])}</h3>`; }
+    else if ((m = line.match(/^[-*•]\s+(.*)/)) || (m = line.match(/^\d+[.)]\s+(.*)/))) {
+      flushP(); const t = /^\d/.test(line) ? "ol" : "ul";
+      if (!list || list.t !== t) { flushL(); list = { t, items: [] }; }
+      list.items.push(m[1]);
+    } else { flushL(); para.push(line); }
+  }
+  flushP(); flushL(); return html;
+}
+const levelText = (g) => (g.lmin || g.lmax ? `Levels ${g.lmin || "?"}–${g.lmax || "?"}` : "");
+const canEditGuide = (g) => S.uid && (g.author === S.uid || (S.me && S.me.isAdmin));
+const excerpt = (body) => { const l = String(body || "").split(/\n/).map((x) => x.trim()).find((x) => x && !/^(#|[-*•]\s|\d+[.)]\s)/.test(x)) || ""; return l.length > 150 ? l.slice(0, 147).replace(/\s+\S*$/, "") + "…" : l; };
+
+// Price trends per item: typical (median) price this week, change against the week before, 30-day daily line.
+const median = (a) => { const s = [...a].sort((x, y) => x - y), m = s.length >> 1; return s.length ? (s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2) : 0; };
+function priceTable() {
+  const by = {}, now = Date.now();
+  for (const p of S.prices) { const k = String(p.item).trim().toLowerCase(); (by[k] = by[k] || { name: String(p.item).trim(), pts: [] }).pts.push(p); }
+  return Object.values(by).map((x) => {
+    x.pts.sort((a, b) => b.t - a.t);
+    const wk = x.pts.filter((p) => p.t > now - 7 * DAY).map((p) => p.price), prev = x.pts.filter((p) => p.t <= now - 7 * DAY && p.t > now - 14 * DAY).map((p) => p.price);
+    const m30 = x.pts.filter((p) => p.t > now - 30 * DAY).map((p) => p.price);
+    x.now = wk.length ? median(wk) : median(x.pts.slice(0, 5).map((p) => p.price));
+    x.fresh = wk.length > 0;
+    x.change = wk.length && prev.length ? median(wk) / median(prev) - 1 : null;
+    x.lo = m30.length ? Math.min(...m30) : null; x.hi = m30.length ? Math.max(...m30) : null;
+    const days = []; for (let d = 29; d >= 0; d--) { const v = x.pts.filter((p) => p.t > now - (d + 1) * DAY && p.t <= now - d * DAY).map((p) => p.price); if (v.length) days.push([29 - d, median(v)]); }
+    x.days = days; x.last = x.pts[0].t;
+    return x;
+  });
+}
+function sparkline(days) {
+  if (days.length < 2) return '<span class="muted spark-none">Not enough reports yet</span>';
+  const vs = days.map((d) => d[1]), lo = Math.min(...vs), hi = Math.max(...vs), W = 110, H = 28;
+  const pts = days.map(([x, v]) => `${(x / 29 * (W - 4) + 2).toFixed(1)},${(hi === lo ? H / 2 : H - 3 - (v - lo) / (hi - lo) * (H - 6)).toFixed(1)}`);
+  const up = vs[vs.length - 1] >= vs[0];
+  return `<svg class="spark ${up ? "up" : "down"}" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Price over the last 30 days, ${up ? "rising" : "falling"}"><polyline points="${pts.join(" ")}" fill="none" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${pts[pts.length - 1].split(",")[0]}" cy="${pts[pts.length - 1].split(",")[1]}" r="2.4"/></svg>`;
+}
+const changeTag = (c) => (c == null ? '<span class="muted">—</span>' : `<span class="chg ${c > 0.02 ? "up" : c < -0.02 ? "down" : "flat"}">${c > 0.02 ? "▲" : c < -0.02 ? "▼" : "■"} ${Math.abs(Math.round(c * 100))}%</span>`);
+
+function renderGuides() {
+  const root = $("#view-guides"); if (!root) return;
+  if (!S.gLoaded) { root.innerHTML = '<div class="empty"><strong>Loading guides…</strong></div>'; loadGuideData(); return; }
+  const head = `<div class="map-head board-head"><div><p class="eyebrow">Bark and Stone · Guides</p><h2 class="hero-title">Guild guides</h2>
+    <p class="muted map-intro">Gathering paths, questing routes and dungeon tips written by guildmates, plus what things are selling for in trade.</p></div>
+    ${S.uid ? '<button class="btn primary" data-act="g-new">Write a guide</button>' : '<button class="btn" data-act="signin">Sign in to write a guide</button>'}</div>`;
+  // Writing or editing.
+  if (S.gEdit) {
+    const g = S.gEdit === "new" ? { title: "", category: S.gTab in G_CATS ? S.gTab : "Gathering", zone: "", lmin: "", lmax: "", body: "" } : S.guides.find((x) => x.id === S.gEdit);
+    if (!g) { S.gEdit = null; return renderGuides(); }
+    root.innerHTML = head + `<form class="card form guide-form" id="guideform">
+      <h3 style="margin-top:0">${S.gEdit === "new" ? "Write a guide" : "Edit guide"}</h3>
+      <label for="gf-title">Title</label><input id="gf-title" maxlength="100" required value="${esc(g.title)}" placeholder="e.g. Thorium run through Un'Goro Crater">
+      <div class="gf-row">
+        <div><label for="gf-cat">Kind of guide</label><select id="gf-cat">${Object.entries(G_CATS).map(([k, l]) => `<option value="${k}" ${g.category === k ? "selected" : ""}>${l}</option>`).join("")}</select></div>
+        <div class="gf-zone"><label for="gf-zone">Zones <span class="muted">(optional)</span></label><input id="gf-zone" maxlength="60" value="${esc(g.zone)}" placeholder="e.g. Un'Goro Crater, Silithus"></div>
+        <div><label for="gf-lmin">Levels <span class="muted">(optional)</span></label><span class="gf-lv"><input id="gf-lmin" type="number" min="1" max="60" value="${esc(g.lmin || "")}" aria-label="From level"> to <input id="gf-lmax" type="number" min="1" max="60" value="${esc(g.lmax || "")}" aria-label="To level"></span></div>
+      </div>
+      <label for="gf-body">Guide</label>
+      <textarea id="gf-body" rows="16" maxlength="10000" required placeholder="Describe the route step by step.">${esc(g.body)}</textarea>
+      <p class="muted gf-help">Start a line with <code>## </code> for a heading, <code>- </code> for a bullet or <code>1. </code> for a numbered step. Wrap words in <code>**</code> to make them bold.</p>
+      <div class="actions"><button class="btn" type="button" data-act="g-cancel">Cancel</button><button class="btn primary" type="submit">${S.gEdit === "new" ? "Publish guide" : "Save changes"}</button></div>
+    </form>`;
+    return;
+  }
+  // Reading one guide.
+  if (S.guideId) {
+    const g = S.guides.find((x) => x.id === S.guideId);
+    if (!g) { root.innerHTML = head + `<div class="empty"><strong>That guide isn't here any more.</strong><a href="#guides">See all guides</a></div>`; return; }
+    const meta = [G_CATS[g.category] || g.category, g.zone, levelText(g)].filter(Boolean).map(esc).join(" · ");
+    root.innerHTML = `<p><a href="#guides" class="linkish">← All guides</a></p><article class="card guide-read">
+      <p class="eyebrow">${meta}</p><h2 class="hero-title">${esc(g.title)}</h2>
+      <p class="muted guide-by">${g.author ? `By ${memberLink(g.author)}` : "Starter guide from the officers"} · updated ${ago(g.u || g.t)}</p>
+      <div class="guide-body">${mdLite(g.body)}</div>
+      <div class="actions">${window.GC_CHAT ? `<button class="btn" data-act="g-ask" data-id="${esc(g.id)}">Ask the helper about this guide</button>` : ""}
+        ${canEditGuide(g) ? `<button class="btn" data-act="g-edit" data-id="${esc(g.id)}">Edit</button><button class="btn danger" data-act="g-del" data-id="${esc(g.id)}">Delete</button>` : ""}</div>
+    </article>`;
+    refreshWowhead(); return;
+  }
+  const tabs = [["all", "All guides"], ...Object.entries(G_CATS).filter(([k]) => k !== "Market"), ["prices", "Market prices"]];
+  const count = (k) => (k === "all" ? S.guides.length : k === "prices" ? priceTable().length : S.guides.filter((g) => g.category === k).length);
+  const bar = `<div class="chips g-tabs">${tabs.map(([k, l]) => `<button class="chip" data-act="g-tab" data-t="${k}" aria-pressed="${S.gTab === k}">${l} <span class="n">${count(k)}</span></button>`).join("")}</div>`;
+  if (S.gTab === "prices") { root.innerHTML = head + bar + renderPrices(); return; }
+  const q = S.gq.trim().toLowerCase();
+  const list = S.guides.filter((g) => (S.gTab === "all" || g.category === S.gTab || (S.gTab === "Other" && g.category === "Market"))
+    && (!q || [g.title, g.zone, g.body].join(" ").toLowerCase().includes(q)))
+    .sort((a, b) => (a.category === b.category ? (a.lmin || 0) - (b.lmin || 0) : 0) || (b.u || 0) - (a.u || 0));
+  const card = (g) => `<a class="card g-card" href="#guide-${esc(g.id)}">
+      <span class="g-cat c-${esc(g.category)}">${esc(G_CATS[g.category] || g.category)}</span>
+      <h3>${esc(g.title)}</h3>
+      <p class="muted g-meta">${[g.zone, levelText(g)].filter(Boolean).map(esc).join(" · ")}</p>
+      <p class="g-ex">${esc(excerpt(g.body))}</p>
+      <span class="muted g-by">${g.author ? esc(userName(g.author) || "A guildmate") : "Officers"} · ${ago(g.u || g.t)}</span></a>`;
+  root.innerHTML = head + bar + `<div class="g-search"><input type="search" id="gq" placeholder="Search guides, zones or items" aria-label="Search guides" value="${esc(S.gq)}"></div>`
+    + (list.length ? `<div class="g-grid">${list.map(card).join("")}</div>`
+      : `<div class="empty"><strong>${q ? "No guides match that search." : "No guides here yet."}</strong>${S.uid ? "Press “Write a guide” to share a route or tip." : ""}</div>`);
+}
+
+function renderPrices() {
+  const rows = priceTable(), q = S.pq.trim().toLowerCase();
+  const shown = rows.filter((r) => !q || r.name.toLowerCase().includes(q))
+    .sort(S.psort === "moves" ? (a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0) || b.now - a.now
+      : S.psort === "recent" ? (a, b) => b.last - a.last : (a, b) => b.now - a.now);
+  const itemNames = [...new Set(Object.values(ITEMS).map((x) => x[0]))].sort();
+  const byName = {}; for (const [id, v] of Object.entries(ITEMS)) byName[v[0].toLowerCase()] = { id, q: v[1] };
+  const itemLink = (n) => { const it = byName[n.toLowerCase()]; return it ? `<a class="q${it.q}" href="https://www.wowhead.com/forever/item=${it.id}" target="_blank" rel="noopener">${esc(n)}</a>` : esc(n); };
+  const report = S.uid ? `<form class="card form price-form" id="priceform">
+      <div><label for="pp-item">Item</label><input id="pp-item" list="pp-items" maxlength="60" required placeholder="e.g. Arcanite Bar"></div>
+      <div><label for="pp-g">Price for one</label>${coinInput("pp", 0, "Price for one")}</div>
+      <div><label for="pp-src">Seen in</label><select id="pp-src"><option>Trade chat</option><option>Auction house</option><option>Vendor</option></select></div>
+      <button class="btn primary" type="submit">Report price</button>
+      <datalist id="pp-items">${itemNames.map((n) => `<option value="${esc(n)}">`).join("")}</datalist>
+    </form>` : `<div class="card"><button class="btn small primary" data-act="signin">Sign in</button> to report prices you see in trade.</div>`;
+  const row = (r) => {
+    const open = S.pOpen === r.name.toLowerCase();
+    const detail = open ? `<tr class="p-detail"><td colspan="6"><ul class="p-reports">${r.pts.slice(0, 25).map((p) => `<li><span>${gold(p.price)}</span><span class="muted">${esc(p.source)} · ${p.by ? esc(userName(p.by) || "a guildmate") : "someone"} · ${ago(p.t)}</span>${S.uid && (p.by === S.uid || (S.me && S.me.isAdmin)) && p.source !== "Guild market" ? `<button class="linkish small-x" data-act="p-del" data-id="${esc(p.id)}">remove</button>` : ""}</li>`).join("")}</ul></td></tr>` : "";
+    return `<tr class="p-row${open ? " open" : ""}" data-act="p-open" data-k="${esc(r.name.toLowerCase())}" tabindex="0" aria-expanded="${open}">
+      <td class="p-name">${itemLink(r.name)}</td>
+      <td>${gold(r.now)}${r.fresh ? "" : '<span class="muted p-old"> older</span>'}</td>
+      <td>${changeTag(r.change)}</td>
+      <td class="p-spark">${sparkline(r.days)}</td>
+      <td class="p-range muted">${r.lo != null ? `${gold(r.lo)} – ${gold(r.hi)}` : "—"}</td>
+      <td class="muted num">${r.pts.length} · ${ago(r.last)}</td></tr>${detail}`;
+  };
+  const top = rows.filter((r) => r.fresh).sort((a, b) => b.now - a.now).slice(0, 3);
+  const movers = rows.filter((r) => r.change != null && Math.abs(r.change) >= 0.05).sort((a, b) => Math.abs(b.change) - Math.abs(a.change)).slice(0, 3);
+  const highlight = rows.length ? `<div class="p-highlights">
+      <div class="card"><p class="eyebrow">Highest value this week</p>${top.length ? `<ol>${top.map((r) => `<li>${itemLink(r.name)} <span>${gold(r.now)}</span></li>`).join("")}</ol>` : '<p class="muted">No reports this week yet.</p>'}</div>
+      <div class="card"><p class="eyebrow">Biggest moves vs last week</p>${movers.length ? `<ol>${movers.map((r) => `<li>${itemLink(r.name)} ${changeTag(r.change)}</li>`).join("")}</ol>` : '<p class="muted">Not enough reports to compare weeks yet.</p>'}</div>
+    </div>` : "";
+  return `<p class="muted p-intro">Prices come from guildmates' reports of what they see in Trade chat and the auction house, plus every priced “For sale” listing on the guild market. The typical price is the middle of this week's reports.</p>
+    ${report}${highlight}
+    <div class="mk-bar"><input type="search" id="pq" placeholder="Search items" aria-label="Search prices" value="${esc(S.pq)}">
+      <select id="psort" aria-label="Sort"><option value="value" ${S.psort === "value" ? "selected" : ""}>Highest value</option><option value="moves" ${S.psort === "moves" ? "selected" : ""}>Biggest moves</option><option value="recent" ${S.psort === "recent" ? "selected" : ""}>Recently reported</option></select></div>
+    ${shown.length ? `<div class="p-wrap"><table class="p-table"><thead><tr><th>Item</th><th>Typical price</th><th>vs last week</th><th>Last 30 days</th><th>30-day range</th><th>Reports</th></tr></thead><tbody>${shown.map(row).join("")}</tbody></table></div>`
+      : `<div class="empty"><strong>${q ? "No item matches that search." : "No prices reported yet."}</strong>${q ? "" : "Report the first one above when you see an item for sale in trade."}</div>`}`;
+}
+
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-act]"); if (!t) return;
+  const act = t.dataset.act;
+  if (act === "g-tab") { S.gTab = t.dataset.t; renderGuides(); }
+  else if (act === "g-new") { if (!S.uid) return openAuth("in"); S.gEdit = "new"; if (S.view !== "guides" || S.guideId) location.hash = "#guides"; renderGuides(); setTimeout(() => { const i = $("#gf-title"); if (i) i.focus(); }, 0); }
+  else if (act === "g-edit") { S.gEdit = t.dataset.id; renderGuides(); }
+  else if (act === "g-cancel") { S.gEdit = null; renderGuides(); }
+  else if (act === "g-del") {
+    const g = S.guides.find((x) => x.id === t.dataset.id); if (!g || !confirm(`Delete the guide “${g.title}”? This can't be undone.`)) return;
+    try { await S.B.deleteGuide(g.id); S.guides = S.guides.filter((x) => x.id !== g.id); location.hash = "#guides"; note("Guide deleted."); } catch (x) { note("Couldn't delete the guide: " + x.message); }
+  }
+  else if (act === "g-ask") { const g = S.guides.find((x) => x.id === t.dataset.id); if (g && window.GC_CHAT) window.GC_CHAT.open(`I'm reading the guide “${g.title}”. `); }
+  else if (act === "p-open") { if (e.target.closest("a,button")) return; const k = t.dataset.k; S.pOpen = S.pOpen === k ? null : k; renderGuides(); }
+  else if (act === "p-del") {
+    try { await S.B.deletePrice(t.dataset.id); S.prices = S.prices.filter((x) => x.id !== t.dataset.id); renderGuides(); } catch (x) { note("Couldn't remove that price: " + x.message); }
+  }
+});
+document.addEventListener("keydown", (e) => { if ((e.key === "Enter" || e.key === " ") && e.target.matches("tr.p-row")) { e.preventDefault(); e.target.click(); } });
+document.addEventListener("input", (e) => {
+  if (e.target.id === "gq") { S.gq = e.target.value; const pos = e.target.selectionStart; renderGuides(); const b = $("#gq"); if (b) { b.focus(); try { b.setSelectionRange(pos, pos); } catch {} } }
+  if (e.target.id === "pq") { S.pq = e.target.value; const pos = e.target.selectionStart; renderGuides(); const b = $("#pq"); if (b) { b.focus(); try { b.setSelectionRange(pos, pos); } catch {} } }
+});
+document.addEventListener("change", (e) => { if (e.target.id === "psort") { S.psort = e.target.value; renderGuides(); } });
+document.addEventListener("submit", async (e) => {
+  const f = e.target;
+  if (f.id === "guideform") {
+    e.preventDefault();
+    const lv = (id) => { const n = Math.round(Number($(id).value)); return n >= 1 && n <= 60 ? n : null; };
+    const o = { id: S.gEdit === "new" ? null : S.gEdit, title: $("#gf-title").value.trim().slice(0, 100), category: $("#gf-cat").value, zone: $("#gf-zone").value.trim().slice(0, 60), lmin: lv("#gf-lmin"), lmax: lv("#gf-lmax"), body: $("#gf-body").value.trim().slice(0, 10000) };
+    if (o.title.length < 3 || !o.body) { note("Give the guide a title and some text."); return; }
+    if (o.lmin && o.lmax && o.lmin > o.lmax) [o.lmin, o.lmax] = [o.lmax, o.lmin];
+    const btn = f.querySelector('[type="submit"]'); btn.disabled = true;
+    try {
+      await S.B.saveGuide(o); S.gEdit = null; S.guides = await S.B.loadGuides();
+      const g = o.id ? S.guides.find((x) => x.id === o.id) : S.guides.slice().sort((a, b) => b.t - a.t)[0];
+      if (g) location.hash = "#guide-" + g.id; renderGuides(); note(o.id ? "Guide saved." : "Guide published. Thanks for sharing it.");
+    } catch (x) { btn.disabled = false; note("Couldn't save the guide: " + x.message); }
+  }
+  else if (f.id === "priceform") {
+    e.preventDefault();
+    const item = $("#pp-item").value.trim().slice(0, 60), price = readCoins("pp");
+    if (!item || !(price > 0)) { note("Enter the item and what one of them costs."); return; }
+    const btn = f.querySelector('[type="submit"]'); btn.disabled = true;
+    try { await S.B.reportPrice({ item, price, source: $("#pp-src").value }); S.prices = await S.B.loadPrices(); S.pOpen = item.toLowerCase(); renderGuides(); note(`Thanks. The price for ${item} is in.`); }
+    catch (x) { btn.disabled = false; note("Couldn't report the price: " + x.message); }
+  }
+});
+
+// The guild helper (chat.js) reaches the site through this.
+window.GC_AI = {
+  token: () => (S.B && S.B.accessToken ? S.B.accessToken() : Promise.resolve(null)),
+  signedIn: () => !!S.uid, signIn: () => openAuth("in"), page: () => S.view, demo: () => !S.B || S.B.mode === "demo",
+};
 
 route();
 })();
