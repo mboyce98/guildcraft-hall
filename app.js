@@ -8,6 +8,8 @@ const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 const fmt = (n) => Number(n).toLocaleString("en-US");
 const gold = (g) => { g = Number(g) || 0; if (g <= 0) return '<span class="muted">—</span>'; return `<span class="gold">${fmt(Math.round(g * 100) / 100)}g</span>`; };
 const ago = (t) => { if (!t) return ""; const s = (Date.now() - t) / 1000; if (s < 60) return "just now"; if (s < 3600) return Math.floor(s / 60) + "m ago"; if (s < 86400) return Math.floor(s / 3600) + "h ago"; return Math.floor(s / 86400) + "d ago"; };
+// Guild settings. Paste the guild's Discord invite (e.g. "https://discord.gg/abc123") to show a Join button on the front page.
+const GUILD = { discordInvite: "" };
 const SRC = { 1: "Crafted", 2: "World drop", 4: "Quest", 5: "Vendor", 6: "Trainer", 16: "Fishing", 21: "Pickpocket" };
 const FINISHED = new Set(["done", "declined", "cancelled"]);
 
@@ -15,7 +17,7 @@ const FINISHED = new Set(["done", "declined", "cancelled"]);
 const S = {
   view: "recipes", q: "", prof: -1, hasCrafter: false, onlyNew: false, limit: 150, sel: null, reqFor: null,
   B: null, me: null, uid: null, loaded: false,
-  crafters: new Map(), requests: [], listings: [], profiles: {}, bnet: {}, board: [],
+  crafters: new Map(), requests: [], listings: [], profiles: {}, bnet: {}, board: [], messages: [], online: [], chatOpen: new Set(), onlineOpen: false,
   boardTab: "open", boardCat: "", viewUser: null, notifOpen: false, seenOverride: 0, postOpen: false,
   myDoc: null, pendingSave: false, editChar: lsGet("gc.editChar"), editProf: null, mineQ: "", saveState: "",
   reqTab: "open", mq: "", mtype: "", authTab: "in",
@@ -51,6 +53,8 @@ function defaultChar() { const saved = lsGet("gc.char"); const mine = myChars();
 (async () => {
   S.B = await openBackend();
   $("#demo-note").hidden = S.B.mode !== "demo";
+  S.B.discordEnabled().then((on) => { $("#discord-wrap").hidden = !on; });
+  if (GUILD.discordInvite) { const a = $("#home-actions"); if (a) a.dataset.discord = GUILD.discordInvite; }
   S.B.onChange(() => queueRefresh());
   S.B.onAuthChange(async (event) => {
     if (event === "PASSWORD_RECOVERY") $("#newpass").hidden = false;
@@ -86,9 +90,22 @@ async function loadMe() {
   try { S.me = await S.B.currentUser(); } catch { S.me = null; }
   if ((S.me && S.me.id) !== S.uid) { S.myDoc = null; S.crafters = new Map(); S.requests = []; S.listings = []; }
   S.uid = S.me ? S.me.id : null;
+  if (!S.uid && S.presenceKey) { S.B.leavePresence(); S.presenceKey = null; S.online = []; }
+  renderWho();
+}
+function renderWho() {
   $("#who").innerHTML = S.me
-    ? `<a class="me-link" href="#profile" title="Your profile">${esc(S.me.username)}</a><button class="btn small" data-act="signout">Sign out</button>`
+    ? `<a class="me-link" href="#profile" title="Your profile">${avatarImg(S.uid, 26)}<span>${esc(S.me.username)}</span></a><button class="btn small" data-act="signout">Sign out</button>`
     : `<button class="btn small primary" data-act="signin">Sign in</button>`;
+}
+// Tell the guild who's here (and on which page), once profile details are loaded.
+function presenceInfo() { const p = prof(S.uid); return { username: S.me ? S.me.username : "", char: p.mainChar || defaultChar() || "", cls: p.mainClass || "", avatar: p.avatar || "", page: S.view }; }
+function syncPresence() {
+  if (!S.uid || !S.B) return;
+  if (S.presenceKey !== S.uid) {
+    S.presenceKey = S.uid;
+    S.B.joinPresence({ id: S.uid, ...presenceInfo() }, (list) => { S.online = list; renderOnline(); });
+  } else S.B.updatePresence({ id: S.uid, ...presenceInfo() });
 }
 
 let refreshTimer = null;
@@ -97,10 +114,11 @@ async function refresh() {
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
   try {
     const d = await S.B.loadAll();
-    S.profiles = d.profiles; S.bnet = d.bnet || {}; S.board = d.board || [];
+    S.profiles = d.profiles; S.bnet = d.bnet || {}; S.board = d.board || []; S.messages = d.messages || [];
     S.crafters = new Map(d.crafters.map((c) => [c.uid, c]));
     S.requests = d.requests; S.listings = d.listings;
     if (!S.pendingSave) { const mine = S.crafters.get(S.uid); S.myDoc = mine ? structuredClone({ chars: mine.chars, note: mine.note }) : (S.myDoc || null); }
+    if (S.presenceKey !== S.uid) { syncPresence(); renderWho(); }
     S.loaded = true; setStatus("");
   } catch (e) { setStatus("<strong>Guild data didn't load.</strong> " + esc(e.message || "") + " It will retry in a minute."); }
   buildIndex(); render();
@@ -127,7 +145,7 @@ function route() {
   const h = location.hash.slice(1);
   const VIEWS = ["home", "rules", "map", "board", "recipes", "mine", "requests", "market", "profile"];
   let view = "home";
-  S.viewUser = null; S.notifOpen = false;
+  S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
   else if (/^member-[0-9a-z_-]+$/i.test(h)) { S.viewUser = h.slice(7); view = "profile"; }
   else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
@@ -138,6 +156,7 @@ function route() {
   VIEWS.forEach((v) => ($("#view-" + v).hidden = v !== view));
   if (view === "rules" && h !== "rules") { const el = document.getElementById(h); if (el) el.scrollIntoView(); }
   else if (changed) window.scrollTo(0, 0);
+  if (changed && S.presenceKey) syncPresence();
   render();
 }
 window.addEventListener("hashchange", route);
@@ -151,14 +170,21 @@ function render() {
     const open = S.requests.filter((r) => r.to === S.uid && r.status === "pending").length;
     const b = $("#req-badge"); b.textContent = open; b.hidden = !open;
     const a = document.activeElement;
-    const typing = a && a.matches && a.matches("input[type=text],input[type=number],input[type=password],textarea") ? a : null;
-    renderBell();
+    // A half-typed chat message survives redraws (new messages still appear); other forms pause redraws while typing.
+    const chatForm = a && a.closest && a.closest(".chat-form");
+    const chatState = chatForm ? { key: chatForm.dataset.key, value: a.value, s: a.selectionStart, e: a.selectionEnd } : null;
+    const typing = !chatForm && a && a.matches && a.matches("input[type=text],input[type=number],input[type=password],textarea") ? a : null;
+    if (chatState) setTimeout(() => {
+      const box = document.querySelector(`.chat-form[data-key="${chatState.key}"] input`);
+      if (box && document.activeElement !== box) { box.value = chatState.value; box.focus(); try { box.setSelectionRange(chatState.s, chatState.e); } catch {} }
+    }, 0);
+    renderBell(); renderOnline();
     if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
-    else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) renderBoard(); }
+    else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "recipes") renderRecipes();
     else if (S.view === "mine") { if (!(typing && typing.closest("#view-mine"))) renderMine(); }
-    else if (S.view === "requests") renderRequests();
+    else if (S.view === "requests") { if (!(typing && typing.closest("#view-requests"))) { renderRequests(); scrollChats(); } }
     else renderMarket();
   }, 0);
 }
@@ -184,7 +210,8 @@ window.GC_SEARCH_RECIPES = (name) => {
 /* ---------- Home ---------- */
 function renderHome() {
   const act = $("#home-actions"); if (!act) return;
-  act.innerHTML = `<a class="btn primary" href="#rules">Read the guild rules</a>` + (S.uid
+  const discord = /^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(GUILD.discordInvite) ? `<a class="btn discord" href="${esc(GUILD.discordInvite)}" target="_blank" rel="noopener">Join our Discord</a>` : "";
+  act.innerHTML = `<a class="btn primary" href="#rules">Read the guild rules</a>` + discord + (S.uid
     ? `<a class="btn" href="#mine">Go to my crafter</a>`
     : `<button class="btn" data-act="signup">Create your account</button><button class="btn" data-act="signin">Sign in</button>`);
   const st = $("#home-stats");
@@ -276,18 +303,41 @@ function renderSheet() {
       <div class="sub">${esc(profName(r.p))} · learned at ${r.lv} · ${esc(src)}${r.isNew ? ' · <span style="color:var(--brass)">New in Forever</span>' : ""}</div></div>
       <button class="btn small close" data-act="close-sheet" aria-label="Close">Close</button>
     </div>
-    <p class="muted" style="margin:10px 0 0">${creates}</p>
-    <div class="ranks" aria-label="Skill-up ranks">
-      <div style="border-color:var(--sk-o)">${c[0]}</div><div style="border-color:var(--sk-y)">${c[1]}</div>
-      <div style="border-color:var(--sk-g)">${c[2]}</div><div style="border-color:var(--sk-x)">${c[3]}</div>
-    </div>
-    <h3>Materials</h3>
-    <ul class="mats">${r.mats.map((m) => `<li><span class="q${itemQ(m[0])}">${esc(itemName(m[0]))}</span><span class="num muted">×${m[1]}</span></li>`).join("")}</ul>
+    <p class="muted" style="margin:10px 0 0">${r.cr ? `Creates ${whItem(r.cr)}${r.cmax > 1 ? ` ×${r.cmin === r.cmax ? r.cmin : r.cmin + "–" + r.cmax}` : ""}` : creates}</p>
+
+    <details class="dd" open><summary>Materials and where to get them</summary>
+      <ul class="mats">${r.mats.map((m) => {
+        const g = window.GC_MAP && window.GC_MAP.findItem(itemName(m[0]));
+        return `<li><span>${whItem(m[0])}${g ? ` <button class="linkish where" data-act="mapfind" data-mapfind="${esc(g.key)}">gathered in ${g.zones} zone${g.zones === 1 ? "" : "s"}</button>` : ""}</span><span class="num muted">×${m[1]}</span></li>`;
+      }).join("")}</ul>
+      <p class="muted dd-note">Hover a material for its Wowhead details.</p>
+    </details>
+
+    <details class="dd"><summary>How to learn it</summary>
+      <p>Learned at skill <strong>${r.lv}</strong> from: ${esc(src)}.</p>
+      <div class="ranks" aria-label="Skill-up ranks">
+        <div style="border-color:var(--sk-o)">${c[0]}</div><div style="border-color:var(--sk-y)">${c[1]}</div>
+        <div style="border-color:var(--sk-g)">${c[2]}</div><div style="border-color:var(--sk-x)">${c[3]}</div>
+      </div>
+      <p class="muted dd-note">Skill-ups are guaranteed up to the orange number, likely to yellow, unlikely to green, and stop at grey.</p>
+      <p><a href="https://www.wowhead.com/forever/spell=${r.id}" target="_blank" rel="noopener">Recipe, trainers and vendors on Wowhead</a></p>
+    </details>
+
+    ${r.cr ? `<details class="dd"><summary>About the crafted item</summary>
+      <p>${whItem(r.cr)}${r.cmax > 1 ? ` · makes ${r.cmin === r.cmax ? r.cmin : r.cmin + "–" + r.cmax} per craft` : ""}</p>
+      <p class="muted dd-note">Hover the item for its full stats, or open it on Wowhead for drops, comments and screenshots.</p>
+      <p><a href="https://www.wowhead.com/forever/item=${r.cr}" target="_blank" rel="noopener">${esc(itemName(r.cr))} on Wowhead</a></p>
+    </details>` : ""}
+
     <h3>Guild crafters${S.uid ? ` (${crafters.length})` : ""}</h3>
-    <div>${who}</div>
-    <p style="margin:14px 0 0"><a href="https://www.wowhead.com/forever/spell=${r.id}" target="_blank" rel="noopener">View on Wowhead</a></p>`;
+    <div>${who}</div>`;
   el._crafters = crafters;
+  refreshWowhead();
+  if (window.GC_MAP && !window.GC_MAP.ready()) window.GC_MAP.load().then(() => { if (S.sel === r.id) renderSheet(); });
 }
+// A Wowhead item link: hover shows Wowhead's tooltip (icon, stats, where it drops).
+function whItem(id) { return `<a class="wh q${itemQ(id)}" href="https://www.wowhead.com/forever/item=${id}" target="_blank" rel="noopener">${esc(itemName(id))}</a>`; }
+function refreshWowhead() { try { if (window.$WowheadPower && window.$WowheadPower.refreshLinks) window.$WowheadPower.refreshLinks(); } catch {} }
 function requestForm() {
   return `<form class="form" id="reqform">
     <div class="row"><label for="rf-char">Your character</label><input type="text" id="rf-char" value="${esc(defaultChar())}" required maxlength="24" placeholder="Who should receive it"></div>
@@ -411,7 +461,8 @@ function renderRequests() {
       <div><div class="what">${verb}: ${rec ? `<a class="q${rec.q}" href="#recipe-${rec.id}">${esc(rec.name)}</a>` : esc(r.label || "Item")} <span class="num">×${r.qty || 1}</span></div>
         <div class="meta">${dir === "in" ? "From" : "To"} <strong>${esc(otherChar || "?")}</strong>${un ? ` (${esc(un)}${tagFor(other) ? " · " + esc(tagFor(other)) : ""})` : ""}${dir === "out" && r.fromChar ? ` · for ${esc(r.fromChar)}` : ""}${dir === "in" && r.toChar ? ` · to ${esc(r.toChar)}` : ""} · ${ago(r.created)} · ${r.kind === "craft" ? "Tip" : "Price"} ${gold(r.tip)}</div>
         ${r.note ? `<div class="meta">“${esc(r.note)}”</div>` : ""}${mats}</div>
-      <div class="acts"><span class="pill st-${esc(r.status)}">${esc(r.status)}</span>${acts.map((a) => `<button class="btn small ${a[2]}" data-act="req" data-id="${esc(r.id)}" data-st="${a[0]}">${a[1]}</button>`).join("")}</div>
+      <div class="acts"><span class="pill st-${esc(r.status)}">${esc(r.status)}</span>${chatToggle("request", r.id)}${acts.map((a) => `<button class="btn small ${a[2]}" data-act="req" data-id="${esc(r.id)}" data-st="${a[0]}">${a[1]}</button>`).join("")}</div>
+      ${chatBox("request", r.id) ? `<div class="req-chat">${chatBox("request", r.id)}</div>` : ""}
     </div>`;
   };
   root.innerHTML = `
@@ -482,12 +533,57 @@ function profsOf(uid) {
   return out;
 }
 
+// Profile picture, or the first letter on a class-coloured circle.
+function avatarImg(uid, size) {
+  const p = (S.profiles && S.profiles[uid]) || {};
+  const url = /^https:\/\/|^data:image\//.test(p.avatar || "") ? p.avatar : "";
+  const letter = esc(((p.mainChar || p.username || (uid === S.uid && S.me && S.me.username) || "?")[0] || "?").toUpperCase());
+  const bg = CLASS_COLOR[p.mainClass] || "var(--brass)";
+  return url ? `<img class="avatar" src="${esc(url)}" alt="" width="${size}" height="${size}" style="width:${size}px;height:${size}px" loading="lazy">`
+    : `<span class="avatar" aria-hidden="true" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.45)}px;background:${bg}">${letter}</span>`;
+}
+
+/* ---------- Chat threads (on requests and board posts) ---------- */
+const threadMsgs = (type, id) => S.messages.filter((m) => m.type === type && m.thread === String(id));
+function threadUnread(type, id) { const seen = seenAt(); return threadMsgs(type, id).filter((m) => m.author !== S.uid && m.t > seen).length; }
+function chatToggle(type, id) {
+  const n = threadMsgs(type, id).length, u = threadUnread(type, id), key = type + ":" + id;
+  return `<button class="btn small chat-btn" data-act="chat" data-key="${key}" aria-expanded="${S.chatOpen.has(key)}">Chat${n ? ` (${n})` : ""}${u ? ' <span class="badge">' + u + "</span>" : ""}</button>`;
+}
+function chatBox(type, id) {
+  const key = type + ":" + id;
+  if (!S.chatOpen.has(key)) return "";
+  const msgs = threadMsgs(type, id);
+  return `<div class="chat">
+    <div class="chat-log" aria-live="polite">${msgs.map((m) => `<div class="msg ${m.author === S.uid ? "me" : ""}">${avatarImg(m.author, 26)}
+      <div class="msg-b"><div class="msg-meta"><strong>${esc(userName(m.author) || "Someone")}</strong> · ${ago(m.t)}${m.author === S.uid || (S.me && S.me.isAdmin) ? ` <button class="linkish small-x" data-act="msg-del" data-id="${esc(m.id)}" aria-label="Delete message">delete</button>` : ""}</div>
+      <div class="msg-body">${esc(m.body)}</div></div></div>`).join("") || `<p class="muted chat-empty">No messages yet. Say hi, or sort out the details here.</p>`}</div>
+    <form class="chat-form" data-key="${key}"><input type="text" maxlength="500" placeholder="Write a message…" aria-label="Message" autocomplete="off"><button class="btn small primary" type="submit">Send</button></form>
+  </div>`;
+}
+function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
+
+/* ---------- Who's online ---------- */
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles" };
+function renderOnline() {
+  const btn = $("#online-btn"); if (!btn) return;
+  const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
+  btn.hidden = !S.uid;
+  $("#online-count").textContent = list.length;
+  const row = (o) => `<li><a href="#member-${esc(o.id)}">${avatarImg(o.id, 28)}<span><strong>${esc(o.char || o.username || "Someone")}</strong>${o.id === S.uid ? " (you)" : ""}<small>${o.username && o.char ? esc(o.username) + " · " : ""}on ${esc(PAGE_NAMES[o.page] || "the site")}</small></span></a></li>`;
+  const panel = $("#online-panel");
+  panel.hidden = !S.onlineOpen;
+  if (S.onlineOpen) panel.innerHTML = `<div class="np-head"><strong>Online now (${list.length})</strong></div><ul class="online-list">${list.map(row).join("")}</ul>`;
+  const home = $("#home-online");
+  if (home) home.innerHTML = S.uid && list.length ? `<h3 class="sec">Online now <span class="online-dot"></span> ${list.length}</h3><ul class="online-list inline">${list.slice(0, 12).map(row).join("")}</ul>` : "";
+}
+
 function memberCard(uid, big) {
   const p = prof(uid), tag = tagFor(uid);
   const main = p.mainChar ? `${classDot(p.mainClass)}<strong>${esc(p.mainChar)}</strong>${p.mainLevel ? ` <span class="muted">${p.mainLevel}</span>` : ""}${p.mainClass ? ` <span class="muted">${esc(p.mainClass)}</span>` : ""}${p.mainRealm ? ` <span class="muted">· ${esc(p.mainRealm)}</span>` : ""}` : `<span class="muted">No main character set</span>`;
   const profs = profsOf(uid);
   return `<div class="member ${big ? "big" : ""}">
-    <div class="avatar" aria-hidden="true">${esc((p.mainChar || p.username || "?")[0].toUpperCase())}</div>
+    ${avatarImg(uid, big ? 56 : 40)}
     <div class="minfo">
       <div class="mname">${big ? esc(p.username || "Member") : memberLink(uid, p.username)}${p.faction ? ` <span class="tag ${p.faction === "Horde" ? "horde" : "ally"}">${esc(p.faction)}</span>` : ""}${tag ? ` <span class="bnet-tag small">✓ ${esc(tag)}</span>` : ""}</div>
       <div class="mmain">${main}</div>
@@ -524,6 +620,10 @@ function renderProfile() {
     editor = `
     <div class="card">
       <h2>Edit your profile</h2>
+      <div class="avatar-edit">${avatarImg(S.uid, 72)}
+        <div><label class="btn small" for="pr-avatar">Choose a picture</label><input type="file" id="pr-avatar" accept="image/jpeg,image/png,image/webp" class="visually-hidden">
+          ${p.avatar ? `<button class="btn small danger" type="button" data-act="avatar-remove">Remove</button>` : ""}
+          <p class="saved" id="pr-avatar-msg">Square works best. It's shrunk to 256 × 256.</p></div></div>
       ${chars.length ? `<div class="fillrow"><label class="muted" for="pf-fill">Fill from your WoW character</label>
         <select id="pf-fill"><option value="">Choose a character…</option>${chars.map((c, i) => `<option value="${i}">${esc(c.name)} · ${c.level || "?"} ${esc(c.cls || "")}${c.realm ? " · " + esc(c.realm) : ""}${c.game ? " (" + esc(c.game) + ")" : ""}</option>`).join("")}</select></div>`
       : `<p class="muted" style="margin:0 0 10px">Link your Battle.net account on <a href="#mine">My crafter</a> to fill this in from your WoW character.</p>`}
@@ -582,7 +682,8 @@ function renderBoard() {
         <div class="meta">Posted by <strong>${esc(b.authorChar || "?")}</strong> (${memberLink(b.author)}) · ${ago(b.created)} · Offer ${gold(b.offer)}${rec ? ` · ${crafters.length} guild crafter${crafters.length === 1 ? "" : "s"} know this` : ""}</div>
         ${b.claimer ? `<div class="meta">${b.status === "done" ? "Done by" : "Taken by"} <strong>${esc(b.claimerChar || "?")}</strong> (${memberLink(b.claimer)})${b.claimed ? " · " + ago(b.claimed) : ""}</div>` : ""}
       </div>
-      <div class="acts">${acts.map((a) => `<button class="btn small ${a[2]}" data-act="post" data-op="${a[0]}" data-id="${esc(b.id)}">${a[1]}</button>`).join("")}</div>
+      <div class="acts">${chatToggle("board", b.id)}${acts.map((a) => `<button class="btn small ${a[2]}" data-act="post" data-op="${a[0]}" data-id="${esc(b.id)}">${a[1]}</button>`).join("")}</div>
+      ${chatBox("board", b.id) ? `<div class="req-chat">${chatBox("board", b.id)}</div>` : ""}
     </article>`;
   };
 
@@ -626,6 +727,14 @@ function notifications() {
     if (b.author !== S.uid && b.claimer === S.uid && b.status === "cancelled")
       out.push({ t: b.updated, text: `A job you took was cancelled: ${esc(b.title)}`, href: "#board" });
   }
+  // Chat messages from others in threads I'm part of (my requests, and board posts I posted, took or wrote in).
+  const mineBoard = new Set(S.board.filter((b) => b.author === S.uid || b.claimer === S.uid).map((b) => b.id));
+  S.messages.forEach((m) => { if (m.type === "board" && m.author === S.uid) mineBoard.add(m.thread); });
+  for (const m of S.messages) {
+    if (m.author === S.uid) continue;
+    if (m.type === "request") { const r = S.requests.find((x) => x.id === m.thread); if (r) out.push({ t: m.t, text: `<strong>${esc(userName(m.author))}</strong> messaged you about ${esc(label(r))}: “${esc(m.body.slice(0, 60))}”`, href: "#requests" }); }
+    else if (mineBoard.has(m.thread)) { const b = S.board.find((x) => x.id === m.thread); if (b) out.push({ t: m.t, text: `<strong>${esc(userName(m.author))}</strong> on “${esc(b.title)}”: “${esc(m.body.slice(0, 60))}”`, href: "#board" }); }
+  }
   const seen = seenAt();
   return out.filter((n) => n.t).sort((a, b) => b.t - a.t).slice(0, 40).map((n) => ({ ...n, unread: n.t > seen }));
 }
@@ -665,6 +774,7 @@ function openAuth(tab) {
 /* ---------- events ---------- */
 document.addEventListener("click", async (e) => {
   if (S.notifOpen && !e.target.closest("#notif-panel,#bell")) { S.notifOpen = false; renderBell(); }
+  if (S.onlineOpen && !e.target.closest("#online-panel,#online-btn")) { S.onlineOpen = false; renderOnline(); }
   const t = e.target.closest("[data-act],[data-recipe],[data-prof]");
   if (!t) { if (e.target.id === "auth") $("#auth").hidden = true; return; }
   if (t.dataset.recipe) { S.sel = Number(t.dataset.recipe); S.reqFor = null; history.replaceState(null, "", "#recipe-" + S.sel); renderRecipes(); return; }
@@ -672,7 +782,18 @@ document.addEventListener("click", async (e) => {
   const act = t.dataset.act;
   if (act === "signin") openAuth("in");
   else if (act === "signup") openAuth("up");
-  else if (act === "bell") { S.notifOpen = !S.notifOpen; renderBell(); }
+  else if (act === "bell") { S.notifOpen = !S.notifOpen; S.onlineOpen = false; renderBell(); renderOnline(); }
+  else if (t.dataset.mapfind !== undefined || act === "mapfind") { if (window.GC_MAP) window.GC_MAP.show(t.dataset.mapfind); }
+  else if (act === "online") { S.onlineOpen = !S.onlineOpen; S.notifOpen = false; renderOnline(); renderBell(); }
+  else if (act === "chat") {
+    const k = t.dataset.key; S.chatOpen.has(k) ? S.chatOpen.delete(k) : S.chatOpen.add(k);
+    if (S.view === "board") renderBoard(); else renderRequests();
+    scrollChats();
+    const f = document.querySelector(`.chat-form[data-key="${k}"] input`); if (f) f.focus();
+  }
+  else if (act === "msg-del") { t.disabled = true; try { await S.B.deleteMessage(t.dataset.id); await refresh(); } catch (err) { note("Couldn't delete that message: " + err.message); } }
+  else if (act === "avatar-remove") { try { await S.B.removeAvatar(); (S.profiles[S.uid] || {}).avatar = ""; renderProfile(); renderWho(); syncPresence(); } catch (err) { note(err.message); } }
+  else if (act === "discord") { try { await S.B.signInWithDiscord(); } catch (err) { $("#a-err").textContent = err.message; } }
   else if (act === "notif-read") markRead();
   else if (act === "notif-go") { S.notifOpen = false; markRead(); }
   else if (act === "post-toggle") { S.postOpen = !S.postOpen; renderBoard(); if (S.postOpen) $("#bf-title").focus(); }
@@ -793,6 +914,17 @@ document.addEventListener("submit", async (e) => {
       S.reqFor = null; renderSheet(); note("Request sent. Track it on the Requests tab."); refresh();
     } catch (x) { note("Couldn't send the request: " + x.message); btn.disabled = false; }
   }
+  else if (f.classList.contains("chat-form")) {
+    const input = f.querySelector("input"), body = input.value.trim().slice(0, 500); if (!body) return;
+    const [type, id] = f.dataset.key.split(":");
+    btn.disabled = true;
+    try {
+      await S.B.sendMessage(type, id, body); input.value = ""; input.blur();
+      await refresh(); if (S.view === "board") renderBoard(); else renderRequests(); scrollChats();
+      const again = document.querySelector(`.chat-form[data-key="${f.dataset.key}"] input`); if (again) again.focus();
+    }
+    catch (x) { note("Couldn't send that message: " + x.message); btn.disabled = false; }
+  }
   else if (f.id === "boardform") {
     const title = $("#bf-title").value.trim().slice(0, 80), ch = $("#bf-char").value.trim().slice(0, 24);
     if (!title || !ch) return;
@@ -839,6 +971,14 @@ document.addEventListener("change", (e) => {
     const set = new Set(p.known || []); t.checked ? set.add(id) : set.delete(id); p.known = [...set];
     queueSave();
     const chip = document.querySelector('[data-act="pick-prof"][aria-pressed="true"] .n'); if (chip) chip.textContent = set.size;
+  }
+  else if (t.id === "pr-avatar" && t.files && t.files[0]) {
+    const msg = $("#pr-avatar-msg"); msg.textContent = "Uploading…";
+    S.B.uploadAvatar(t.files[0]).then((url) => {
+      (S.profiles[S.uid] || (S.profiles[S.uid] = {})).avatar = url;
+      renderProfile(); renderWho(); syncPresence();
+      const m = $("#pr-avatar-msg"); if (m) m.textContent = "Picture updated.";
+    }).catch((err) => { const m = $("#pr-avatar-msg"); if (m) m.textContent = err.message; });
   }
   else if (t.id === "pf-fill" && t.value !== "") {
     const c = ((S.bnet[S.uid] || {}).characters || [])[Number(t.value)]; if (!c) return;

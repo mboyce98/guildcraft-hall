@@ -26,7 +26,8 @@ const KIND = { herb: "Herb", vein: "Ore", chest: "Chest" };
 
 let M = null, ZONES = new Map(), NODES = [], loading = null;
 const ALIAS = new Map();
-const st = { q: "", kind: "all", node: null, zone: null };
+const st = { q: "", kind: "all", node: null, zone: null, zoom: 1 };
+const ZMIN = 1, ZMAX = 4;
 
 function load() {
   if (loading) return loading;
@@ -99,7 +100,12 @@ function worldSvg(focus) {
     </g>`;
   }).join("");
   return `<figure class="worldmap">
-    <div class="wm-scroll"><div class="wm-inner">
+    <div class="wm-tools" role="group" aria-label="Map zoom">
+      <button class="wm-btn" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>
+      <button class="wm-btn" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>
+      <button class="wm-btn wm-fit" data-zoom="fit" title="Show the whole map">Fit</button>
+    </div>
+    <div class="wm-scroll"><div class="wm-inner" style="width:${st.zoom * 100}%;min-width:${Math.round(680 * st.zoom)}px">
       <img src="images/world-map.webp?v=1" width="${MAP_W}" height="${MAP_H}" alt="World map of Kalimdor and the Eastern Kingdoms in WoW Forever">
       <svg viewBox="0 0 ${MAP_W} ${MAP_H}" role="group" aria-label="Zones">${marks}</svg>
     </div></div></figure>`;
@@ -152,7 +158,12 @@ function draw() {
     const max = Math.max(...Object.values(sel.zones).map((z) => z.n), 1);
     focus = {}; for (const [z, v] of Object.entries(sel.zones)) focus[z] = { n: v.n, t: v.n / max };
   }
+  // Keep the zoom and scroll position when the map redraws.
+  const old = $("#mapboard .wm-scroll");
+  const keep = old ? [old.scrollLeft, old.scrollTop] : null;
   $("#mapboard").innerHTML = worldSvg(focus);
+  if (keep) { const sc = $("#mapboard .wm-scroll"); sc.scrollLeft = keep[0]; sc.scrollTop = keep[1]; }
+  wireZoom();
 
   // Zones with no spot on the schematic (new Forever zones, dungeons, raids) are listed instead.
   const restIds = sel ? Object.keys(sel.zones).map(Number).filter((z) => !PLACED.has(z))
@@ -163,6 +174,43 @@ function draw() {
   }).join("")}</div>` : "";
   sheet(sel);
 }
+
+// ---- Zoom and pan ----
+// Zoom around a point (clientX/clientY), keeping that spot under the cursor.
+function setZoom(z, clientX, clientY) {
+  const sc = $("#mapboard .wm-scroll"), inner = sc && sc.querySelector(".wm-inner"); if (!inner) return;
+  z = Math.max(ZMIN, Math.min(ZMAX, Math.round(z * 100) / 100));
+  if (z === st.zoom) return;
+  const box = sc.getBoundingClientRect();
+  const px = clientX == null ? box.width / 2 : clientX - box.left, py = clientY == null ? box.height / 2 : clientY - box.top;
+  const fx = (sc.scrollLeft + px) / inner.offsetWidth, fy = (sc.scrollTop + py) / inner.offsetHeight;
+  st.zoom = z;
+  inner.style.width = z * 100 + "%"; inner.style.minWidth = Math.round(680 * z) + "px";
+  sc.scrollLeft = fx * inner.offsetWidth - px; sc.scrollTop = fy * inner.offsetHeight - py;
+  sc.classList.toggle("zoomed", z > 1);
+}
+let dragMoved = false;
+function wireZoom() {
+  const sc = $("#mapboard .wm-scroll"); if (!sc || sc.dataset.wired) return;
+  sc.dataset.wired = "1"; sc.classList.toggle("zoomed", st.zoom > 1);
+  sc.addEventListener("wheel", (e) => {
+    if (e.ctrlKey || Math.abs(e.deltaY) > Math.abs(e.deltaX)) { e.preventDefault(); setZoom(st.zoom * (e.deltaY < 0 ? 1.2 : 1 / 1.2), e.clientX, e.clientY); }
+  }, { passive: false });
+  sc.addEventListener("dblclick", (e) => { e.preventDefault(); setZoom(st.zoom * 1.6, e.clientX, e.clientY); });
+  sc.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0 || st.zoom <= 1 || e.pointerType === "touch") return;
+    drag = { sc, x: e.clientX, y: e.clientY, l: sc.scrollLeft, t: sc.scrollTop }; dragMoved = false;
+  });
+}
+let drag = null;
+window.addEventListener("pointermove", (e) => {
+  if (!drag) return;
+  const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+  if (!dragMoved && Math.hypot(dx, dy) < 5) return;
+  dragMoved = true; drag.sc.classList.add("dragging");
+  drag.sc.scrollLeft = drag.l - dx; drag.sc.scrollTop = drag.t - dy;
+});
+window.addEventListener("pointerup", () => { if (drag) { drag.sc.classList.remove("dragging"); drag = null; setTimeout(() => { dragMoved = false; }, 0); } });
 
 function grid(cells) {
   const max = Math.max(...[...cells.values()], 1);
@@ -216,8 +264,11 @@ function sheet(sel) {
 
 document.addEventListener("click", (e) => {
   if (!$("#view-map") || $("#view-map").hidden) return;
+  const zb = e.target.closest("[data-zoom]");
+  if (zb) { const z = zb.dataset.zoom; setZoom(z === "fit" ? 1 : st.zoom * (z === "in" ? 1.5 : 1 / 1.5)); return; }
   const t = e.target.closest("[data-zone],[data-node],[data-mapkind],[data-pick],[data-recipes],[data-act^='map-']");
   if (!t) return;
+  if (dragMoved && t.closest(".worldmap")) return; // that was a drag, not a click
   if (t.dataset.mapkind) { st.kind = t.dataset.mapkind; draw(); }
   else if (t.dataset.pick) { st.node = t.dataset.pick; st.zone = null; draw(); }
   else if (t.dataset.node) { st.node = st.node === t.dataset.node && !st.zone ? null : t.dataset.node; st.zone = null; draw(); }
@@ -230,7 +281,16 @@ document.addEventListener("keydown", (e) => {
   if ((e.key === "Enter" || e.key === " ") && e.target.matches && e.target.matches("#view-map g[data-zone]")) { e.preventDefault(); st.zone = Number(e.target.dataset.zone); draw(); }
 });
 
-window.GC_MAP = { render };
+// For the recipe pages: which gatherable node gives this item, and open the map on it.
+const byItem = new Map();
+function findItem(name) {
+  if (!M) return null;
+  if (!GROUPS) GROUPS = groups();
+  if (!byItem.size) for (const g of GROUPS) { if (g.kind === "chest") continue; const it = itemFor(g.name); if (it) { const k = it.name.toLowerCase(); const prev = byItem.get(k); const n = Object.keys(g.zones).length; if (!prev || n > prev.zones) byItem.set(k, { key: g.key, zones: n }); } }
+  return byItem.get(String(name).toLowerCase()) || null;
+}
+function show(key) { st.node = key; st.zone = null; st.kind = "all"; st.q = ""; const box = $("#mapq"); if (box) box.value = ""; location.hash = "#map"; setTimeout(() => { render(); }, 0); }
+window.GC_MAP = { render, load, ready: () => !!M, findItem, show };
 // If the page opened straight on #map, the page may have tried to draw before this file arrived.
 const mv = document.getElementById("view-map");
 if (mv && !mv.hidden && !mv.dataset.built) render();

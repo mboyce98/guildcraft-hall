@@ -8,7 +8,10 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23d9a441'/%3E%3Cpath d='M8 22l9-9 3 3-9 9zM15 9l4-4 8 8-4 4z' fill='%231b1306'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Inter:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="styles.css?v=11">
+<link rel="stylesheet" href="styles.css?v=13">
+<!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
+<script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
+<script src="https://wow.zamimg.com/js/tooltips.js" async></script>
 </head>
 <body>
 <header class="top">
@@ -24,6 +27,10 @@
       <a href="#requests" data-tab="requests">Requests <span class="badge" id="req-badge" hidden></span></a>
       <a href="#market" data-tab="market">Market</a>
     </nav>
+    <div class="bell-wrap">
+      <button class="online-btn" id="online-btn" data-act="online" aria-label="Who's online" title="Who's online" hidden><span class="online-dot"></span><span id="online-count">0</span> online</button>
+      <div class="notif-panel online-panel" id="online-panel" hidden></div>
+    </div>
     <div class="bell-wrap">
       <button class="bell" id="bell" data-act="bell" aria-label="Notifications" hidden>
         <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v3.6L4.3 15.4A1 1 0 0 0 5.2 17h13.6a1 1 0 0 0 .9-1.6L18 12.6V9a6 6 0 0 0-6-6zm0 19a3 3 0 0 0 3-3H9a3 3 0 0 0 3 3z" fill="currentColor"/></svg>
@@ -60,6 +67,7 @@
           <li><strong>Browse recipes and the market</strong> to find a crafter or a deal.</li>
         </ol>
         <div class="home-stats" id="home-stats"></div>
+        <div class="home-online" id="home-online"></div>
       </div>
 
       <div class="card">
@@ -165,6 +173,12 @@
       <button class="chip" data-act="auth-tab" data-t="up">Create account</button>
       <button class="chip" data-act="auth-tab" data-t="reset">Forgot password</button>
     </div>
+    <div id="discord-wrap" hidden>
+      <button class="btn discord" type="button" data-act="discord">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M20.3 4.4A19.6 19.6 0 0 0 15.4 3l-.6 1.3a18 18 0 0 0-5.6 0L8.6 3a19.6 19.6 0 0 0-4.9 1.4C.6 9 0 13.6.3 18.1A19.8 19.8 0 0 0 6.3 21l1.3-1.8c-.7-.3-1.4-.6-2-1l.5-.4a14 14 0 0 0 11.8 0l.5.4c-.6.4-1.3.7-2 1l1.3 1.8a19.7 19.7 0 0 0 6-2.9c.4-5.2-.7-9.8-3.4-13.7zM8.5 15.4c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4zm7 0c-1.2 0-2.1-1.1-2.1-2.4s.9-2.4 2.1-2.4 2.2 1.1 2.1 2.4c0 1.3-.9 2.4-2.1 2.4z"/></svg>
+        Continue with Discord</button>
+      <p class="or"><span>or use email</span></p>
+    </div>
     <form id="authform" novalidate>
       <label class="f" id="f-user">Username<input type="text" id="a-user" autocomplete="username" maxlength="24" placeholder="Letters, numbers, _ (3–24)"></label>
       <label class="f">Email<input type="text" id="a-email" autocomplete="email" inputmode="email"></label>
@@ -184,8 +198,8 @@
   </div>
 </div>
 
-<script src="backend.js?v=6"></script>
-<script src="app.js?v=9"></script>
-<script src="map.js?v=4"></script>
+<script src="backend.js?v=7"></script>
+<script src="app.js?v=11"></script>
+<script src="map.js?v=5"></script>
 </body>
 </html>

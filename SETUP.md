@@ -51,6 +51,18 @@ To check the settings at any time, open `/.netlify/functions/bnet-start?check=1`
 ## 6b. Request Board, profiles and notifications
 Run `supabase-board-profiles.sql` once in the SQL Editor (after `supabase-setup.sql`). It adds profile fields (main character, class, Discord, play times, bio), the public `board_posts` table and the "last read" time for notifications. Only the poster can edit a board post; anyone else can only take an open job for themselves, give it back, or mark their job done.
 
+## 6c. Chat and profile pictures
+Run `supabase-chat-avatars.sql` once. It adds chat threads on requests and board posts (a private request's chat is visible only to its two people) and an `avatars` storage bucket where each member can only change their own picture.
+
+## 6d. Discord (optional)
+**Join button:** paste your guild's invite link into `GUILD.discordInvite` at the top of `app.js` (e.g. `https://discord.gg/abc123`) and push. A "Join our Discord" button appears on the front page.
+
+**"Continue with Discord" sign-in:**
+1. At https://discord.com/developers/applications click **New Application**, name it "Bark and Stone".
+2. Under **OAuth2**, add the redirect `https://aclhzgtyucqxekzuahyx.supabase.co/auth/v1/callback` and copy the **Client ID** and **Client Secret**.
+3. In Supabase, **Authentication → Sign In / Providers → Discord**: switch it on and paste both values.
+The button appears in the sign-in box automatically once it's on.
+
 ## 7. Make yourself an admin
 1. Create your account on the live site.
 2. Run in the SQL Editor: `update public.profiles set is_admin = true where username = 'YourUsername';`

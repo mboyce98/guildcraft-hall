@@ -19,6 +19,24 @@ const BACKEND = {
 
 const USERNAME_RE = /^[A-Za-z0-9_]{3,24}$/;
 
+// Shrink a picture to a square of `size` pixels (centre crop) and return a JPEG blob.
+function shrinkImage(file, size) {
+  return new Promise((resolve, reject) => {
+    if (!/^image\//.test(file.type)) return reject(new Error("Choose a picture file (JPG, PNG or WebP)."));
+    if (file.size > 15 * 1024 * 1024) return reject(new Error("That picture is over 15 MB. Choose a smaller one."));
+    const img = new Image();
+    img.onload = () => {
+      const s = Math.min(img.naturalWidth, img.naturalHeight);
+      const c = document.createElement("canvas"); c.width = c.height = size;
+      c.getContext("2d").drawImage(img, (img.naturalWidth - s) / 2, (img.naturalHeight - s) / 2, s, s, 0, 0, size, size);
+      URL.revokeObjectURL(img.src);
+      c.toBlob((b) => (b ? resolve(b) : reject(new Error("Couldn't read that picture."))), "image/jpeg", 0.85);
+    };
+    img.onerror = () => reject(new Error("Couldn't read that picture."));
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 function loadScript(src) {
   return new Promise((resolve, reject) => {
     const s = document.createElement("script");
@@ -68,6 +86,7 @@ function demoDb() {
       return {
         profiles,
         board: (data.board || []).map((b) => ({ ...b })),
+        messages: (data.messages || []).map((m) => ({ ...m })),
         crafters: Object.entries(data.crafters).map(([id, c]) => ({ uid: id, chars: c.chars || {}, note: c.note || "" })),
         requests: data.requests.filter((r) => r.from === uid || r.to === uid).map((r) => ({ ...r })),
         listings: data.listings.map((l) => ({ ...l })),
@@ -76,7 +95,19 @@ function demoDb() {
     async linkBnet() { throw new Error("Battle.net linking works once the site is connected to Supabase."); },
     async unlinkBnet() {},
     async saveBnet() {},
-    async saveProfile(f) { const u = need(); Object.assign(u, { profile: f }); persist(); },
+    async saveProfile(f) { const u = need(); u.profile = { ...(u.profile || {}), ...f }; persist(); },
+    async sendMessage(type, thread, body) { const u = need(); (data.messages = data.messages || []).push({ id: String(data.seq++), type, thread: String(thread), author: u.id, body, t: Date.now() }); persist(); },
+    async deleteMessage(id) { data.messages = (data.messages || []).filter((m) => m.id !== id); persist(); },
+    async uploadAvatar(file) {
+      const u = need(); const blob = await shrinkImage(file, 256);
+      const url = await new Promise((res) => { const r = new FileReader(); r.onload = () => res(r.result); r.readAsDataURL(blob); });
+      u.profile = { ...(u.profile || {}), avatar: url }; persist(); return url;
+    },
+    async removeAvatar() { const u = need(); u.profile = { ...(u.profile || {}), avatar: "" }; persist(); },
+    joinPresence(info, onChange) { onChange([{ ...info, since: Date.now() }]); },
+    updatePresence() {}, leavePresence() {},
+    async discordEnabled() { return false; },
+    async signInWithDiscord() { throw new Error("Discord sign-in works once the site is connected to Supabase."); },
     async markNotifsSeen() { const u = need(); u.notifSeen = Date.now(); persist(); },
     async createPost(o) { const u = need(); (data.board = data.board || []).push({ ...o, id: String(data.seq++), author: u.id, status: "open", created: Date.now(), updated: Date.now() }); persist(); },
     async updatePost(id, f) { const p = (data.board || []).find((x) => x.id === id); if (p) { Object.assign(p, f, { updated: Date.now() }); if (f.status === "open") { p.claimer = null; p.claimerChar = ""; } persist(); } },
@@ -99,7 +130,7 @@ async function supabaseDb() {
   const changeFns = [], authFns = [];
   const ok = ({ data, error }) => { if (error) throw new Error(error.message); return data; };
   const redirectTo = location.origin + location.pathname;
-  let uid = null, live = null;
+  let uid = null, live = null, presence = null;
 
   const subscribe = () => {
     if (live || !uid) return;
@@ -143,13 +174,14 @@ async function supabaseDb() {
     async resetPassword(email) { ok(await sb.auth.resetPasswordForEmail(email, { redirectTo })); },
     async updatePassword(password) { ok(await sb.auth.updateUser({ password })); },
     async loadAll() {
-      const [profiles, crafters, requests, listings, links, board] = await Promise.all([
+      const [profiles, crafters, requests, listings, links, board, messages] = await Promise.all([
         sb.from("profiles").select("*"),
         sb.from("crafters").select("user_id,chars,note"),
         sb.from("requests").select("*").order("created_at", { ascending: false }).limit(500),
         sb.from("listings").select("*").order("created_at", { ascending: false }).limit(500),
         sb.from("bnet_links").select("user_id,battletag,characters,linked_at"),
         sb.from("board_posts").select("*").order("created_at", { ascending: false }).limit(300),
+        sb.from("messages").select("*").order("created_at", { ascending: false }).limit(1000),
       ].map((p) => p.then(ok)));
       const pmap = {}, bnet = {};
       profiles.forEach((p) => {
@@ -157,13 +189,14 @@ async function supabaseDb() {
           username: p.username, isAdmin: p.is_admin, joined: Date.parse(p.created_at),
           mainChar: p.main_char || "", mainRealm: p.main_realm || "", mainClass: p.main_class || "", mainLevel: p.main_level || 0,
           faction: p.faction || "", bio: p.bio || "", discord: p.discord || "", playTimes: p.play_times || "",
-          notifSeen: p.notif_seen_at ? Date.parse(p.notif_seen_at) : 0,
+          notifSeen: p.notif_seen_at ? Date.parse(p.notif_seen_at) : 0, avatar: p.avatar_url || "",
         };
       });
       links.forEach((l) => { bnet[l.user_id] = { battletag: l.battletag, characters: l.characters || [], linkedAt: Date.parse(l.linked_at) }; });
       return {
         profiles: pmap,
         bnet,
+        messages: messages.reverse().map((m) => ({ id: String(m.id), type: m.thread_type, thread: String(m.thread_id), author: m.author_id, body: m.body, t: Date.parse(m.created_at) })),
         board: board.map((b) => ({
           id: String(b.id), author: b.author_id, authorChar: b.author_char, category: b.category, title: b.title, recipeId: b.recipe_id,
           qty: b.qty, offer: Number(b.offer), note: b.note, status: b.status, claimer: b.claimer_id, claimerChar: b.claimer_char,
@@ -181,6 +214,37 @@ async function supabaseDb() {
         })),
       };
     },
+    // ---- Chat ----
+    async sendMessage(type, threadId, body) { await need(); ok(await sb.from("messages").insert({ thread_type: type, thread_id: Number(threadId), body })); },
+    async deleteMessage(id) { ok(await sb.from("messages").delete().eq("id", Number(id))); },
+    // ---- Profile picture: shrink to 256px in the browser, then store under avatars/<user id>/ ----
+    async uploadAvatar(file) {
+      const id = await need();
+      const blob = await shrinkImage(file, 256);
+      const path = `${id}/avatar-${Date.now()}.jpg`;
+      ok(await sb.storage.from("avatars").upload(path, blob, { contentType: "image/jpeg", upsert: true }));
+      const url = sb.storage.from("avatars").getPublicUrl(path).data.publicUrl;
+      ok(await sb.from("profiles").update({ avatar_url: url }).eq("id", id));
+      return url;
+    },
+    async removeAvatar() { const id = await need(); ok(await sb.from("profiles").update({ avatar_url: "" }).eq("id", id)); },
+    // ---- Who's online (Supabase Realtime presence) ----
+    joinPresence(info, onChange) {
+      if (presence) sb.removeChannel(presence);
+      presence = sb.channel("guild-online", { config: { presence: { key: info.id } } });
+      presence.on("presence", { event: "sync" }, () => {
+        const st = presence.presenceState(); const list = [];
+        for (const [key, metas] of Object.entries(st)) if (metas && metas[0]) list.push({ id: key, ...metas[0] });
+        onChange(list);
+      }).subscribe((status) => { if (status === "SUBSCRIBED") presence.track({ ...info, since: Date.now() }); });
+    },
+    updatePresence(info) { if (presence) presence.track(info); },
+    leavePresence() { if (presence) { sb.removeChannel(presence); presence = null; } },
+    // ---- Discord sign-in (shows once switched on in Supabase) ----
+    async discordEnabled() {
+      try { const r = await fetch(`${BACKEND.supabaseUrl}/auth/v1/settings`, { headers: { apikey: BACKEND.supabaseAnonKey } }); return !!(await r.json()).external?.discord; } catch { return false; }
+    },
+    async signInWithDiscord() { ok(await sb.auth.signInWithOAuth({ provider: "discord", options: { redirectTo } })); },
     // ---- Profile & notifications ----
     async saveProfile(f) {
       const id = await need();
