@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=1">
+<link rel="stylesheet" href="theme.css?v=2">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -23,6 +23,7 @@
       <a href="#home" data-tab="home">Home</a>
       <a href="#rules" data-tab="rules">Rules</a>
       <a href="#map" data-tab="map">Map</a>
+      <a href="#chronicle" data-tab="chronicle">Chronicle</a>
       <a href="#loot" data-tab="loot">Loot</a>
       <a href="#board" data-tab="board">Board</a>
       <a href="#recipes" data-tab="recipes">Recipes</a>
@@ -89,6 +90,7 @@
     <div class="tiles">
       <a class="tile" href="#board"><strong>Request Board</strong><span>Ask the whole guild for something, or pick up a job.</span></a>
       <a class="tile" href="#profile"><strong>Your profile</strong><span>Your main character, Discord and play times.</span></a>
+      <a class="tile" href="#chronicle"><strong>Chronicles of Azeroth</strong><span>The history of the world, races, racials and classes.</span></a>
       <a class="tile" href="#loot"><strong>Loot Vault</strong><span>10,000+ weapons and armor, and which boss drops them.</span></a>
       <a class="tile" href="#map"><strong>World map</strong><span>Where herbs, ore and treasure chests are found.</span></a>
       <a class="tile" href="#recipes"><strong>Recipes</strong><span>Every WoW Forever recipe and who in the guild can craft it.</span></a>
@@ -160,6 +162,219 @@
   </section>
 
   <section id="view-map" hidden></section>
+
+  <section id="view-chronicle" class="chronicle" hidden>
+    <div class="page-head">
+      <p class="eyebrow">Bark and Stone · Lore</p>
+      <h2 class="hero-title">Chronicles of Azeroth</h2>
+      <p class="muted page-intro">How the world got here, who lives in it, and what each race and class brings to the guild. A quick read for new adventurers, and a refresher for old ones.</p>
+      <nav class="chron-nav" aria-label="Chronicle sections">
+        <button class="chip" data-chron="ch-history">The history</button>
+        <button class="chip" data-chron="ch-factions">The two factions</button>
+        <button class="chip" data-chron="ch-races">Races and racials</button>
+        <button class="chip" data-chron="ch-classes">Classes</button>
+        <button class="chip" data-chron="ch-matrix">Who can be what</button>
+      </nav>
+    </div>
+
+    <!-- ===== History ===== -->
+    <h3 class="chron-h" id="ch-history">The history of the world</h3>
+    <ol class="timeline">
+      <li class="era">
+        <span class="era-when">Before history</span>
+        <h4>The Titans shape the world</h4>
+        <p>Immense, god-like beings called the Titans travelled the cosmos bringing order to young worlds. On Azeroth they tamed the elemental lords and their chaotic servants, sealing them away beneath the earth, and left behind great watchers and keepers to guard their work. Ancient Titan vaults still lie buried in places like Uldaman and Ulduar.</p>
+      </li>
+      <li class="era">
+        <span class="era-when">About 10,000 years ago</span>
+        <h4>The Well of Eternity and the War of the Ancients</h4>
+        <p>At the heart of the single great continent lay the Well of Eternity, a lake of raw magic. The night elves (the Kaldorei) built a dazzling empire around it under Queen Azshara. Their reckless use of its power drew the attention of Sargeras and his Burning Legion, an army of demons bent on destroying all life.</p>
+        <p>Azshara opened the way, and the War of the Ancients began. Led by the demigod Cenarius, the druid Malfurion Stormrage, the priestess Tyrande Whisperwind and the dragons, the defenders won, but the Well imploded. The <strong>Great Sundering</strong> tore the land apart into the continents we know today and left the swirling <strong>Maelstrom</strong> in the middle of the sea. You can see it at the centre of the guild map.</p>
+        <p class="era-links"><a href="#map">See the Maelstrom on the map</a></p>
+      </li>
+      <li class="era">
+        <span class="era-when">After the Sundering</span>
+        <h4>A new world tree, and exiles who became the high elves</h4>
+        <p>The night elves planted a new World Tree at Mount Hyjal and turned to druidism, swearing off arcane magic. Some refused and were exiled. They sailed east, founded Quel'Thalas and became the high elves. In the eastern lands the trolls of the Amani and Gurubashi empires ruled the jungles and forests.</p>
+      </li>
+      <li class="era">
+        <span class="era-when">About 2,800 years ago</span>
+        <h4>The rise of humanity</h4>
+        <p>Scattered human tribes united as the nation of Arathor, with its capital Strom in what is now the Arathi Highlands. To beat back the trolls they allied with the high elves, who taught a handful of humans to wield magic. Over the centuries Arathor split into the seven human kingdoms, including Stormwind, Lordaeron, Gilneas and the magocracy of Dalaran. The dwarves of Ironforge and the gnomes of Gnomeregan built their own kingdoms in the mountains.</p>
+        <p class="era-links"><button class="linkish" data-lootsearch="Hakkar">Loot from Hakkar, the Gurubashi trolls' blood god</button></p>
+      </li>
+      <li class="era">
+        <span class="era-when">The First War</span>
+        <h4>The Dark Portal opens</h4>
+        <p>On the world of Draenor, the shamanistic orc clans were corrupted by the demon Kil'jaeden and the warlock Gul'dan, who forged them into the bloodthirsty Horde. With the help of the possessed guardian Medivh, a Dark Portal was opened into Azeroth, and the Horde poured through into the Swamp of Sorrows and the Blasted Lands. In the war that followed, the kingdom of Stormwind was overrun and burned.</p>
+      </li>
+      <li class="era">
+        <span class="era-when">The Second War</span>
+        <h4>The Alliance of Lordaeron</h4>
+        <p>Stormwind's refugees fled north. Humans, high elves, dwarves and gnomes joined together as the Alliance of Lordaeron. The Horde, now riding red dragons enslaved at Grim Batol, pushed deep into the north before it was finally broken at Blackrock Spire. The surviving orcs were herded into internment camps, where many fell into a listless stupor.</p>
+        <p class="era-links"><button class="linkish" data-lootzone="1583">Loot from Blackrock Spire</button></p>
+      </li>
+      <li class="era">
+        <span class="era-when">Between the wars</span>
+        <h4>Thrall frees the orcs</h4>
+        <p>A young orc raised as a slave and gladiator, named Thrall, escaped, learned the ways of the shaman and freed his people from the camps. Guided by visions, he led the new Horde west across the sea to Kalimdor, where they befriended the tauren and the Darkspear trolls.</p>
+      </li>
+      <li class="era">
+        <span class="era-when">The Third War</span>
+        <h4>The Scourge and the battle for Mount Hyjal</h4>
+        <p>A plague swept Lordaeron, turning its people into the undead Scourge, servants of the Lich King. Prince Arthas, trying to stop it, took up the cursed runeblade Frostmourne, murdered his father and delivered his kingdom to the dead. The Burning Legion followed. The demon lord Archimonde marched on the World Tree at Mount Hyjal, and night elves, orcs and humans fought side by side for the first time. The ancient spirits of the forest sacrificed the tree's power to destroy him.</p>
+      </li>
+      <li class="era current">
+        <span class="era-when">Now: the age of WoW Forever</span>
+        <h4>An uneasy peace, and old evils stirring</h4>
+        <p>The Horde has built its capital at Orgrimmar in Durotar. The banshee Sylvanas Windrunner and her Forsaken broke free of the Lich King and hold the Undercity beneath the ruins of Lordaeron. The Alliance rebuilds around Stormwind and Ironforge, while the night elves guard Teldrassil. But the dangers are everywhere:</p>
+        <ul class="threats">
+          <li>The fire lord <strong>Ragnaros</strong> stirs beneath Blackrock Mountain. <button class="linkish" data-lootzone="2717">Molten Core in the Loot Vault</button> · <a href="https://www.wowhead.com/forever/zone=2717" target="_blank" rel="noopener">full loot table</a></li>
+          <li>The black dragon <strong>Onyxia</strong> schemes from her lair, and her brother Nefarian builds an army of chromatic dragons. <button class="linkish" data-lootsearch="Onyxia">Onyxia's loot</button> · <button class="linkish" data-lootzone="2677">Blackwing Lair loot</button> · <a href="https://www.wowhead.com/forever/zone=2677" target="_blank" rel="noopener">full loot table</a></li>
+          <li>The blood god <strong>Hakkar</strong> is being called back to Zul'Gurub. <button class="linkish" data-lootsearch="Hakkar">Hakkar's loot</button> · <a href="https://www.wowhead.com/forever/zone=1977" target="_blank" rel="noopener">full Zul'Gurub loot table</a></li>
+          <li>An Old God waits in the desert city of <strong>Ahn'Qiraj</strong>. <button class="linkish" data-lootzone="3428">Temple of Ahn'Qiraj loot</button> · <button class="linkish" data-lootsearch="Ossirian">Ossirian's loot</button> · <a href="https://www.wowhead.com/forever/zone=3428" target="_blank" rel="noopener">full loot table</a></li>
+          <li>The lich <strong>Kel'Thuzad</strong> commands the Scourge from the floating necropolis Naxxramas. <button class="linkish" data-lootzone="3456">Naxxramas loot</button> · <a href="https://www.wowhead.com/forever/zone=3456" target="_blank" rel="noopener">full loot table</a></li>
+        </ul>
+        <p class="muted chron-note" style="margin:0 0 8px">Raid loot in our Loot Vault is only partly linked to its raid, because Wowhead doesn't tag every raid drop. The “full loot table” links show everything.</p>
+        <p>WoW Forever also opens lands that weren't reachable before, such as Gilneas, the Riverglades, Shen'dralas and Mount Hyjal. Their stories are best discovered in game, together.</p>
+      </li>
+    </ol>
+
+    <!-- ===== Factions ===== -->
+    <h3 class="chron-h" id="ch-factions">The two factions</h3>
+    <div class="factions">
+      <div class="faction ally">
+        <h4>The Alliance</h4>
+        <p>Bound by old treaties and shared hardship: the humans of Stormwind, the dwarves of Ironforge, the night elves of Darnassus and the gnomes of Gnomeregan. Honour, order and the hope of rebuilding what was lost.</p>
+        <p class="capitals">Capitals: Stormwind City, Ironforge, Darnassus</p>
+      </div>
+      <div class="faction horde">
+        <h4>The Horde</h4>
+        <p>A coalition of outsiders who survived by standing together: the orcs of Durotar, the tauren of Mulgore, the Darkspear trolls and the Forsaken. Strength, freedom and a fierce loyalty to one another.</p>
+        <p class="capitals">Capitals: Orgrimmar, Thunder Bluff, the Undercity</p>
+      </div>
+    </div>
+
+    <!-- ===== Races ===== -->
+    <h3 class="chron-h" id="ch-races">Races and their racial traits</h3>
+    <p class="muted chron-note">Racial traits as they work in classic-era WoW. WoW Forever may have tuned some of them, so check your character's spellbook for the exact numbers. <span class="prof-hint">Gold-marked traits help with professions.</span></p>
+    <div class="races">
+      <article class="race ally"><header><h4>Human</h4><span class="tag ally">Alliance</span></header>
+        <p>Adaptable and ambitious, the most numerous people of the Eastern Kingdoms.</p>
+        <ul class="racials">
+          <li><strong>Perception</strong>: briefly see stealthed enemies far more easily.</li>
+          <li><strong>The Human Spirit</strong>: +5% Spirit.</li>
+          <li><strong>Diplomacy</strong>: +10% reputation gains.</li>
+          <li><strong>Sword and Mace Specialization</strong>: +5 skill with swords and maces.</li>
+        </ul><p class="home">Starts in Elwynn Forest</p></article>
+      <article class="race ally"><header><h4>Dwarf</h4><span class="tag ally">Alliance</span></header>
+        <p>Stout miners and smiths of Ironforge, rediscovering their Titan-forged origins.</p>
+        <ul class="racials">
+          <li><strong>Stoneform</strong>: remove poison, disease and bleeding, and gain armor for a few seconds.</li>
+          <li><strong>Frost Resistance</strong>: +10 Frost resistance.</li>
+          <li><strong>Gun Specialization</strong>: +5 skill with guns.</li>
+          <li class="prof"><strong>Treasure Finding</strong>: track treasure chests on the minimap.</li>
+        </ul><p class="home">Starts in Dun Morogh</p></article>
+      <article class="race ally"><header><h4>Night Elf</h4><span class="tag ally">Alliance</span></header>
+        <p>Ancient, nature-bound guardians of Kalimdor who have sworn off arcane magic.</p>
+        <ul class="racials">
+          <li><strong>Shadowmeld</strong>: vanish while standing still.</li>
+          <li><strong>Quickness</strong>: +1% chance to dodge.</li>
+          <li><strong>Nature Resistance</strong>: +10 Nature resistance.</li>
+          <li><strong>Wisp Spirit</strong>: become a fast wisp when dead.</li>
+        </ul><p class="home">Starts in Teldrassil</p></article>
+      <article class="race ally"><header><h4>Gnome</h4><span class="tag ally">Alliance</span></header>
+        <p>Brilliant tinkerers, driven from Gnomeregan but never short of ideas.</p>
+        <ul class="racials">
+          <li><strong>Escape Artist</strong>: break free of roots and snares.</li>
+          <li><strong>Expansive Mind</strong>: +5% Intellect.</li>
+          <li><strong>Arcane Resistance</strong>: +10 Arcane resistance.</li>
+          <li class="prof"><strong>Engineering Specialization</strong>: +15 Engineering skill.</li>
+        </ul><p class="home">Starts in Dun Morogh</p></article>
+      <article class="race horde"><header><h4>Orc</h4><span class="tag horde">Horde</span></header>
+        <p>Freed from demonic corruption, a proud warrior people led by Thrall.</p>
+        <ul class="racials">
+          <li><strong>Blood Fury</strong>: a burst of extra attack power.</li>
+          <li><strong>Hardiness</strong>: +25% chance to resist stuns.</li>
+          <li><strong>Command</strong>: hunter and warlock pets deal 5% more damage.</li>
+          <li><strong>Axe Specialization</strong>: +5 skill with axes.</li>
+        </ul><p class="home">Starts in Durotar</p></article>
+      <article class="race horde"><header><h4>Undead</h4><span class="tag horde">Horde</span></header>
+        <p>The Forsaken: free-willed dead who broke from the Lich King under Sylvanas.</p>
+        <ul class="racials">
+          <li><strong>Will of the Forsaken</strong>: break charm, fear and sleep.</li>
+          <li><strong>Cannibalize</strong>: recover health from humanoid or undead corpses.</li>
+          <li><strong>Underwater Breathing</strong>: breathe underwater far longer.</li>
+          <li><strong>Shadow Resistance</strong>: +10 Shadow resistance.</li>
+        </ul><p class="home">Starts in Tirisfal Glades</p></article>
+      <article class="race horde"><header><h4>Tauren</h4><span class="tag horde">Horde</span></header>
+        <p>Gentle giants of Mulgore who honour the Earth Mother and walk with the land.</p>
+        <ul class="racials">
+          <li><strong>War Stomp</strong>: stun nearby enemies.</li>
+          <li><strong>Endurance</strong>: +5% base health.</li>
+          <li><strong>Nature Resistance</strong>: +10 Nature resistance.</li>
+          <li class="prof"><strong>Cultivation</strong>: +15 Herbalism skill.</li>
+        </ul><p class="home">Starts in Mulgore</p></article>
+      <article class="race horde"><header><h4>Troll</h4><span class="tag horde">Horde</span></header>
+        <p>The Darkspear tribe, cunning survivors who owe Thrall a life debt.</p>
+        <ul class="racials">
+          <li><strong>Berserking</strong>: faster attacks and casting when hurt.</li>
+          <li><strong>Regeneration</strong>: faster health regeneration, even in combat.</li>
+          <li><strong>Beast Slaying</strong>: +5% damage against beasts.</li>
+          <li><strong>Bow and Throwing Specialization</strong>: +5 skill with bows and thrown weapons.</li>
+        </ul><p class="home">Starts in Durotar</p></article>
+    </div>
+
+    <!-- ===== Classes ===== -->
+    <h3 class="chron-h" id="ch-classes">The classes</h3>
+    <div class="classes">
+      <article class="klass" style="--cc:#C69B6D"><header><h4>Warrior</h4><span class="roles"><span>Tank</span><span>Melee</span></span></header>
+        <p>Masters of weapons and armor who build <strong>Rage</strong> by dealing and taking damage. The classic main tank, and a hard-hitting damage dealer.</p>
+        <p class="kfacts">Mail, then plate at 40 · Rage</p></article>
+      <article class="klass" style="--cc:#F48CBA"><header><h4>Paladin</h4><span class="roles"><span>Healer</span><span>Tank</span><span>Melee</span></span></header>
+        <p>Holy warriors of the Alliance. Party-wide blessings and auras, strong heals and some of the best survival tools in the game.</p>
+        <p class="kfacts">Mail, then plate at 40 · Mana · Alliance only</p></article>
+      <article class="klass" style="--cc:#AAD372"><header><h4>Hunter</h4><span class="roles"><span>Ranged</span></span></header>
+        <p>Deadly at range with a bow or gun, fighting alongside a tamed beast companion. Great for soloing and pulling in dungeons.</p>
+        <p class="kfacts">Leather, then mail at 40 · Mana · Pet</p></article>
+      <article class="klass" style="--cc:#FFF468"><header><h4>Rogue</h4><span class="roles"><span>Melee</span></span></header>
+        <p>Stealthy, agile and dangerous. They use <strong>Energy</strong> and combo points, open locked chests, and craft their own poisons.</p>
+        <p class="kfacts">Leather · Energy · Lockpicking, poisons</p></article>
+      <article class="klass" style="--cc:#E8E8E8"><header><h4>Priest</h4><span class="roles"><span>Healer</span><span>Caster</span></span></header>
+        <p>The group's lifeline: powerful heals and shields, and the Shadow path for those who prefer to hurt.</p>
+        <p class="kfacts">Cloth · Mana · Fortitude buff, resurrection</p></article>
+      <article class="klass" style="--cc:#2E8CE8"><header><h4>Shaman</h4><span class="roles"><span>Healer</span><span>Caster</span><span>Melee</span></span></header>
+        <p>Speakers to the elements who drop totems to strengthen the whole party. Heal, cast lightning, or fight with an enhanced weapon.</p>
+        <p class="kfacts">Leather, then mail at 40 · Mana · Horde only</p></article>
+      <article class="klass" style="--cc:#3FC7EB"><header><h4>Mage</h4><span class="roles"><span>Caster</span></span></header>
+        <p>Raw arcane, fire and frost power. Huge damage, crowd control, and the guild's favourite service: conjured food, water and portals.</p>
+        <p class="kfacts">Cloth · Mana · Portals, conjured food</p></article>
+      <article class="klass" style="--cc:#8788EE"><header><h4>Warlock</h4><span class="roles"><span>Caster</span></span></header>
+        <p>Dark casters who command demons, spread curses and drain life. They summon groupmates and make healthstones.</p>
+        <p class="kfacts">Cloth · Mana · Demon pets, summoning</p></article>
+      <article class="klass" style="--cc:#FF7C0A"><header><h4>Druid</h4><span class="roles"><span>Healer</span><span>Tank</span><span>Melee</span><span>Caster</span></span></header>
+        <p>Shapeshifters who can fill any role: bear to tank, cat to fight, tree-hugging healer, or moonkin caster. The game's best all-rounders.</p>
+        <p class="kfacts">Leather · Mana, Rage or Energy by form</p></article>
+    </div>
+
+    <!-- ===== Matrix ===== -->
+    <h3 class="chron-h" id="ch-matrix">Who can be what</h3>
+    <div class="table-wrap matrix-wrap"><table class="matrix">
+      <thead><tr><th>Class</th><th class="ally-h">Human</th><th class="ally-h">Dwarf</th><th class="ally-h">Night Elf</th><th class="ally-h">Gnome</th><th class="horde-h">Orc</th><th class="horde-h">Undead</th><th class="horde-h">Tauren</th><th class="horde-h">Troll</th></tr></thead>
+      <tbody>
+        <tr><th>Warrior</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
+        <tr><th>Paladin</th><td class="y">✔</td><td class="y">✔</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+        <tr><th>Hunter</th><td></td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td></tr>
+        <tr><th>Rogue</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y">✔</td></tr>
+        <tr><th>Priest</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td></tr>
+        <tr><th>Shaman</th><td></td><td></td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td></tr>
+        <tr><th>Mage</th><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td></td><td class="y">✔</td></tr>
+        <tr><th>Warlock</th><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td></td><td></td></tr>
+        <tr><th>Druid</th><td></td><td></td><td class="y">✔</td><td></td><td></td><td></td><td class="y">✔</td><td></td></tr>
+      </tbody></table></div>
+    <p class="muted chron-note">Race and class combinations as in classic-era WoW. If WoW Forever adds new ones, the character creation screen is the final word.</p>
+  </section>
+
   <section id="view-loot" hidden></section>
   <section id="view-board" hidden></section>
   <section id="view-profile" hidden></section>
@@ -204,8 +419,8 @@
 </div>
 
 <script src="backend.js?v=8"></script>
-<script src="app.js?v=12"></script>
+<script src="app.js?v=14"></script>
 <script src="map.js?v=5"></script>
-<script src="loot.js?v=1"></script>
+<script src="loot.js?v=3"></script>
 </body>
 </html>

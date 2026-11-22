@@ -112,3 +112,60 @@ tbody tr[aria-selected="true"]{background:rgb(227 181 91 / .14)}
 .sheet-actions{margin-top:14px}
 @media (max-width: 960px){ .sheet{background:rgb(12 14 21 / .98); -webkit-backdrop-filter:none; backdrop-filter:none} }
 @media (prefers-reduced-motion: reduce){ .backdrop::before{filter:brightness(.42)} }
+
+/* ---------- Chronicles of Azeroth ---------- */
+.chron-nav{display:flex; flex-wrap:wrap; gap:6px; margin-top:14px}
+.chron-h{font-family:var(--f-display); font-size:1.35rem; letter-spacing:.03em; color:var(--gold-hi); margin:34px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line); scroll-margin-top:90px; text-transform:none}
+.chron-h::before{content:"❖ "; color:var(--brass)}
+.chron-note{max-width:75ch; margin:-4px 0 14px; font-size:.88rem}
+.prof-hint{color:var(--gold-hi)}
+
+.timeline{list-style:none; margin:0; padding:0 0 0 26px; position:relative; display:grid; gap:16px; max-width:900px}
+.timeline::before{content:""; position:absolute; left:8px; top:6px; bottom:6px; width:2px; background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo) 60%, rgb(185 130 40 / .2))}
+.era{position:relative; background:var(--panel); border:1px solid var(--line); border-radius:6px; padding:14px 16px; box-shadow:inset 0 0 0 1px rgb(0 0 0 / .5), 0 8px 22px rgb(0 0 0 / .4); -webkit-backdrop-filter:blur(6px); backdrop-filter:blur(6px)}
+.era::before{content:""; position:absolute; left:-25px; top:18px; width:12px; height:12px; transform:rotate(45deg); background:linear-gradient(135deg, var(--gold-hi), var(--gold-lo)); border:2px solid #1c1306; box-shadow:0 0 10px rgb(227 181 91 / .5)}
+.era.current{border-color:var(--brass); box-shadow:inset 0 0 0 1px rgb(0 0 0 / .5), 0 0 0 1px rgb(227 181 91 / .25), 0 8px 22px rgb(0 0 0 / .4)}
+.era-when{display:inline-block; font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; color:#c9a965; margin-bottom:4px}
+.era h4{font-family:var(--f-display); font-size:1.12rem; color:var(--ink); margin:0 0 8px}
+.era p{line-height:1.65; margin:0 0 8px; max-width:80ch}
+.era p:last-child{margin-bottom:0}
+.era-links{font-size:.88rem}
+.threats{margin:4px 0 10px; padding-left:20px; display:grid; gap:6px; line-height:1.55}
+.threats .linkish{font-size:.84rem; margin-left:4px}
+
+.factions{display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:14px}
+.faction{border-radius:6px; padding:16px; border:1px solid; box-shadow:0 8px 22px rgb(0 0 0 / .4)}
+.faction.ally{border-color:#2f5d99; background:linear-gradient(160deg, rgb(30 60 110 / .55), rgb(12 18 30 / .9))}
+.faction.horde{border-color:#8a2a22; background:linear-gradient(160deg, rgb(110 28 20 / .55), rgb(24 12 10 / .9))}
+.faction h4{font-family:var(--f-display); font-size:1.3rem; margin:0 0 8px; letter-spacing:.04em}
+.faction.ally h4{color:#8fc0ff} .faction.horde h4{color:#ff8f80}
+.faction p{line-height:1.6; margin:0 0 8px}
+.capitals{font-size:.84rem; color:var(--muted)}
+
+.races{display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:12px}
+.race{background:var(--panel); border:1px solid var(--line); border-top:3px solid; border-radius:6px; padding:14px; display:grid; gap:6px; align-content:start; box-shadow:0 8px 22px rgb(0 0 0 / .4)}
+.race.ally{border-top-color:#3d7fd0} .race.horde{border-top-color:#c8463a}
+.race header, .klass header{display:flex; justify-content:space-between; align-items:center; gap:8px}
+.race h4, .klass h4{font-family:var(--f-display); font-size:1.1rem; margin:0}
+.race p{margin:0; line-height:1.5; font-size:.9rem}
+.racials{list-style:none; margin:4px 0 0; padding:0; display:grid; gap:5px; font-size:.86rem; line-height:1.45}
+.racials li{padding-left:14px; position:relative}
+.racials li::before{content:"◆"; position:absolute; left:0; font-size:.6rem; top:4px; color:#7d6a45}
+.racials li.prof{color:var(--gold-hi)}
+.racials li.prof::before{color:var(--brass)}
+.race .home{font-size:.78rem; color:var(--muted); margin-top:2px}
+
+.classes{display:grid; grid-template-columns:repeat(auto-fill, minmax(260px, 1fr)); gap:12px}
+.klass{background:linear-gradient(180deg, color-mix(in oklab, var(--cc) 14%, rgb(15 18 27 / .92)), rgb(15 18 27 / .92) 60%); border:1px solid color-mix(in oklab, var(--cc) 45%, #2a2418); border-radius:6px; padding:14px; display:grid; gap:8px; align-content:start; box-shadow:0 8px 22px rgb(0 0 0 / .4)}
+.klass h4{color:var(--cc); text-shadow:0 1px 2px rgb(0 0 0 / .8)}
+.klass p{margin:0; line-height:1.55; font-size:.9rem}
+.roles{display:flex; flex-wrap:wrap; gap:4px; justify-content:flex-end}
+.roles span{font-size:.68rem; text-transform:uppercase; letter-spacing:.06em; padding:1px 7px; border-radius:999px; border:1px solid color-mix(in oklab, var(--cc) 55%, transparent); color:color-mix(in oklab, var(--cc) 70%, #fff)}
+.kfacts{font-size:.8rem !important; color:var(--muted)}
+
+.matrix-wrap{max-width:900px}
+.matrix th, .matrix td{text-align:center; padding:8px}
+.matrix tbody th{text-align:left; background:none; font-family:var(--f-display); color:var(--ink); border-bottom:1px solid rgb(75 60 34 / .55)}
+.matrix .ally-h{color:#8fc0ff} .matrix .horde-h{color:#ff8f80}
+.matrix td.y{color:var(--ok); font-weight:700}
+@media (max-width: 640px){ .factions{grid-template-columns:minmax(0,1fr)} .timeline{padding-left:20px} .era::before{left:-19px} .chron-h{scroll-margin-top:12px} }

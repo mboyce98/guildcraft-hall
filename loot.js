@@ -75,7 +75,7 @@ function render() {
     const zoneIds = [...new Set(ITEMS.map((r) => r[12]).filter(Boolean))].filter((id) => ZONES.has(id));
     const group = (pred) => zoneIds.filter((id) => pred(ZONES.get(id))).sort((a, b) => zoneName(a).localeCompare(zoneName(b)));
     const dungeons = group((z) => z.cat === 2), raids = group((z) => z.cat === 3), world = group((z) => z.cat !== 2 && z.cat !== 3);
-    const og = (label, ids) => ids.length ? `<optgroup label="${label}">${ids.map((id) => `<option value="${id}">${esc(zoneName(id))}</option>`).join("")}</optgroup>` : "";
+    const og = (label, ids) => ids.length ? `<optgroup label="${label}">${ids.map((id) => `<option value="${id}" ${String(st.zone) === String(id) ? "selected" : ""}>${esc(zoneName(id))}</option>`).join("")}</optgroup>` : "";
     root.innerHTML = `
       <div class="page-head"><p class="eyebrow">Bark and Stone · Loot database</p><h2 class="hero-title">The Loot Vault</h2>
         <p class="muted page-intro">Every uncommon-or-better weapon, armor piece and trinket in WoW Forever, and where it comes from. Filter by slot, armor type, dungeon or level, then hover an item for its stats.</p></div>
@@ -176,7 +176,22 @@ document.addEventListener("click", (e) => {
 });
 document.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches && e.target.matches("#view-loot tr[data-item]")) { st.sel = Number(e.target.dataset.item); draw(); } });
 
-window.GC_LOOT = { render };
+// From the Chronicle: open the Loot Vault filtered to one dungeon or raid.
+function openZone(id) {
+  Object.assign(st, { q: "", quality: "", slot: "", type: "", source: "", zone: String(id), minLv: "", maxLv: "", onlyNew: false, limit: 100, sel: null, sort: "q", dir: -1 });
+  const v = $("#view-loot"); if (v) v.dataset.built = "";
+  location.hash = "#loot";
+  setTimeout(() => { render(); const z = $("#lf-zone"); if (z) z.value = String(id); }, 0);
+  load().then(() => { const z = $("#lf-zone"); if (z) { z.value = String(id); draw(); } });
+}
+// From the Chronicle: open the Loot Vault searching for a boss name.
+function openSearch(text) {
+  Object.assign(st, { q: String(text), quality: "", slot: "", type: "", source: "", zone: "", minLv: "", maxLv: "", onlyNew: false, limit: 100, sel: null, sort: "q", dir: -1 });
+  const v = $("#view-loot"); if (v) v.dataset.built = "";
+  location.hash = "#loot";
+  load().then(() => setTimeout(() => { render(); const box = $("#lq"); if (box) box.value = st.q; draw(); }, 0));
+}
+window.GC_LOOT = { render, openZone, openSearch };
 const lv = document.getElementById("view-loot");
 if (lv && !lv.hidden && !lv.dataset.built) render();
 })();

@@ -143,7 +143,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "loot", "board", "recipes", "mine", "requests", "market", "profile"];
+  const VIEWS = ["home", "rules", "map", "chronicle", "loot", "board", "recipes", "mine", "requests", "market", "profile"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -577,7 +577,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", chronicle: "the Chronicle", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
@@ -786,6 +786,17 @@ function openAuth(tab) {
 
 /* ---------- events ---------- */
 document.addEventListener("click", async (e) => {
+  // Chronicle: jump to a section, or open a raid's loot.
+  const jump = e.target.closest("[data-chron]");
+  if (jump) {
+    const el = document.getElementById(jump.dataset.chron);
+    if (el) { const top = el.getBoundingClientRect().top + window.scrollY - (document.querySelector(".top").offsetHeight || 0) - 12; window.scrollTo(0, Math.max(0, top)); }
+    return;
+  }
+  const lz = e.target.closest("[data-lootzone]");
+  if (lz) { if (window.GC_LOOT) window.GC_LOOT.openZone(Number(lz.dataset.lootzone)); return; }
+  const ls = e.target.closest("[data-lootsearch]");
+  if (ls) { if (window.GC_LOOT) window.GC_LOOT.openSearch(ls.dataset.lootsearch); return; }
   if (S.notifOpen && !e.target.closest("#notif-panel,#bell")) { S.notifOpen = false; renderBell(); }
   if (S.onlineOpen && !e.target.closest("#online-panel,#online-btn")) { S.onlineOpen = false; renderOnline(); }
   const t = e.target.closest("[data-act],[data-recipe],[data-prof]");
