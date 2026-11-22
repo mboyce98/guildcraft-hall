@@ -111,6 +111,8 @@ async function loadMe() {
   if ((S.me && S.me.id) !== S.uid) { S.myDoc = null; S.crafters = new Map(); S.requests = []; S.listings = []; }
   S.uid = S.me ? S.me.id : null;
   if (!S.uid && S.presenceKey) { S.B.leavePresence(); S.presenceKey = null; S.online = []; }
+  if (S.uid && S.dcIdentity === undefined) loadDiscordIdentity();
+  if (!S.uid) S.dcIdentity = undefined;
   renderWho();
 }
 function renderWho() {
@@ -134,7 +136,9 @@ async function refresh() {
   S.B.loadSettings().then((s) => { S.settings = s || {}; renderHome(); }).catch(() => {});
   S.B.loadNews().then((n) => { S.news = n || []; renderNews(); if (S.view === "admin" && S.adminTab === "news") renderAdmin(); }).catch(() => {});
   if (S.view === "guides" || S.gLoaded) loadGuideData();
+  loadEvents();
   if (!S.uid) { S.loaded = true; buildIndex(); render(); return; }
+  loadAlerts();
   try {
     const d = await S.B.loadAll();
     S.profiles = d.profiles; S.bnet = d.bnet || {}; S.board = d.board || []; S.messages = d.messages || []; S.dms = d.dms || [];
@@ -167,13 +171,15 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
   else if (/^member-[0-9a-z_-]+$/i.test(h)) { S.viewUser = h.slice(7); view = "profile"; }
   else if (/^messages-[0-9a-z_-]+$/i.test(h)) { S.dmWith = h.slice(9); view = "messages"; }
   else if (h === "messages") { S.dmWith = null; view = "messages"; }
+  else if (/^event-\d+$/.test(h)) { if (S.eventId !== h.slice(6)) S.evMsg = ""; S.eventId = h.slice(6); S.evEdit = null; view = "events"; }
+  else if (h === "events") { S.eventId = null; view = "events"; }
   else if (/^guide-\d+$/.test(h)) { S.guideId = h.slice(6); S.gEdit = null; view = "guides"; }
   else if (h === "guides" || h === "prices") { S.guideId = null; if (h === "prices") S.gTab = "prices"; view = "guides"; }
   else if (/^rule-\d$|^consequences$/.test(h)) view = "rules";
@@ -211,8 +217,9 @@ function render() {
       const box = document.querySelector(`.chat-form[data-key="${chatState.key}"] input`);
       if (box && document.activeElement !== box) { box.value = chatState.value; box.focus(); try { box.setSelectionRange(chatState.s, chatState.e); } catch {} }
     }, 0);
-    renderBell(); renderOnline(); renderDmButton();
-    if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
+    renderBell(); renderOnline(); renderDmButton(); renderEventBits(); renderTradeBadge();
+    if (S.view === "events") { if (!(typing && typing.closest("#view-events"))) renderEvents(); }
+    else if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
@@ -739,6 +746,7 @@ function renderProfile() {
         <div class="row"><label for="pr-bio">About you</label><textarea id="pr-bio" rows="3" maxlength="400">${esc(p.bio || "")}</textarea></div>
         <div class="actions"><span class="saved" id="pr-saved"></span><button class="btn primary" type="submit">Save profile</button></div>
       </form>
+      ${S.B && S.B.mode !== "demo" ? `<div class="dc-link" id="dc-link">${discordLinkBox()}</div>` : ""}
     </div>`;
   }
   root.innerHTML = `
@@ -1113,6 +1121,13 @@ function notifications() {
     else if (mineBoard.has(m.thread)) { const b = S.board.find((x) => x.id === m.thread); if (b) out.push({ t: m.t, text: `<strong>${esc(userName(m.author))}</strong> on “${esc(b.title)}”: “${esc(m.body.slice(0, 60))}”`, href: "#board" }); }
   }
   for (const m of S.dms) if (m.to === S.uid) out.push({ t: m.t, text: `<strong>${esc(userName(m.from) || "Someone")}</strong> sent you a message: “${esc(m.body.slice(0, 60))}”`, href: "#messages-" + m.from });
+  // Guild events: new ones planned by others, and ones you're going to that start within 3 hours.
+  for (const ev of upcomingEvents()) {
+    if (ev.createdBy !== S.uid) out.push({ t: ev.t, text: `New event: <strong>${esc(ev.title)}</strong> on ${esc(evWhen(ev.starts))}`, href: "#event-" + ev.id });
+    const me = mySignup(ev);
+    if (me && me.status === "yes" && ev.starts - Date.now() < 3 * 3600000) out.push({ t: ev.starts - 3 * 3600000, text: `Starting ${evUntil(ev.starts)}: <strong>${esc(ev.title)}</strong>`, href: "#event-" + ev.id });
+  }
+  out.push(...alertNotifications());
   const seen = seenAt();
   return out.filter((n) => n.t).sort((a, b) => b.t - a.t).slice(0, 40).map((n) => ({ ...n, unread: n.t > seen }));
 }
@@ -1636,7 +1651,7 @@ function renderPrices() {
       <div class="card"><p class="eyebrow">Biggest moves vs last week</p>${movers.length ? `<ol>${movers.map((r) => `<li>${itemLink(r.name)} ${changeTag(r.change)}</li>`).join("")}</ol>` : '<p class="muted">Not enough reports to compare weeks yet.</p>'}</div>
     </div>` : "";
   return `<p class="muted p-intro">Prices come from guildmates' reports of what they see in Trade chat and the auction house, plus every priced “For sale” listing on the guild market. The typical price is the middle of this week's reports.</p>
-    ${report}${highlight}
+    ${report}${alertsCard()}${highlight}
     <div class="mk-bar"><input type="search" id="pq" placeholder="Search items" aria-label="Search prices" value="${esc(S.pq)}">
       <select id="psort" aria-label="Sort"><option value="value" ${S.psort === "value" ? "selected" : ""}>Highest value</option><option value="moves" ${S.psort === "moves" ? "selected" : ""}>Biggest moves</option><option value="recent" ${S.psort === "recent" ? "selected" : ""}>Recently reported</option></select></div>
     ${shown.length ? `<div class="p-wrap"><table class="p-table"><thead><tr><th>Item</th><th>Typical price</th><th>vs last week</th><th>Last 30 days</th><th>30-day range</th><th>Reports</th></tr></thead><tbody>${shown.map(row).join("")}</tbody></table></div>`
@@ -1690,6 +1705,299 @@ document.addEventListener("submit", async (e) => {
     catch (x) { btn.disabled = false; note("Couldn't report the price: " + x.message); }
   }
 });
+
+/* ---------- Events: the guild calendar. Sign-ups come from the website and from Discord buttons. ---------- */
+const EV_KINDS = { Dungeon: "🗝️", Raid: "🐉", Farming: "⛏️", Leveling: "📜", PvP: "⚔️", Social: "🍺", Other: "📅" };
+const EV_ROLES = [["Tank", "🛡️", "Tanks"], ["Healer", "💚", "Healers"], ["Damage", "🗡️", "Damage"]];
+Object.assign(S, { events: [], evLoaded: false, eventId: null, evEdit: null, evPast: false, evRole: lsGet("gc.evRole") || "", evMsg: "",
+  alerts: [], alertPrices: [], dcIdentity: undefined });
+async function loadEvents() {
+  try { S.events = (await S.B.loadEvents()) || []; } catch {}
+  S.evLoaded = true;
+  if (S.view === "events" && !(document.activeElement && document.activeElement.closest && document.activeElement.closest("#eventform"))) renderEvents();
+  renderEventBits();
+}
+const evEnd = (e) => e.starts + e.dur * 60000;
+const evOver = (e) => evEnd(e) < Date.now();
+function evRoster(e) {
+  const yes = e.signups.filter((s) => s.status === "yes");
+  return { inn: yes.slice(0, e.size), standby: yes.slice(e.size), maybe: e.signups.filter((s) => s.status === "maybe"), no: e.signups.filter((s) => s.status === "no") };
+}
+const mySignup = (e) => (S.uid ? e.signups.find((s) => s.user === S.uid) : null);
+const canEditEvent = (e) => S.uid && (e.createdBy === S.uid || (S.me && S.me.isAdmin));
+const evWhen = (t, o) => new Date(t).toLocaleString(undefined, { weekday: "short", month: "short", day: "numeric", hour: "numeric", minute: "2-digit", ...(o || {}) });
+const evTime = (t) => new Date(t).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+function evUntil(t) {
+  const m = Math.round((t - Date.now()) / 60000);
+  if (m < -1) return "started " + ago(t);
+  if (m < 1) return "starting now";
+  if (m < 60) return `in ${m} min`;
+  if (m < 48 * 60) return `in ${Math.round(m / 60)} h`;
+  return `in ${Math.round(m / 1440)} days`;
+}
+const hoursText = (min) => (min >= 60 ? `${+(min / 60).toFixed(1)} h` : `${min} min`);
+const upcomingEvents = () => S.events.filter((e) => !e.cancelled && !evOver(e)).sort((a, b) => a.starts - b.starts);
+const unansweredEvents = () => (S.uid ? upcomingEvents().filter((e) => !mySignup(e)) : []);
+
+// Badge on the Events menu link, and the "coming up" box on the home page.
+function renderEventBits() {
+  const b = $("#ev-badge");
+  if (b) { const n = unansweredEvents().length; b.textContent = n; b.hidden = !n; b.title = n ? `${n} event${n === 1 ? "" : "s"} you haven't answered` : ""; }
+  const home = $("#home-events");
+  if (home) {
+    const list = upcomingEvents().slice(0, 3);
+    home.innerHTML = list.length ? `<h3 class="sec">Coming up</h3><div class="hev-list">${list.map((e) => {
+      const r = evRoster(e), me = mySignup(e);
+      return `<a class="hev" href="#event-${esc(e.id)}"><span class="hev-ico" aria-hidden="true">${EV_KINDS[e.kind] || "📅"}</span>
+        <span class="hev-main"><strong>${esc(e.title)}</strong><span class="muted">${esc(evWhen(e.starts))} · ${evUntil(e.starts)}</span></span>
+        <span class="hev-n">${r.inn.length}/${e.size}${me ? `<small class="ev-mine st-${me.status}">${me.status === "yes" ? "Going" : me.status === "maybe" ? "Maybe" : "Not going"}</small>` : ""}</span></a>`;
+    }).join("")}</div><p><a href="#events">All events</a></p>` : "";
+  }
+}
+
+function evDateBlock(t) {
+  const d = new Date(t);
+  return `<div class="ev-date" aria-hidden="true"><span>${d.toLocaleDateString(undefined, { weekday: "short" })}</span><strong>${d.getDate()}</strong><span>${d.toLocaleDateString(undefined, { month: "short" })}</span></div>`;
+}
+const roleCounts = (r) => EV_ROLES.map(([k, ico]) => `<span title="${k}">${ico} ${r.inn.filter((s) => s.role === k).length}</span>`).join("");
+const statusChip = (s) => (s ? `<span class="ev-mine st-${s.status}">${s.status === "yes" ? `Going · ${esc(s.role)}` : s.status === "maybe" ? "Maybe" : "Not going"}</span>` : "");
+
+function renderEvents() {
+  const root = $("#view-events"); if (!root) return;
+  if (!S.evLoaded) { root.innerHTML = '<div class="empty"><strong>Loading events…</strong></div>'; loadEvents(); return; }
+  const head = `<div class="map-head board-head"><div><p class="eyebrow">Bark and Stone · Events</p><h2 class="hero-title">Guild events</h2>
+    <p class="muted map-intro">Dungeon runs, raids and farming nights. Sign up here or with the buttons on the bot's post in Discord; both show up in the same list.</p></div>
+    ${S.uid ? '<button class="btn primary" data-act="ev-new">Plan an event</button>' : '<button class="btn" data-act="signin">Sign in to plan an event</button>'}</div>`;
+  const msg = S.evMsg ? `<p class="ev-msg">${esc(S.evMsg)}</p>` : "";
+
+  if (S.evEdit) { root.innerHTML = head + eventForm(); return; }
+
+  if (S.eventId) {
+    const e = S.events.find((x) => x.id === S.eventId);
+    if (!e) { root.innerHTML = head + `<div class="empty"><strong>That event isn't here any more.</strong><a href="#events">See all events</a></div>`; return; }
+    root.innerHTML = `<p><a href="#events" class="linkish">← All events</a></p>` + msg + eventDetail(e);
+    return;
+  }
+
+  const up = upcomingEvents(), past = S.events.filter((e) => e.cancelled || evOver(e)).sort((a, b) => b.starts - a.starts);
+  const card = (e) => {
+    const r = evRoster(e), me = mySignup(e);
+    return `<a class="card ev-card k-${esc(e.kind)}${e.cancelled ? " cancelled" : ""}" href="#event-${esc(e.id)}">${evDateBlock(e.starts)}
+      <div class="ev-main"><p class="ev-kind">${EV_KINDS[e.kind] || "📅"} ${esc(e.kind)}${e.cancelled ? ' · <span class="bad">Cancelled</span>' : ""}</p>
+        <h3>${esc(e.title)}</h3>
+        <p class="muted">${esc(evTime(e.starts))} · ${hoursText(e.dur)}${e.location ? " · " + esc(e.location) : ""}</p>
+        <p class="ev-fill"><span class="ev-roles">${roleCounts(r)}</span><span>${r.inn.length}/${e.size} going${r.maybe.length ? ` · ${r.maybe.length} maybe` : ""}</span></p></div>
+      <div class="ev-side">${evOver(e) || e.cancelled ? "" : `<span class="muted small">${evUntil(e.starts)}</span>`}${statusChip(me) || (S.uid && !e.cancelled && !evOver(e) ? '<span class="ev-mine st-none">Not answered</span>' : "")}</div></a>`;
+  };
+  root.innerHTML = head + msg
+    + (up.length ? `<div class="ev-list">${up.map(card).join("")}</div>`
+      : `<div class="empty"><strong>Nothing planned yet.</strong>${S.uid ? "Press “Plan an event”, or type <code>/event</code> in the guild Discord." : ""}</div>`)
+    + (past.length ? `<button class="linkish ev-pastbtn" data-act="ev-past" aria-expanded="${S.evPast}">${S.evPast ? "Hide" : "Show"} past and cancelled events (${past.length})</button>${S.evPast ? `<div class="ev-list past">${past.map(card).join("")}</div>` : ""}` : "");
+}
+
+function eventDetail(e) {
+  const r = evRoster(e), me = mySignup(e), open = !e.cancelled && !evOver(e), edit = canEditEvent(e);
+  const who = (s) => {
+    const name = s.user ? `<a href="#member-${esc(s.user)}">${esc(s.name)}</a>` : esc(s.name);
+    const rm = edit || s.user === S.uid ? `<button class="linkish small-x" data-act="ev-rm" data-id="${esc(s.id)}" title="Remove from this event" aria-label="Remove ${esc(s.name)}">✕</button>` : "";
+    return `<li class="${s.user === S.uid ? "me" : ""}">${name}${s.user ? "" : ' <span class="dc-tag" title="Signed up in Discord">Discord</span>'}${rm}</li>`;
+  };
+  const col = ([k, ico, label]) => {
+    const list = r.inn.filter((s) => s.role === k);
+    return `<div class="ev-col"><h4>${ico} ${label} <span class="muted">${list.length}</span></h4><ul>${list.map(who).join("") || '<li class="muted">Nobody yet</li>'}</ul></div>`;
+  };
+  const extra = (title, list) => (list.length ? `<div class="ev-extra"><h4>${title} <span class="muted">${list.length}</span></h4><ul class="ev-names">${list.map((s) => who(s).replace("<li", `<li data-role="${esc(s.role)}"`)).join("")}</ul></div>` : "");
+  const p = prof(S.uid);
+  const myName = (me && me.name) || p.mainChar || defaultChar() || (S.me ? S.me.username : "");
+  const role = S.evRole || (me && me.role) || "Damage";
+  const rsvp = !S.uid ? `<div class="card ev-rsvp"><button class="btn primary" data-act="signin">Sign in</button> to sign up on the website, or use the buttons on the event's post in the guild Discord.</div>`
+    : !open ? "" : `<form class="card ev-rsvp" id="rsvpform">
+      <h3>${me ? "Your answer" : "Are you coming?"}${me ? ` ${statusChip(me)}` : ""}</h3>
+      <div class="ev-rsvp-row">
+        <div><label for="ev-name">Character</label><input id="ev-name" maxlength="40" value="${esc(myName)}" required></div>
+        <fieldset class="ev-rolepick"><legend>Role</legend>${EV_ROLES.map(([k, ico]) => `<label><input type="radio" name="ev-role" value="${k}" ${role === k ? "checked" : ""}><span>${ico} ${k}</span></label>`).join("")}</fieldset>
+      </div>
+      <div class="actions ev-answers">
+        <button class="btn primary" type="submit" data-st="yes">${me && me.status === "yes" ? "Update" : "I'm coming"}</button>
+        <button class="btn" type="submit" data-st="maybe">Maybe</button>
+        <button class="btn" type="submit" data-st="no">Can't make it</button>
+      </div></form>`;
+  const left = Math.max(0, e.size - r.inn.length);
+  return `<article class="card ev-detail k-${esc(e.kind)}">
+    <div class="ev-dhead">${evDateBlock(e.starts)}<div>
+      <p class="eyebrow">${EV_KINDS[e.kind] || "📅"} ${esc(e.kind)}${e.inDiscord ? ' · <span class="dc-tag" title="The bot posted this event in Discord">Posted in Discord</span>' : ""}</p>
+      <h2 class="hero-title">${e.cancelled ? '<span class="bad">Cancelled:</span> ' : ""}${esc(e.title)}</h2>
+      <p class="ev-meta"><strong>${esc(evWhen(e.starts, { weekday: "long", month: "long" }))}</strong> to ${esc(evTime(evEnd(e)))} <span class="muted">(${evUntil(e.starts)}, your time)</span></p>
+      <p class="muted ev-meta">${[e.location, e.host ? "Hosted by " + e.host : ""].filter(Boolean).map(esc).join(" · ")}</p>
+    </div></div>
+    ${e.note ? `<p class="ev-note">${esc(e.note)}</p>` : ""}
+    <p class="ev-fill big"><span class="ev-roles">${roleCounts(r)}</span><span><strong>${r.inn.length}/${e.size}</strong> going${open ? (left ? ` · ${left} spot${left === 1 ? "" : "s"} left` : " · full, new sign-ups go on standby") : ""}</span></p>
+    ${S.uid ? `<div class="ev-cols">${EV_ROLES.map(col).join("")}</div>${extra("Standby", r.standby)}${extra("Maybe", r.maybe)}${extra("Can't make it", r.no)}`
+      : `<p class="muted">Sign in to see who's going.</p>`}
+    ${edit ? `<div class="actions ev-host">${open ? `<button class="btn" data-act="ev-edit" data-id="${esc(e.id)}">Edit</button>` : ""}
+      ${evOver(e) ? "" : `<button class="btn" data-act="ev-cancel" data-id="${esc(e.id)}">${e.cancelled ? "Restore event" : "Cancel event"}</button>`}
+      <button class="btn danger" data-act="ev-del" data-id="${esc(e.id)}">Delete</button></div>` : ""}
+  </article>${rsvp}`;
+}
+
+function localInput(t) { const d = new Date(t - new Date(t).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); }
+function eventForm() {
+  const now = new Date(); now.setDate(now.getDate() + 1); now.setHours(20, 0, 0, 0);
+  const e = S.evEdit === "new" ? { title: "", kind: "Dungeon", starts: now.getTime(), dur: 120, location: "", size: 5, note: "", host: prof(S.uid).mainChar || defaultChar() || "" }
+    : S.events.find((x) => x.id === S.evEdit);
+  if (!e) { S.evEdit = null; return ""; }
+  const durs = [30, 60, 90, 120, 150, 180, 240, 300, 360, 480];
+  if (!durs.includes(e.dur)) durs.push(e.dur);
+  return `<form class="card form guide-form" id="eventform">
+    <h3 style="margin-top:0">${S.evEdit === "new" ? "Plan an event" : "Edit event"}</h3>
+    <label for="ef-title">What is it?</label><input id="ef-title" maxlength="80" required value="${esc(e.title)}" placeholder="e.g. Scarlet Monastery: Library and Armory">
+    <div class="gf-row ef-row">
+      <div><label for="ef-kind">Kind</label><select id="ef-kind">${Object.entries(EV_KINDS).map(([k, i]) => `<option value="${k}" ${e.kind === k ? "selected" : ""}>${i} ${k}</option>`).join("")}</select></div>
+      <div><label for="ef-when">Starts <span class="muted">(your time)</span></label><input id="ef-when" type="datetime-local" required value="${localInput(e.starts)}"></div>
+      <div><label for="ef-dur">How long</label><select id="ef-dur">${durs.sort((a, b) => a - b).map((d) => `<option value="${d}" ${e.dur === d ? "selected" : ""}>${hoursText(d)}</option>`).join("")}</select></div>
+    </div>
+    <div class="gf-row ef-row">
+      <div><label for="ef-size">Spots</label><input id="ef-size" type="number" min="2" max="40" value="${e.size}" required></div>
+      <div><label for="ef-loc">Meet at <span class="muted">(optional)</span></label><input id="ef-loc" maxlength="80" value="${esc(e.location)}" placeholder="e.g. Ironforge bank"></div>
+      <div><label for="ef-host">Host</label><input id="ef-host" maxlength="60" value="${esc(e.host)}"></div>
+    </div>
+    <label for="ef-note">Details <span class="muted">(optional)</span></label>
+    <textarea id="ef-note" rows="4" maxlength="1000" placeholder="Level range, what to bring, loot rules…">${esc(e.note)}</textarea>
+    <p class="muted gf-help">The event is posted in the guild Discord with sign-up buttons once the bot has an events channel (type <code>/eventchannel</code> there).</p>
+    <div class="actions"><button class="btn" type="button" data-act="ev-cancel-edit">Cancel</button><button class="btn primary" type="submit">${S.evEdit === "new" ? "Post event" : "Save changes"}</button></div>
+  </form>`;
+}
+
+// After a change on the website, update the event's post in Discord and say how it went.
+async function evSync(id, quiet) {
+  const r = await S.B.syncEvent(id);
+  if (!quiet && r && !r.posted && r.reason && S.B.mode !== "demo") S.evMsg = "Saved on the website. Discord wasn't updated: " + r.reason;
+  else if (!quiet && r && r.posted) S.evMsg = r.updated ? "" : "Saved and posted in Discord.";
+  if (S.view === "events") renderEvents();
+}
+
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest("[data-act]"); if (!t) return;
+  const act = t.dataset.act;
+  if (act === "ev-new") { if (!S.uid) return openAuth("in"); S.evEdit = "new"; S.evMsg = ""; if (S.eventId) location.hash = "#events"; renderEvents(); setTimeout(() => { const i = $("#ef-title"); if (i) i.focus(); }, 0); }
+  else if (act === "ev-edit") { S.evEdit = t.dataset.id; S.evMsg = ""; renderEvents(); }
+  else if (act === "ev-cancel-edit") { S.evEdit = null; renderEvents(); }
+  else if (act === "ev-past") { S.evPast = !S.evPast; renderEvents(); }
+  else if (act === "ev-cancel") {
+    const ev = S.events.find((x) => x.id === t.dataset.id); if (!ev) return;
+    if (!ev.cancelled && !confirm(`Cancel “${ev.title}”? Everyone will see it as cancelled, here and in Discord.`)) return;
+    try { await S.B.setEventCancelled(ev.id, !ev.cancelled); ev.cancelled = !ev.cancelled; S.evMsg = ""; renderEvents(); evSync(ev.id); loadEvents(); }
+    catch (x) { note("Couldn't change the event: " + x.message); }
+  }
+  else if (act === "ev-del") {
+    const ev = S.events.find((x) => x.id === t.dataset.id); if (!ev || !confirm(`Delete “${ev.title}” and its sign-ups? This can't be undone. (To keep it visible as cancelled, use Cancel event instead.)`)) return;
+    try { await S.B.syncEvent(ev.id, "delete"); await S.B.deleteEvent(ev.id); S.events = S.events.filter((x) => x.id !== ev.id); location.hash = "#events"; note("Event deleted."); renderEventBits(); }
+    catch (x) { note("Couldn't delete the event: " + x.message); }
+  }
+  else if (act === "ev-rm") {
+    const ev = S.events.find((x) => x.signups.some((s) => s.id === t.dataset.id)); if (!ev) return;
+    const s = ev.signups.find((x) => x.id === t.dataset.id);
+    if (!confirm(s.user === S.uid ? "Take yourself off this event?" : `Remove ${s.name} from this event?`)) return;
+    try { await S.B.removeSignup(s.id); ev.signups = ev.signups.filter((x) => x.id !== s.id); renderEvents(); renderEventBits(); evSync(ev.id, true); }
+    catch (x) { note("Couldn't remove that sign-up: " + x.message); }
+  }
+});
+document.addEventListener("change", (e) => { if (e.target.name === "ev-role") { S.evRole = e.target.value; lsSet("gc.evRole", S.evRole); } });
+document.addEventListener("submit", async (e) => {
+  const f = e.target;
+  if (f.id === "rsvpform") {
+    e.preventDefault();
+    const st = (e.submitter && e.submitter.dataset.st) || "yes";
+    const ev = S.events.find((x) => x.id === S.eventId); if (!ev) return;
+    const name = $("#ev-name").value.trim().slice(0, 40), role = (f.querySelector('input[name="ev-role"]:checked') || {}).value || "Damage";
+    if (!name) { note("Enter your character's name."); return; }
+    f.querySelectorAll("button").forEach((b) => (b.disabled = true));
+    try { await S.B.rsvp(ev.id, st, role, name); S.evMsg = ""; await loadEvents(); evSync(ev.id, true); }
+    catch (x) { f.querySelectorAll("button").forEach((b) => (b.disabled = false)); note("Couldn't save your answer: " + x.message); }
+  }
+  else if (f.id === "eventform") {
+    e.preventDefault();
+    const starts = new Date($("#ef-when").value).getTime();
+    const o = { id: S.evEdit === "new" ? null : S.evEdit, title: $("#ef-title").value.trim().slice(0, 80), kind: $("#ef-kind").value, starts,
+      dur: Number($("#ef-dur").value) || 120, size: Math.max(2, Math.min(40, Math.round(Number($("#ef-size").value) || 5))),
+      location: $("#ef-loc").value.trim().slice(0, 80), host: $("#ef-host").value.trim().slice(0, 60), note: $("#ef-note").value.trim().slice(0, 1000) };
+    if (o.title.length < 3) { note("Give the event a name of at least 3 letters."); return; }
+    if (!starts) { note("Choose when the event starts."); return; }
+    if (!o.id && starts < Date.now() - 600000) { note("That start time has already passed."); return; }
+    const btn = f.querySelector('[type="submit"]'); btn.disabled = true;
+    try {
+      const id = await S.B.saveEvent(o); S.evEdit = null; S.evMsg = "Saved.";
+      await loadEvents(); location.hash = "#event-" + id; evSync(id);
+    } catch (x) { btn.disabled = false; note("Couldn't save the event: " + x.message); }
+  }
+});
+
+/* ---------- Price alerts: tell me when an item is reported under or over a price ---------- */
+async function loadAlerts() {
+  if (!S.uid) { S.alerts = []; S.alertPrices = []; return; }
+  try { S.alerts = (await S.B.loadAlerts()) || []; S.alertPrices = await S.B.recentPrices([...new Set(S.alerts.map((a) => a.item))]); } catch {}
+  renderBell(); if (S.view === "guides" && S.gTab === "prices") renderGuides();
+}
+const alertHit = (a, p) => p.item.trim().toLowerCase() === a.item.trim().toLowerCase() && p.t > a.t && p.by !== S.uid && ((a.below && p.price <= a.below) || (a.above && p.price >= a.above));
+function alertNotifications() {
+  const out = [];
+  for (const a of S.alerts) for (const p of S.alertPrices) if (alertHit(a, p))
+    out.push({ t: p.t, text: `<strong>${esc(p.item)}</strong> was reported at ${gold(p.price, "")} in ${esc(p.source.toLowerCase())} (${a.below && p.price <= a.below ? "under" : "over"} your alert)`, href: "#prices" });
+  return out;
+}
+function alertsCard(itemNames) {
+  if (!S.uid) return "";
+  const latest = (item) => { const p = S.alertPrices.filter((x) => x.item.trim().toLowerCase() === item.toLowerCase()).sort((a, b) => b.t - a.t)[0]; return p ? `last seen ${gold(p.price, "")} ${ago(p.t)}` : "no reports lately"; };
+  return `<details class="card p-alerts" ${S.alertsOpen ? "open" : ""}><summary><strong>Your price alerts</strong> <span class="muted">${S.alerts.length ? `(${S.alerts.length})` : "· get a notification when an item is reported under or over a price"}</span></summary>
+    ${S.alerts.length ? `<ul class="pa-list">${S.alerts.map((a) => `<li><strong>${esc(a.item)}</strong> ${a.below ? `under ${gold(a.below, "")}` : ""}${a.below && a.above ? " or " : ""}${a.above ? `over ${gold(a.above, "")}` : ""} <span class="muted">· ${latest(a.item)}</span> <button class="linkish small-x" data-act="pa-del" data-id="${esc(a.id)}">remove</button></li>`).join("")}</ul>` : ""}
+    <form class="form price-form pa-form" id="alertform">
+      <div><label for="pa-item">Item</label><input id="pa-item" list="pp-items" maxlength="60" required placeholder="e.g. Arcanite Bar"></div>
+      <div><label for="pa-dir">Tell me when it's</label><select id="pa-dir"><option value="below">under</option><option value="above">over</option></select></div>
+      <div><label for="pa-g">Price for one</label>${coinInput("pa", 0, "Alert price")}</div>
+      <button class="btn" type="submit">Add alert</button>
+    </form><p class="muted small">Alerts show in your notifications bell when a guildmate reports a matching price.</p></details>`;
+}
+document.addEventListener("toggle", (e) => { if (e.target.classList && e.target.classList.contains("p-alerts")) S.alertsOpen = e.target.open; }, true);
+document.addEventListener("click", async (e) => {
+  const t = e.target.closest('[data-act="pa-del"]'); if (!t) return;
+  try { await S.B.deleteAlert(t.dataset.id); S.alerts = S.alerts.filter((a) => a.id !== t.dataset.id); renderGuides(); renderBell(); } catch (x) { note("Couldn't remove the alert: " + x.message); }
+});
+document.addEventListener("submit", async (e) => {
+  if (e.target.id !== "alertform") return;
+  e.preventDefault();
+  const item = $("#pa-item").value.trim().slice(0, 60), price = readCoins("pa"), dir = $("#pa-dir").value;
+  if (!item || !(price > 0)) { note("Enter the item and a price."); return; }
+  try { await S.B.addAlert({ item, [dir]: price }); S.alertsOpen = true; await loadAlerts(); renderGuides(); note(`Alert set: ${item} ${dir === "below" ? "under" : "over"} the price you chose.`); }
+  catch (x) { note("Couldn't add the alert: " + x.message); }
+});
+
+/* ---------- Link a Discord account (so Discord sign-ups count as you) ---------- */
+async function loadDiscordIdentity() {
+  if (!S.uid || S.B.mode === "demo") { S.dcIdentity = null; return; }
+  S.dcIdentity = await S.B.discordIdentity();
+  if (S.view === "profile" && !S.viewUser) { const box = $("#dc-link"); if (box) box.innerHTML = discordLinkBox(); }
+}
+function discordLinkBox() {
+  if (S.dcIdentity === undefined) return "";
+  return S.dcIdentity ? `<p class="dc-linked">✓ Discord linked${S.dcIdentity.name && S.dcIdentity.name !== "linked" ? ` as <strong>${esc(S.dcIdentity.name)}</strong>` : ""}. Event sign-ups you make with the bot's buttons count as you.</p>`
+    : `<p class="muted" style="margin:0 0 8px">Link your Discord account so sign-ups you make in Discord count as you, and so you can sign in with Discord.</p><button class="btn small discord" type="button" data-act="dc-link">Link Discord</button> <span class="saved" id="dc-link-msg"></span>`;
+}
+document.addEventListener("click", async (e) => {
+  if (!e.target.closest('[data-act="dc-link"]')) return;
+  const m = $("#dc-link-msg");
+  try { await S.B.linkDiscord(); }
+  catch (x) { if (m) m.textContent = /manual linking|disabled|not enabled|provider/i.test(x.message) ? "Discord linking isn't switched on yet. An admin needs to turn it on in Supabase (see SETUP.md)." : x.message; }
+});
+
+/* ---------- "New" count on the Trade menu: board jobs posted since you last looked ---------- */
+function boardSeen() { let t = Number(lsGet("gc.boardSeen")); if (!t) { t = Date.now() - 3 * 86400000; lsSet("gc.boardSeen", String(t)); } return t; }
+function renderTradeBadge() {
+  const b = $("#trade-badge"); if (!b) return;
+  if (S.view === "board") lsSet("gc.boardSeen", String(Date.now()));
+  const seen = boardSeen();
+  const n = S.uid ? S.board.filter((p) => p.status === "open" && p.author !== S.uid && p.created > seen).length : 0;
+  b.textContent = n; b.hidden = !n; b.title = n ? `${n} new job${n === 1 ? "" : "s"} on the Request Board` : "";
+}
 
 // The guild helper (chat.js) reaches the site through this.
 window.GC_AI = {

@@ -690,3 +690,88 @@ a.g-card:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
   .ai-root.open{left:12px; top:12px}
   .ai-root.open .ai-panel{width:100%; height:auto; flex:1}
 }
+
+/* ---------- Guild events ---------- */
+.ev-list{display:grid; gap:10px; margin:0 0 14px}
+.ev-list.past{opacity:.75}
+a.ev-card{display:flex; gap:14px; align-items:center; padding:12px 16px; text-decoration:none; color:var(--ink); border-left:3px solid var(--kc, var(--brass)); transition:border-color .15s, transform .15s}
+a.ev-card:hover{transform:translateY(-1px); border-color:var(--brass)}
+a.ev-card:focus-visible{outline:2px solid var(--brass); outline-offset:2px}
+.ev-card.cancelled h3{text-decoration:line-through; color:var(--muted)}
+.k-Dungeon{--kc:#4f92dc} .k-Raid{--kc:#a335ee} .k-Farming{--kc:#5fd47e} .k-Leveling{--kc:#e3b55b} .k-PvP{--kc:#d9534f} .k-Social{--kc:#f0a04b} .k-Other{--kc:#9aa0a6}
+.ev-date{flex:none; width:58px; text-align:center; border:1px solid var(--line); border-radius:8px; padding:4px 0; background:rgb(0 0 0 / .2); display:flex; flex-direction:column; line-height:1.15}
+.ev-date span{font-size:.7rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.ev-date strong{font-family:var(--f-display); font-size:1.45rem; color:var(--gold-hi)}
+.ev-main{flex:1; min-width:0}
+.ev-main h3{margin:0 0 2px; font-family:var(--f-display); font-size:1.08rem; color:var(--gold-hi)}
+.ev-main p{margin:0}
+.ev-kind{font-size:.75rem; letter-spacing:.05em; text-transform:uppercase; color:var(--kc, var(--muted))}
+.ev-fill{display:flex; flex-wrap:wrap; gap:4px 14px; font-size:.88rem; margin-top:4px !important}
+.ev-fill.big{font-size:.98rem; margin:12px 0 !important}
+.ev-roles{display:inline-flex; gap:10px}
+.ev-side{flex:none; display:flex; flex-direction:column; align-items:flex-end; gap:6px; text-align:right}
+.ev-mine{display:inline-block; font-size:.75rem; font-weight:600; padding:2px 9px; border-radius:999px; border:1px solid currentColor; white-space:nowrap; vertical-align:middle}
+.ev-mine.st-yes{color:var(--ok)} .ev-mine.st-maybe{color:var(--gold-hi)} .ev-mine.st-no{color:var(--muted)} .ev-mine.st-none{color:var(--info)}
+.ev-pastbtn{margin:4px 0 10px}
+.ev-msg{padding:8px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel-2); margin:0 0 12px}
+.ev-detail{border-left:3px solid var(--kc, var(--brass)); padding:18px 22px; margin-bottom:14px}
+.ev-dhead{display:flex; gap:16px; align-items:flex-start}
+.ev-dhead .hero-title{margin:2px 0 6px}
+.ev-meta{margin:0 0 2px}
+.ev-note{white-space:pre-line; margin:12px 0 0; line-height:1.55}
+.dc-tag{display:inline-block; font-size:.68rem; font-weight:600; letter-spacing:.03em; text-transform:none; padding:1px 7px; border-radius:999px; background:rgb(88 101 242 / .22); color:#aab3ff; border:1px solid rgb(88 101 242 / .5); vertical-align:middle}
+.ev-cols{display:grid; grid-template-columns:repeat(3, 1fr); gap:12px}
+.ev-col, .ev-extra{border:1px solid var(--line); border-radius:8px; padding:10px 12px; background:rgb(0 0 0 / .15)}
+.ev-extra{margin-top:10px}
+.ev-col h4, .ev-extra h4{margin:0 0 6px; font-size:.92rem}
+.ev-col ul, .ev-names{list-style:none; margin:0; padding:0}
+.ev-col li{padding:3px 0; display:flex; gap:6px; align-items:center; flex-wrap:wrap}
+.ev-names{display:flex; flex-wrap:wrap; gap:4px 14px}
+.ev-names li{display:inline-flex; gap:6px; align-items:center}
+.ev-col li.me, .ev-names li.me{font-weight:700}
+.ev-host{margin-top:14px}
+.ev-rsvp{padding:14px 18px}
+.ev-rsvp h3{margin:0 0 10px; font-family:var(--f-display); color:var(--gold-hi); font-size:1.05rem}
+.ev-rsvp-row{display:flex; flex-wrap:wrap; gap:14px; align-items:flex-end}
+.ev-rsvp-row > div{display:flex; flex-direction:column; gap:4px}
+.ev-rsvp-row input#ev-name{width:200px; max-width:100%}
+.ev-rolepick{border:0; margin:0; padding:0; display:flex; gap:6px; flex-wrap:wrap}
+.ev-rolepick legend{font-size:.85rem; margin-bottom:4px; padding:0}
+.ev-rolepick label{position:relative; cursor:pointer}
+.ev-rolepick input{position:absolute; opacity:0; inset:0; cursor:pointer}
+.ev-rolepick span{display:inline-block; padding:7px 12px; border:1px solid var(--line); border-radius:8px; background:var(--panel-2)}
+.ev-rolepick input:checked + span{border-color:var(--brass); background:var(--brass-soft); color:var(--gold-hi); font-weight:600}
+.ev-rolepick input:focus-visible + span{outline:2px solid var(--brass); outline-offset:2px}
+.ev-answers{justify-content:flex-start; margin-top:12px}
+.ef-row{grid-template-columns:1fr 1fr 1fr}
+.ef-row input[type=number]{width:100%}
+.home-events{margin-top:14px}
+.hev-list{display:grid; gap:6px}
+a.hev{display:flex; gap:10px; align-items:center; padding:8px 10px; border:1px solid var(--line); border-radius:8px; text-decoration:none; color:var(--ink); background:rgb(0 0 0 / .15)}
+a.hev:hover{border-color:var(--brass)}
+.hev-ico{font-size:1.2rem}
+.hev-main{flex:1; min-width:0; display:flex; flex-direction:column}
+.hev-main strong{color:var(--gold-hi)}
+.hev-main .muted{font-size:.82rem}
+.hev-n{display:flex; flex-direction:column; align-items:flex-end; gap:3px; font-weight:600; font-size:.9rem}
+.nav-top .badge, .navbtn .badge{margin-left:4px}
+.p-alerts{margin:0 0 14px; padding:12px 16px}
+.p-alerts summary{cursor:pointer}
+.pa-list{margin:10px 0; padding-left:18px}
+.pa-list li{margin:4px 0}
+.pa-form{margin:12px 0 4px}
+.dc-link{margin-top:14px; padding-top:12px; border-top:1px solid var(--line)}
+.dc-linked{margin:0; color:var(--ok)}
+@media (max-width:700px){
+  .ev-cols{grid-template-columns:1fr}
+  .ef-row{grid-template-columns:1fr}
+  a.ev-card{flex-wrap:wrap; gap:10px 12px}
+  .ev-side{flex-direction:row; width:100%; justify-content:space-between; align-items:center}
+  .ev-detail{padding:14px}
+  .ev-dhead{gap:12px}
+}
+/* Phones: the site name already goes home, so drop the Home link to make room for Events; wrap if still too wide. */
+@media (max-width: 640px){
+  nav.tabs > a[data-tab="home"]{display:none}
+  nav.tabs{flex-wrap:wrap; justify-content:space-around; row-gap:2px}
+}

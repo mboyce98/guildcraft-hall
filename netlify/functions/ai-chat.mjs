@@ -24,6 +24,7 @@ How to answer:
 
 Pages of the site (link them as plain paths like ${SITE}/#market):
 - #home: guild news, world news from Wowhead, screenshots
+- #events: guild events calendar (dungeon runs, raids, farming nights) with sign-ups; members also sign up with the buttons on the bot's post in Discord, or plan one with /event there
 - #rules, #chronicle (guild lore), #classes (classes and races), #members, #messages (private messages)
 - #guides: member-written guides (gathering paths, questing routes, dungeons) and the Market prices tab, where members report prices and see trends
 - #map: world map with gathering spots, #cities: Stormwind and Ironforge trainers and vendors, #loot: Loot Vault of dungeon drops
@@ -54,12 +55,13 @@ const day = 86400000;
 async function guildContext(jwt) {
   const since = new Date(Date.now() - 60 * day).toISOString();
   const get = (p) => sb(p, jwt).catch(() => []);
-  const [news, guides, prices, listings, board] = await Promise.all([
+  const [news, guides, prices, listings, board, events] = await Promise.all([
     get("/rest/v1/guild_news?select=title,body,tag,created_at&order=pinned.desc,created_at.desc&limit=5"),
     get("/rest/v1/guides?select=id,title,category,zone,level_min,level_max,body&order=updated_at.desc&limit=40"),
     get(`/rest/v1/price_points?select=item,price,source,created_at&created_at=gte.${since}&order=created_at.desc&limit=2000`),
     get("/rest/v1/listings?select=type,item,qty,price,char,note,created_at&order=created_at.desc&limit=60"),
     get("/rest/v1/board_posts?select=title,qty,offer,status,author_char&status=in.(open,claimed)&order=created_at.desc&limit=25"),
+    get(`/rest/v1/events?select=id,title,kind,starts_at,duration_min,location,size,cancelled,event_signups(status,role)&starts_at=gte.${new Date(Date.now() - 3 * 3600000).toISOString()}&order=starts_at&limit=10`),
   ]);
   const out = [];
   out.push("GUILD NEWS:\n" + (news.map((n) => `- [${n.tag}] ${n.title}: ${String(n.body).slice(0, 400)}`).join("\n") || "(none)"));
@@ -80,6 +82,11 @@ async function guildContext(jwt) {
   out.push("PRICES REPORTED BY MEMBERS, last 60 days, highest first:\n" + (rows.slice(0, 80).map((r) => r.line).join("\n") || "(no prices reported yet)"));
   out.push("GUILD MARKET LISTINGS:\n" + (listings.map((l) => `- ${l.type === "S" ? "For sale" : "Wanted"}: ${l.item} x${l.qty} at ${coins(l.price)} each by ${l.char}${l.note ? " (" + String(l.note).slice(0, 80) + ")" : ""}`).join("\n") || "(none)"));
   out.push("OPEN REQUEST BOARD JOBS:\n" + (board.map((b) => `- ${b.title} x${b.qty}, offer ${coins(b.offer)}, posted by ${b.author_char || "a member"} (${b.status})`).join("\n") || "(none)"));
+  out.push("UPCOMING GUILD EVENTS (times in UTC; each at " + SITE + "/#event-ID):\n" + (events.map((e) => {
+    const ups = e.event_signups || [], yes = ups.filter((s) => s.status === "yes");
+    return `- Event ${e.id}: ${e.title} [${e.kind}]${e.cancelled ? " CANCELLED" : ""} at ${e.starts_at} for ${e.duration_min} min${e.location ? ", meet at " + e.location : ""}. `
+      + `${Math.min(yes.length, e.size)}/${e.size} going (${["Tank", "Healer", "Damage"].map((r) => yes.filter((s) => s.role === r).length + " " + r).join(", ")}), ${ups.filter((s) => s.status === "maybe").length} maybe`;
+  }).join("\n") || "(none planned)"));
   return out.join("\n\n");
 }
 

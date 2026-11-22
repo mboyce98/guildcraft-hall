@@ -56,6 +56,19 @@ const COMMANDS = [
   { name: "news", description: "Latest Bark and Stone guild news" },
   { name: "wownews", description: "Latest WoW Forever headlines from Wowhead" },
   { name: "site", description: "Links to the Bark and Stone website" },
+  { name: "event", description: "Plan a guild event that people can sign up for", options: [
+    { type: 3, name: "title", description: "What it is, e.g. Deadmines run", required: true, max_length: 80 },
+    { type: 3, name: "when", description: "e.g. Sat 8pm, tomorrow 7:30pm, 11/29 9pm (guild time)", required: true, max_length: 60 },
+    { type: 3, name: "kind", description: "Kind of event", required: false, choices: ["Dungeon", "Raid", "Farming", "Leveling", "PvP", "Social", "Other"].map((k) => ({ name: k, value: k })) },
+    { type: 4, name: "size", description: "How many people (default 5)", required: false, min_value: 2, max_value: 40 },
+    { type: 3, name: "where", description: "Meeting place or zone", required: false, max_length: 80 },
+    { type: 4, name: "hours", description: "How long, in hours (default 2)", required: false, min_value: 1, max_value: 12 },
+    { type: 3, name: "note", description: "Anything people should know or bring", required: false, max_length: 500 },
+  ] },
+  { name: "events", description: "Upcoming guild events and who's going" },
+  { name: "eventchannel", description: "Post guild events from the website in this channel", default_member_permissions: "32", options: [
+    { type: 3, name: "timezone", description: "Guild time zone for event times typed in Discord", required: false, choices: require("./_events").TIMEZONES },
+  ] },
 ];
 
 module.exports = { dcfg, dataKey, dataKeyHash, verify, rpc, discordApi, COMMANDS };

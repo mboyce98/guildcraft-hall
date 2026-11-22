@@ -136,6 +136,40 @@ function demoDb() {
     async loadPrices() { return (data.prices || []).map((p) => ({ ...p })); },
     async reportPrice(o) { const u = need(); (data.prices = data.prices || []).push({ ...o, id: String(data.seq++), by: u.id, t: Date.now() }); persist(); },
     async deletePrice(id) { data.prices = (data.prices || []).filter((x) => x.id !== id); persist(); },
+    // ---- Events (demo copy keeps them in this browser) ----
+    async loadEvents() {
+      if (!data.events) {
+        const at = (days, h) => { const d = new Date(); d.setDate(d.getDate() + days); d.setHours(h, 0, 0, 0); return d.getTime(); };
+        data.events = [
+          { id: String(data.seq++), title: "Deadmines run", kind: "Dungeon", starts: at(2, 20), dur: 120, location: "Moonbrook, Westfall", size: 5, note: "Levels 17 to 24. Bring water.", host: "Mason", createdBy: null, cancelled: false, inDiscord: true, t: Date.now(),
+            signups: [{ id: String(data.seq++), user: null, discordId: "1", name: "Thoradin", role: "Tank", status: "yes", joined: Date.now() - 5000 },
+              { id: String(data.seq++), user: null, discordId: "2", name: "Elsbeth", role: "Healer", status: "maybe", joined: Date.now() - 4000 }] },
+          { id: String(data.seq++), title: "Thorium farming in Un'Goro", kind: "Farming", starts: at(5, 19), dur: 180, location: "Marshal's Refuge", size: 10, note: "", host: "Mason", createdBy: null, cancelled: false, inDiscord: false, t: Date.now(), signups: [] },
+        ];
+      }
+      return data.events.map((e) => ({ ...e, signups: e.signups.map((s) => ({ ...s })) }));
+    },
+    async saveEvent(o) {
+      const u = need();
+      if (o.id) { Object.assign(data.events.find((x) => x.id === o.id), o); persist(); return o.id; }
+      const id = String(data.seq++); data.events.push({ ...o, id, createdBy: u.id, cancelled: false, inDiscord: false, t: Date.now(), signups: [] }); persist(); return id;
+    },
+    async setEventCancelled(id, c) { const e = data.events.find((x) => x.id === id); if (e) { e.cancelled = !!c; persist(); } },
+    async deleteEvent(id) { data.events = data.events.filter((x) => x.id !== id); persist(); },
+    async rsvp(eventId, status, role, name) {
+      const u = need(); const e = data.events.find((x) => x.id === eventId); const s = e.signups.find((x) => x.user === u.id);
+      if (!s) e.signups.push({ id: String(data.seq++), user: u.id, name, role, status, joined: Date.now() });
+      else { if (status === "yes" && s.status !== "yes") s.joined = Date.now(); Object.assign(s, { name, role, status }); }
+      persist();
+    },
+    async removeSignup(id) { data.events.forEach((e) => { e.signups = e.signups.filter((s) => s.id !== id); }); persist(); },
+    async syncEvent() { return { posted: false, reason: "Discord works on the live site." }; },
+    async loadAlerts() { return (data.alerts || []).map((a) => ({ ...a })); },
+    async addAlert(o) { need(); (data.alerts = data.alerts || []).push({ ...o, id: String(data.seq++), t: Date.now() }); persist(); },
+    async deleteAlert(id) { data.alerts = (data.alerts || []).filter((a) => a.id !== id); persist(); },
+    async recentPrices(items) { const want = new Set(items.map((x) => x.toLowerCase())); return (data.prices || []).filter((p) => want.has(p.item.toLowerCase())).map((p) => ({ ...p })); },
+    async discordIdentity() { return null; },
+    async linkDiscord() { throw new Error("Linking Discord works on the live site."); },
     async accessToken() { return null; },
     async saveSetting(key, value) { (data.settings = data.settings || {})[key] = value; persist(); },
     async adminSetMember(id, f) { const u = data.users.find((x) => x.id === id); if (u) { u.profile = { ...(u.profile || {}), ...("rank" in f ? { rank: f.rank } : {}) }; if ("isAdmin" in f) u.isAdmin = !!f.isAdmin; persist(); } },
@@ -290,6 +324,63 @@ async function supabaseDb() {
     async reportPrice(o) { await need(); ok(await sb.from("price_points").insert({ item: o.item, price: o.price, source: o.source })); },
     async deletePrice(id) { ok(await sb.from("price_points").delete().eq("id", Number(id))); },
     async accessToken() { const { data } = await sb.auth.getSession(); return data.session?.access_token || null; },
+    // ---- Guild events and sign-ups (sign-ups also come in from Discord buttons) ----
+    async loadEvents() {
+      const since = new Date(Date.now() - 30 * 86400000).toISOString();
+      const er = await sb.from("events").select("*").gte("starts_at", since).order("starts_at").limit(200);
+      if (er.error) return [];
+      const ids = er.data.map((e) => e.id);
+      const sr = ids.length ? await sb.from("event_signups").select("*").in("event_id", ids) : { data: [] };
+      const ups = (sr.data || []).map((s) => ({ id: String(s.id), event: String(s.event_id), user: s.user_id, discordId: s.discord_id, name: s.name, role: s.role, status: s.status, note: s.note, joined: Date.parse(s.joined_at) }));
+      return er.data.map((e) => ({
+        id: String(e.id), title: e.title, kind: e.kind, starts: Date.parse(e.starts_at), dur: e.duration_min, location: e.location, size: e.size, note: e.note,
+        host: e.host_name, createdBy: e.created_by, cancelled: e.cancelled, inDiscord: !!e.discord_message_id, t: Date.parse(e.created_at),
+        signups: ups.filter((s) => s.event === String(e.id)).sort((a, b) => a.joined - b.joined),
+      }));
+    },
+    async saveEvent(o) {
+      await need();
+      const row = { title: o.title, kind: o.kind, starts_at: new Date(o.starts).toISOString(), duration_min: o.dur, location: o.location || "", size: o.size, note: o.note || "", host_name: o.host || "" };
+      if (o.id) { ok(await sb.from("events").update(row).eq("id", Number(o.id))); return o.id; }
+      return String(ok(await sb.from("events").insert(row).select("id").single()).id);
+    },
+    async setEventCancelled(id, c) { ok(await sb.from("events").update({ cancelled: !!c }).eq("id", Number(id))); },
+    async deleteEvent(id) { ok(await sb.from("events").delete().eq("id", Number(id))); },
+    async rsvp(eventId, status, role, name) { await need(); ok(await sb.rpc("event_rsvp", { p_event: Number(eventId), p_status: status, p_role: role, p_name: name, p_note: "" })); },
+    async removeSignup(id) { ok(await sb.from("event_signups").delete().eq("id", Number(id))); },
+    // Tell Discord (the bot's post for this event) about a change. Never blocks the website if Discord is down.
+    async syncEvent(id, action) {
+      const { data } = await sb.auth.getSession();
+      const token = data.session?.access_token; if (!token) return { posted: false };
+      try {
+        const r = await fetch("/.netlify/functions/event-sync", { method: "POST", headers: { "content-type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ id: Number(id), action }) });
+        return await r.json();
+      } catch { return { posted: false, reason: "Couldn't reach Discord." }; }
+    },
+    // ---- Price alerts (each member's own) ----
+    async loadAlerts() {
+      const r = await sb.from("price_alerts").select("*").order("created_at");
+      return r.error ? [] : r.data.map((a) => ({ id: String(a.id), item: a.item, below: a.below == null ? null : Number(a.below), above: a.above == null ? null : Number(a.above), t: Date.parse(a.created_at) }));
+    },
+    async addAlert(o) { await need(); ok(await sb.from("price_alerts").insert({ item: o.item, below: o.below || null, above: o.above || null })); },
+    async deleteAlert(id) { ok(await sb.from("price_alerts").delete().eq("id", Number(id))); },
+    async recentPrices(items) {
+      if (!items.length) return [];
+      const since = new Date(Date.now() - 21 * 86400000).toISOString();
+      const r = await sb.from("price_points").select("*").gte("created_at", since).order("created_at", { ascending: false }).limit(2000);
+      const want = new Set(items.map((x) => x.toLowerCase()));
+      return r.error ? [] : r.data.filter((p) => want.has(String(p.item).trim().toLowerCase()))
+        .map((p) => ({ id: String(p.id), item: p.item, price: Number(p.price), source: p.source, by: p.reporter_id, t: Date.parse(p.created_at) }));
+    },
+    // ---- Discord account link (lets Discord sign-ups count as you) ----
+    async discordIdentity() {
+      try {
+        const r = await sb.auth.getUserIdentities();
+        const d = (r.data?.identities || []).find((i) => i.provider === "discord");
+        return d ? { name: d.identity_data?.custom_claims?.global_name || d.identity_data?.full_name || d.identity_data?.name || "linked" } : null;
+      } catch { return null; }
+    },
+    async linkDiscord() { ok(await sb.auth.linkIdentity({ provider: "discord", options: { redirectTo: location.origin + location.pathname + "#profile" } })); },
     // ---- Site settings (anyone can read; admins write) ----
     async loadSettings() { const r = await sb.from("site_settings").select("key,value"); return r.error ? {} : Object.fromEntries(r.data.map((x) => [x.key, x.value])); },
     async saveSetting(key, value) { await need(); ok(await sb.from("site_settings").upsert({ key, value, updated_at: new Date().toISOString() })); },

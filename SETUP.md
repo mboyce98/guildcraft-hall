@@ -81,3 +81,22 @@ The Ask button on every page uses Claude through `netlify/functions/ai-chat.mjs`
 3. Run `supabase-guides.sql` in Supabase once (guides, price reports and the 30-questions-a-day limit).
 
 Only signed-in members can ask. Each member gets 30 questions a day.
+
+## Guild events (website and Discord)
+
+1. Run `supabase-events.sql` in the Supabase SQL Editor (already done for the live site).
+2. On the site's Admin page → Discord bot, press **Set up slash commands** again so Discord gets the new `/event`, `/events` and `/eventchannel` commands.
+3. In Discord, go to the channel where events should appear and type `/eventchannel` (needs Manage Server). Pick the guild's time zone there too; it's used to read times typed in Discord like `Sat 8pm`.
+
+Then:
+- `/event title:Deadmines when:Sat 8pm` plans an event from Discord. The bot posts it with **Tank / Healer / Damage / Maybe / Can't make it** buttons.
+- Events planned on the website (Events page → Plan an event) are posted to the events channel the same way.
+- Sign-ups from the buttons and from the website land in the same list, and the Discord post updates when people sign up on the site.
+
+## Sign in with Discord, and linking Discord to an account
+
+So Discord sign-ups count as the right guild member, members link Discord on their profile page. To switch this on:
+1. Discord Developer Portal → your bot's application → **OAuth2**: add the redirect `https://aclhzgtyucqxekzuahyx.supabase.co/auth/v1/callback`, and copy the **Client ID** and **Client Secret**.
+2. Supabase → Authentication → Sign In / Providers → **Discord**: turn it on and paste the Client ID and Secret.
+3. Supabase → Authentication → Sign In / Providers → turn on **Allow manual linking** (lets existing members link Discord from their profile).
+The "Sign in with Discord" button appears on the site's sign-in box by itself once Discord is turned on.

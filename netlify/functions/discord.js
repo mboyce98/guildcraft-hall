@@ -1,6 +1,7 @@
 // The Bark and Stone Discord bot. Discord sends slash commands here (the app's "Interactions Endpoint URL"),
 // so the bot needs no server of its own. Every reply must go back within 3 seconds.
-const { dcfg, dataKey, verify, rpc } = require("./_discord");
+const { dcfg, dataKey, verify, rpc, discordApi } = require("./_discord");
+const { eventMessage, parseWhen, roster, TIMEZONES, KIND_ICON } = require("./_events");
 
 const GOLD = 0xe3b55b;
 const json = (body) => ({ statusCode: 200, headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
@@ -67,6 +68,50 @@ async function command(cfg, it) {
         prof ? { name: "Professions", value: clip(prof, 1000) } : null,
         gear ? { name: "Best gear", value: clip(gear, 1000) } : null,
       ].filter(Boolean), footer: { text: "From Blizzard's Armory" } }] });
+  }
+
+  // ---- Guild events ----
+  if (name === "event" || name === "events" || name === "eventchannel") {
+    const key = dataKey(cfg);
+    let conf;
+    try { conf = await withTimeout(rpc("bot_config", { p_key: key }), 2000); }
+    catch (e) { return oops(/Not allowed|bot_config/.test(e.message) ? "Events aren't switched on yet. An admin needs to run the events database update and press “Set up slash commands” on the site's Admin page." : "The website didn't answer in time. Try again in a moment."); }
+    const tz = conf.tz || "America/New_York";
+    if (name === "eventchannel") {
+      const newTz = opt(it, "timezone") || null;
+      await rpc("bot_set_event_channel", { p_key: key, p_channel: String(it.channel_id), p_tz: newTz });
+      return oops(`Events planned on the website will be posted in <#${it.channel_id}>. Times typed in Discord are read as **${(TIMEZONES.find((z) => z.value === (newTz || tz)) || { name: newTz || tz }).name}** time.`);
+    }
+    if (name === "events") {
+      const list = await withTimeout(rpc("bot_events_upcoming", { p_key: key }), 2200);
+      if (!list.length) return reply({ content: `No events planned. Plan one with \`/event\` or at ${cfg.site}/#events` });
+      return reply({ embeds: [{ title: "Upcoming guild events", url: cfg.site + "/#events", color: GOLD, description: list.map((ev) => {
+        const t = Math.floor(Date.parse(ev.starts_at) / 1000), r = roster(ev);
+        const jump = ev.discord_message_id && it.guild_id ? ` · [sign up](https://discord.com/channels/${it.guild_id}/${ev.discord_channel_id}/${ev.discord_message_id})` : "";
+        return `${KIND_ICON[ev.kind] || "📅"} **[${clip(ev.title, 80)}](${cfg.site}/#event-${ev.id})**\n<t:${t}:f> (<t:${t}:R>) · ${r.inn.length}/${ev.size} going${r.maybe.length ? `, ${r.maybe.length} maybe` : ""}${jump}`;
+      }).join("\n\n") }] });
+    }
+    // /event: plan it, post it with sign-up buttons
+    const when = parseWhen(opt(it, "when"), tz);
+    if (!when) return oops("I couldn't read that time. Try something like `Sat 8pm`, `tomorrow 7:30pm` or `11/29 9pm`.");
+    if (when < Date.now() - 5 * 60000) return oops(`That time (<t:${Math.floor(when / 1000)}:F>) has already passed.`);
+    if (when > Date.now() + 366 * 86400000) return oops("That's more than a year away.");
+    const user = (it.member && it.member.user) || it.user || {};
+    const who = (it.member && it.member.nick) || user.global_name || user.username || "";
+    const title = String(opt(it, "title") || "").trim();
+    if (title.length < 3) return oops("Give the event a title of at least 3 letters.");
+    const ev = await rpc("bot_event_create", { p_key: key, p_title: title, p_kind: opt(it, "kind") || "Dungeon", p_starts: new Date(when).toISOString(),
+      p_duration: (opt(it, "hours") || 2) * 60, p_location: opt(it, "where") || "", p_size: opt(it, "size") || 5, p_note: opt(it, "note") || "", p_discord: String(user.id || ""), p_name: who });
+    const channel = conf.events_channel || String(it.channel_id);
+    try {
+      const msg = await discordApi(cfg, "POST", `/channels/${channel}/messages`, eventMessage(ev, cfg.site));
+      await rpc("bot_event_set_message", { p_key: key, p_event: ev.id, p_channel: channel, p_message: msg.id });
+      if (!conf.events_channel) await rpc("bot_set_event_channel", { p_key: key, p_channel: channel, p_tz: null }).catch(() => {});
+      return oops(`Posted **${clip(ev.title, 80)}** in <#${channel}> for <t:${Math.floor(when / 1000)}:F>. Sign-ups also show at ${cfg.site}/#event-${ev.id}`);
+    } catch (e) {
+      // No permission to post there: put the event right here instead (its buttons still work).
+      return reply(eventMessage(ev, cfg.site));
+    }
   }
 
   // Everything below reads guild data from the website.
@@ -137,6 +182,21 @@ async function autocomplete(cfg, it) {
   return json({ type: 8, data: { choices } });
 }
 
+// A sign-up button on an event post: record it, then redraw the post with the new roster.
+async function button(cfg, it) {
+  const m = String(it.data.custom_id || "").match(/^ev:(\d+):(yes|maybe|no)(?::(Tank|Healer|Damage))?$/);
+  if (!m) return json({ type: 6 });
+  const user = (it.member && it.member.user) || it.user || {};
+  const who = (it.member && it.member.nick) || user.global_name || user.username || "";
+  try {
+    const ev = await withTimeout(rpc("bot_event_rsvp", { p_key: dataKey(cfg), p_event: Number(m[1]), p_discord: String(user.id), p_name: who,
+      p_status: m[2], p_role: m[3] || null, p_channel: String(it.channel_id || ""), p_message: String((it.message && it.message.id) || "") }), 2500);
+    return json({ type: 7, data: eventMessage(ev, cfg.site) });
+  } catch (e) {
+    return oops(/gone|cancelled/.test(e.message) ? e.message : "Couldn't save that. Try again in a moment.");
+  }
+}
+
 exports.handler = async (event) => {
   const cfg = dcfg();
   if (event.httpMethod !== "POST") return { statusCode: 200, headers: { "content-type": "text/plain" }, body: "Bark and Stone Discord bot. Discord talks to this address; there's nothing to see in a browser." };
@@ -146,6 +206,7 @@ exports.handler = async (event) => {
   try {
     if (it.type === 2) return await command(cfg, it);
     if (it.type === 4) return await autocomplete(cfg, it);
+    if (it.type === 3) return await button(cfg, it);
   } catch (e) { console.error(e); return oops("Something went wrong answering that. Try again in a moment."); }
   return json({ type: 1 });
 };
