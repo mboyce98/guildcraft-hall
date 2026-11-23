@@ -40,6 +40,7 @@ exports.handler = async (event) => {
       isHunter ? opt("/hunter-pets") : null, opt("/pvp-summary"), opt("/reputations"), opt("/appearance"),
       opt("/encounters/dungeons"), opt("/encounters/raids"), opt("/collections/mounts"),
     ]);
+    if ((event.queryStringParameters || {}).raw === "enc") return json(200, { dung, raids, enc: await opt("/encounters"), stats: await opt("/achievements/statistics"), ach: await opt("/achievements") });
     // Dungeon and raid progress (for achievements): cleared instances and every boss killed at least once.
     const cleared = [], kills = [];
     for (const src of [dung, raids]) for (const ex of (src && src.expansions) || []) for (const ins of ex.instances || []) {
