@@ -872,16 +872,20 @@ a.hev:hover{border-color:var(--brass)}
   .tk-label{font-size:.7rem; padding:0 16px 0 10px}
 }
 
-/* ---------- Market: Stormwind trade district backdrop ---------- */
-#view-market{position:relative; isolation:isolate}
-#view-market::before{content:""; position:absolute; z-index:-1; left:50%; top:-16px; width:100vw; height:640px; transform:translateX(-50%); pointer-events:none;
-  background:linear-gradient(180deg, rgb(10 12 18 / .25) 0%, rgb(10 12 18 / .7) 45%, var(--bg) 100%), url("images/market.webp?v=1") center 38% / cover no-repeat}
-#view-market .board-head, #view-market > .card.empty{position:relative; overflow:hidden; border:1px solid #6b5426; border-radius:8px; box-shadow:0 14px 40px rgb(0 0 0 / .55); outline:1px solid rgb(227 181 91 / .15); outline-offset:-6px}
-#view-market .board-head{padding:clamp(110px, 16vw, 200px) clamp(16px, 3vw, 28px) 20px; align-items:flex-end;
-  background:linear-gradient(180deg, rgb(10 12 18 / 0) 25%, rgb(10 12 18 / .55) 60%, rgb(10 12 18 / .92)), url("images/market.webp?v=1") center 42% / cover no-repeat}
-#view-market .board-head .map-intro{color:#efe3c6; text-shadow:0 1px 2px rgb(0 0 0 / .85)}
+/* ---------- Picture headers and backdrops: Market, Request Board, Events, Classes and races ---------- */
+#view-market{--hero-img:url("images/market.webp?v=1"); --hero-pos:center 42%}
+#view-board{--hero-img:url("images/stormwind-square.jpg?v=1"); --hero-pos:center 55%}
+#view-events{--hero-img:url("images/tavern.webp?v=1"); --hero-pos:center 45%}
+#view-classes{--hero-img:url("images/adventurers.webp?v=1"); --hero-pos:center 28%}
+#view-market, #view-board, #view-events, #view-classes{position:relative; isolation:isolate}
+#view-market::before, #view-board::before, #view-events::before, #view-classes::before{content:""; position:absolute; z-index:-1; left:50%; top:-16px; width:100vw; height:640px; transform:translateX(-50%); pointer-events:none;
+  background:linear-gradient(180deg, rgb(10 12 18 / .3) 0%, rgb(10 12 18 / .75) 45%, var(--bg) 100%), var(--hero-img) var(--hero-pos) / cover no-repeat}
+#view-market .board-head, #view-board .board-head, #view-events .board-head, #view-classes .page-head, #view-market > .card.empty{position:relative; overflow:hidden; border:1px solid #6b5426; border-radius:8px; box-shadow:0 14px 40px rgb(0 0 0 / .55); outline:1px solid rgb(227 181 91 / .15); outline-offset:-6px}
+#view-market .board-head, #view-board .board-head, #view-events .board-head, #view-classes .page-head{padding:clamp(110px, 16vw, 200px) clamp(16px, 3vw, 28px) 20px; align-items:flex-end;
+  background:linear-gradient(180deg, rgb(10 12 18 / 0) 25%, rgb(10 12 18 / .55) 60%, rgb(10 12 18 / .92)), var(--hero-img) var(--hero-pos) / cover no-repeat}
+#view-classes .page-head{padding-top:clamp(150px, 22vw, 280px); margin-bottom:14px}
+#view-market .map-intro, #view-board .map-intro, #view-events .map-intro, #view-classes .page-intro{color:#efe3c6; text-shadow:0 1px 2px rgb(0 0 0 / .85)}
 #view-market > .card.empty{margin-top:clamp(120px, 18vw, 220px); background:rgb(15 18 27 / .88)}
-
 /* ---------- Classes and races: new in WoW Forever ---------- */
 .forever-new{display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); margin-bottom:10px}
 .fn-card{padding:16px 18px; border:1px solid var(--line); border-radius:8px; background:var(--panel)}
