@@ -1107,3 +1107,11 @@ a.mstat[href]:hover{border-color:var(--brass)}
 .ach-toast.out{opacity:0; transform:translateY(8px)}
 @keyframes ach-in{from{opacity:0; transform:translateY(12px)}}
 @media (prefers-reduced-motion:reduce){.ach-toast{animation:none; transition:none}}
+
+/* Admin → Discord → Invite newcomers */
+.dc-nc-list{display:grid; gap:6px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 180px), 1fr)); max-height:320px; overflow-y:auto; margin:0 0 12px; padding:2px}
+.dc-nc{display:flex; align-items:center; gap:8px; padding:6px 8px; border-radius:8px; background:rgb(0 0 0 / .2); cursor:pointer; min-width:0}
+.dc-nc span:last-child{min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.dc-nc img, .dc-nc-av{flex:none; width:24px; height:24px; border-radius:50%}
+.dc-nc-av{display:grid; place-items:center; background:#5865f2; color:#fff; font-size:.75rem; font-weight:700}
+.dc-nc:has(input:not(:checked)){opacity:.5}

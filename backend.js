@@ -119,6 +119,7 @@ function demoDb() {
     async discordTest() { throw new Error("Discord works once the site is connected to Supabase."); },
     async discordBot() { throw new Error("The Discord bot works on the live site."); },
     async discordChannels() { throw new Error("The Discord bot works on the live site."); },
+    async discordNewcomers(post) { if (post) return { posted: post.ids.length, newcomers: [{ id: "11", name: "Bramblewick" }, { id: "12", name: "Kessa" }, { id: "13", name: "Old Tom" }].filter((p) => !post.ids.includes(p.id)), config: {} }; return { newcomers: [{ id: "11", name: "Bramblewick" }, { id: "12", name: "Kessa" }, { id: "13", name: "Old Tom" }], config: {} }; },
     async loadNews() { return (data.news || []).slice().sort((a, b) => (b.pinned - a.pinned) || b.t - a.t).map((n) => ({ ...n })); },
     async createNews(o) { const u = need(); (data.news = data.news || []).push({ ...o, pinned: !!o.pinned, id: String(data.seq++), author: u.id, t: Date.now() }); persist(); },
     async updateNews(id, f) { const n = (data.news || []).find((x) => x.id === id); if (n) { Object.assign(n, f); persist(); } },
@@ -330,6 +331,16 @@ async function supabaseDb() {
       const { data } = await sb.auth.getSession();
       const token = data.session?.access_token; if (!token) throw new Error("Please sign in first.");
       const r = await fetch("/.netlify/functions/discord-admin?action=" + action, { method: action === "setup" ? "POST" : "GET", headers: { Authorization: "Bearer " + token } });
+      let body = {}; try { body = await r.json(); } catch {}
+      if (!r.ok) throw new Error(body.error || "The Discord helper didn't answer.");
+      return body;
+    },
+    // Admin page: who in Discord hasn't used the website yet, and have the bot invite them.
+    async discordNewcomers(post) {
+      const { data } = await sb.auth.getSession();
+      const token = data.session?.access_token; if (!token) throw new Error("Please sign in first.");
+      const r = await fetch("/.netlify/functions/discord-admin?action=" + (post ? "newcomers-post" : "newcomers"), post
+        ? { method: "POST", headers: { Authorization: "Bearer " + token, "content-type": "application/json" }, body: JSON.stringify(post) } : { headers: { Authorization: "Bearer " + token } });
       let body = {}; try { body = await r.json(); } catch {}
       if (!r.ok) throw new Error(body.error || "The Discord helper didn't answer.");
       return body;

@@ -105,6 +105,12 @@ The "Sign in with Discord" button appears on the site's sign-in box by itself on
 
 Run `supabase-feed.sql` and `supabase-feed-bot.sql` once (already done for the live site). **No Discord admin needed:** a website admin can pick the feed and events channels on the Admin page → Discord bot → Channels, and the bot posts there itself. Discord admins can also type `/feedchannel` in the channel that should get new market listings, Request Board jobs, guild news, guides, events and new members. The bot needs the **Manage Webhooks** permission for that (re-invite it from the Admin page, or give its role the permission). Choose what gets posted on the Admin page → Discord bot.
 
+## Invite newcomers from Discord
+Admin page → Discord bot → **Invite newcomers** lists people in your Discord server who don't use the website yet, and has the bot tag them in a channel with a short tour of the hall and a **Visit the guild hall** button. People who linked Discord on their profile, or whose Discord name matches a site username or main character, are left out.
+
+1. Run `supabase-invite.sql` in the Supabase SQL editor.
+2. In the Discord Developer Portal, open the app → **Bot**, turn on **Server Members Intent**, and press **Save Changes** (Discord only shares the member list with bots that have this on).
+
 ## Merchant Row (adverts)
 
 Run `supabase-adverts.sql` once in the Supabase SQL Editor. Merchant Row shows on the Market, Recipes, Request Board and Crafting requests pages.
