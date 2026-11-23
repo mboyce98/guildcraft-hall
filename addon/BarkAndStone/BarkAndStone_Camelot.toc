@@ -1,9 +1,0 @@
-## Interface: 16001
-## Title: Bark and Stone
-## Notes: Guild helper for Bark and Stone: guildmates near your level, dungeons for your level, and an export of your professions and recipes for the guild website.
-## Author: Bark and Stone
-## Version: 1.0.1
-## SavedVariables: BarkAndStoneDB
-
-Data.lua
-BarkAndStone.lua

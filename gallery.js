@@ -11,8 +11,16 @@ let i = 0, timer = null, paused = false;
 
 dots.innerHTML = slides.map((s, n) => `<button type="button" role="tab" data-gal-dot="${n}" aria-label="Picture ${n + 1}: ${s.querySelector("figcaption").textContent}"></button>`).join("");
 
+// Pictures load only when needed: the one showing and the next one.
+function hydrate(k) {
+  const s = slides[(k + slides.length) % slides.length]; if (!s || s.dataset.ready) return;
+  s.dataset.ready = "1";
+  if (s.dataset.bg) s.style.setProperty("--bg", `url('${s.dataset.bg}')`);
+  const im = s.querySelector("img[data-src]"); if (im) im.src = im.dataset.src;
+}
 function show(n) {
   i = (n + slides.length) % slides.length;
+  hydrate(i); hydrate(i + 1);
   slides.forEach((s, k) => { s.classList.toggle("on", k === i); s.setAttribute("aria-hidden", String(k !== i)); });
   dots.querySelectorAll("button").forEach((d, k) => d.setAttribute("aria-selected", String(k === i)));
   count.textContent = `${i + 1} / ${slides.length}`;

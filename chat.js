@@ -50,9 +50,9 @@ function localAnswer(k) {
   }
   if (k === "level") {
     const lv = g.level;
-    if (!lv) return "Tell me your level and I'll point the way. Set your main character's level on #profile, or import it with the addon. Roughly:\n" + ZONES.map(([a, b, z]) => `- **${a}-${b}:** ${z}`).join("\n");
+    if (!lv) return "Tell me your level and I'll point the way. Set your main character's level on #profile. Roughly:\n" + ZONES.map(([a, b, z]) => `- **${a}-${b}:** ${z}`).join("\n");
     const fit = ZONES.filter(([a, b]) => lv >= a && lv <= b).map(([, , z]) => z);
-    return `At level **${lv}**, head for ${fit.join(", or ")}. For dungeons at your level, the addon's Dungeons tab (/bas) shows which ones fit you and which guildmates can come. There are route guides on #guides too.`;
+    return `At level **${lv}**, head for ${fit.join(", or ")}. Plan a dungeon run for your level on #events, and there are route guides on #guides too.`;
   }
   if (k === "tip") return "A word of advice from the Watch: " + (g.tips[Math.floor(Math.random() * g.tips.length)] || "keep your armour repaired and your bags empty.");
   if (k === "join") return "Glad to hear it!\n- Read the guild rules on #rules. Rule 1: respect your fellow guildies.\n- Make an account here (the **Sign in** button at the top) and fill in your profile.\n"
@@ -85,7 +85,7 @@ root.innerHTML = `
     <img src="images/guard-face.jpg?v=1" alt="" width="46" height="46"><span>Ask the guard</span></button>
   <section class="ai-panel" id="ai-panel" role="dialog" aria-label="${GUARD}, the guild helper" hidden>
     <header class="ai-head guard-head">
-      <img class="guard-portrait" src="images/guard.jpg?v=1" alt="A Stormwind City guard saluting" width="52" height="52">
+      <img class="guard-portrait" src="images/guard.jpg?v=1" alt="A Stormwind City guard saluting" width="52" height="52" loading="lazy">
       <div><strong>${GUARD}</strong><span class="ai-sub">Stormwind City Watch · guild helper</span></div>
       <button type="button" class="ai-icon" data-ai="clear" title="Start a new conversation" aria-label="Start a new conversation">↺</button>
       <button type="button" class="ai-icon" data-ai="close" title="Close" aria-label="Close">✕</button>

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=27">
+<link rel="stylesheet" href="theme.css?v=28">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -85,9 +85,9 @@
 
     <section class="newsfeed" id="news" aria-label="News">
       <div class="news-banner">
-        <img class="crest" src="images/alliance.png?v=1" alt="Alliance crest" width="49" height="60">
+        <img class="crest" src="images/alliance-sm.png?v=1" alt="Alliance crest" width="49" height="60">
         <div class="news-title"><p class="eyebrow">For the Alliance</p><h3 class="sec">Guild news</h3></div>
-        <img class="crest crest-r" src="images/alliance.png?v=1" alt="" width="49" height="60">
+        <img class="crest crest-r" src="images/alliance-sm.png?v=1" alt="" width="49" height="60">
       </div>
       <div class="guild-news" id="guild-news"><p class="muted">Loading guild news…</p></div>
     </section>
@@ -96,12 +96,12 @@
       <div class="gal-head"><h3 class="sec">From our adventures</h3><span class="muted gal-count" id="gal-count"></span></div>
       <div class="gal-viewport">
         <!-- To add a screenshot: put it in images/gallery/ and copy one <figure> below. -->
-        <figure class="gal-slide" style="--bg:url('images/gallery/shot-1.jpg')"><img src="images/gallery/shot-1.jpg" alt="A lone adventurer facing a misty sea temple at sunrise" loading="lazy" width="683" height="782"><figcaption>Sunrise over a forgotten sea temple</figcaption></figure>
-        <figure class="gal-slide" style="--bg:url('images/gallery/shot-2.jpg')"><img src="images/gallery/shot-2.jpg" alt="A dwarf looking down into the canals of Stormwind at night" loading="lazy" width="1600" height="1000"><figcaption>Night watch over the Stormwind canals</figcaption></figure>
-        <figure class="gal-slide" style="--bg:url('images/gallery/shot-3.jpg')"><img src="images/gallery/shot-3.jpg" alt="A rogue on a torch-lit path through a dark, foggy forest" loading="lazy" width="1600" height="1000"><figcaption>A torch-lit road through Duskwood</figcaption></figure>
-        <figure class="gal-slide" style="--bg:url('images/gallery/shot-4.jpg')"><img src="images/gallery/shot-4.jpg" alt="Adventurers gathered around a campfire under an Alliance banner at Sentinel Hill" loading="lazy" width="1600" height="900"><figcaption>Campfire night at Sentinel Hill, Westfall</figcaption></figure>
-        <figure class="gal-slide" style="--bg:url('images/gallery/shot-5.webp')"><img src="images/gallery/shot-5.webp" alt="A night elf riding an antlered storm crow through violet mist past a towering tree" loading="lazy" width="2000" height="1125"><figcaption>Riding the violet mist on a storm crow</figcaption></figure>
-        <figure class="gal-slide" style="--bg:url('images/gallery/shot-6.webp')"><img src="images/gallery/shot-6.webp" alt="Two riders on flying mounts silhouetted against a blazing golden sunset" loading="lazy" width="2000" height="1125"><figcaption>Flying into a golden sunset</figcaption></figure>
+        <figure class="gal-slide" data-bg="images/gallery/shot-1.jpg"><img data-src="images/gallery/shot-1.jpg" alt="A lone adventurer facing a misty sea temple at sunrise" loading="lazy" width="683" height="782"><figcaption>Sunrise over a forgotten sea temple</figcaption></figure>
+        <figure class="gal-slide" data-bg="images/gallery/shot-2.jpg"><img data-src="images/gallery/shot-2.jpg" alt="A dwarf looking down into the canals of Stormwind at night" loading="lazy" width="1600" height="1000"><figcaption>Night watch over the Stormwind canals</figcaption></figure>
+        <figure class="gal-slide" data-bg="images/gallery/shot-3.jpg"><img data-src="images/gallery/shot-3.jpg" alt="A rogue on a torch-lit path through a dark, foggy forest" loading="lazy" width="1600" height="1000"><figcaption>A torch-lit road through Duskwood</figcaption></figure>
+        <figure class="gal-slide" data-bg="images/gallery/shot-4.jpg"><img data-src="images/gallery/shot-4.jpg" alt="Adventurers gathered around a campfire under an Alliance banner at Sentinel Hill" loading="lazy" width="1600" height="900"><figcaption>Campfire night at Sentinel Hill, Westfall</figcaption></figure>
+        <figure class="gal-slide" data-bg="images/gallery/shot-5.webp"><img data-src="images/gallery/shot-5.webp" alt="A night elf riding an antlered storm crow through violet mist past a towering tree" loading="lazy" width="2000" height="1125"><figcaption>Riding the violet mist on a storm crow</figcaption></figure>
+        <figure class="gal-slide" data-bg="images/gallery/shot-6.webp"><img data-src="images/gallery/shot-6.webp" alt="Two riders on flying mounts silhouetted against a blazing golden sunset" loading="lazy" width="2000" height="1125"><figcaption>Flying into a golden sunset</figcaption></figure>
         <button class="gal-nav prev" type="button" data-gal="prev" aria-label="Previous picture">‹</button>
         <button class="gal-nav next" type="button" data-gal="next" aria-label="Next picture">›</button>
       </div>
@@ -537,15 +537,15 @@
 
 <script src="backend.js?v=18"></script>
 <script src="merchants.js?v=1"></script>
-<script src="app.js?v=34"></script>
+<script src="app.js?v=35"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=7"></script>
-<script src="gallery.js?v=1"></script>
+<script src="gallery.js?v=2"></script>
 <script src="music.js?v=1"></script>
 <script src="mounts.js?v=3"></script>
 <script src="achievements.js?v=1"></script>
 <script src="news.js?v=3"></script>
-<script src="chat.js?v=4"></script>
+<script src="chat.js?v=5"></script>
 </body>
 </html>

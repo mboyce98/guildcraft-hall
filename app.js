@@ -294,7 +294,7 @@ const TIPS = [
   "Visit your class trainer every even level. New spells and ranks are waiting.",
   "Pick up every quest in town before heading out, and hand them in together. It saves hours of running.",
   "Learn First Aid early. Bandages mean less sitting around and fewer trips to the graveyard.",
-  "Run dungeons with guildmates near your level. Type /bas in game to see who's close.",
+  "Run dungeons with guildmates near your level. Plan one on the Events page and the guild can sign up.",
   "Keep food and water for your level in your bags. Every innkeeper sells it.",
   "Herbalism, Mining and Skinning pay for themselves while you level. Sell spares on the guild Market.",
   "Log out in an inn or a city to build rested XP. You level faster the next day.",
@@ -365,16 +365,8 @@ function railLeft() {
       ? `<div class="b-faces">${on.slice(0, 10).map((o) => `<a href="#member-${esc(o.id)}" title="${esc(o.char || o.username || "")}">${avatarImg(o.id, 34)}</a>`).join("")}</div>
          <p class="muted small">${on.length === 1 ? "Just you right now. Say hi in Discord!" : `${on.length} guildmates are on the site.`}</p>`
       : `<p class="muted small">Nobody else is around right now.</p>`));
-    const lv = Object.entries(S.profiles).filter(([, p]) => p.mainLevel > 0).sort((a, b) => b[1].mainLevel - a[1].mainLevel);
-    if (lv.length) {
-      const avg = Math.round(lv.reduce((s, [, p]) => s + p.mainLevel, 0) / lv.length);
-      parts.push(banner("b-ladder", "Leveling ladder", `<ol class="b-ladder">${lv.slice(0, 6).map(([id, p]) => `<li><a href="#member-${esc(id)}">${classDot(p.mainClass)}${esc(p.mainChar || p.username || "Member")}</a><b>${p.mainLevel}</b></li>`).join("")}</ol>
-        <p class="small">Guild average: <strong>level ${avg}</strong></p>
-        <div class="b-bar" role="img" aria-label="${Math.round(avg / 60 * 100)}% of the way to level 60"><i style="width:${Math.min(100, avg / 60 * 100)}%"></i></div>
-        <p class="muted small">${Math.round(avg / 60 * 100)}% of the way to 60. Keep your level up to date by importing from the addon.</p>`));
-    }
   } else {
-    parts.push(banner("b-watch", "Join the watch", `<p class="muted small">Sign in to see who's online, the guild's leveling ladder and the market.</p><button class="btn small primary" data-act="signin">Sign in</button>`));
+    parts.push(banner("b-watch", "Join the watch", `<p class="muted small">Sign in to see who's online and what's on the market.</p><button class="btn small primary" data-act="signin">Sign in</button>`));
   }
   return parts.join("");
 }
@@ -391,8 +383,6 @@ function railRight() {
     const fresh = Object.entries(S.profiles).filter(([, p]) => p.joined).sort((a, b) => b[1].joined - a[1].joined).slice(0, 4);
     if (fresh.length) parts.push(banner("b-recruits", "Newest recruits", `<ul class="b-list">${fresh.map(([id, p]) => `<li><a href="#member-${esc(id)}">${avatarImg(id, 24)} ${esc(p.mainChar || p.username || "Member")}</a> <span class="muted small">${ago(p.joined)}</span></li>`).join("")}</ul>`));
   }
-  parts.push(banner("b-addon", "Bark and Stone addon", `<p class="small">Find guildmates near your level, see which dungeons suit you, and send your recipes to this site.</p>
-    <a class="btn small primary" href="downloads/BarkAndStone.zip" download>Download</a> <span class="muted small">then type <code>/bas</code></span>`));
   const inv = (S.settings.discord_invite || GUILD.discordInvite || "").trim();
   if (/^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(inv)) parts.push(banner("b-discord", "Join us on Discord", `<p class="small">Events, the market feed and the guild bot all live there.</p><a class="btn small discord" href="${esc(inv)}" target="_blank" rel="noopener">Open Discord</a>`));
   return parts.join("");
@@ -585,68 +575,16 @@ function queueSave() {
 }
 function updateSaved() { const el = $("#saved"); if (el) el.textContent = S.saveState; }
 
-/* ---------- Import from the Bark and Stone in-game addon (/bas export) ---------- */
-// Lines: "BAS1~version", then per character "C~name~realm~class~level~race~faction~zone~copper",
-// "P~profession~skill~id;id;…" (recipe spell IDs) and "N~profession~name;name;…" (recipes without an ID).
-function parseAddonExport(text) {
-  const lines = String(text || "").split(/\r?\n/).map((s) => s.trim()).filter(Boolean);
-  const start = lines.findIndex((l) => /^BAS1~/.test(l));
-  if (start < 0) throw new Error("That isn't text from the addon. In game, type /bas export and copy everything in the box.");
-  const chars = []; let cur = null;
-  for (const l of lines.slice(start + 1)) {
-    const f = l.split("~");
-    if (f[0] === "C" && f[1]) { cur = { name: f[1].trim().slice(0, 24), realm: f[2] || "", cls: f[3] || "", level: Number(f[4]) || 0, faction: f[6] || "", profs: {} }; chars.push(cur); }
-    else if (cur && (f[0] === "P" || f[0] === "N") && f[1]) {
-      const p = cur.profs[f[1]] || (cur.profs[f[1]] = { skill: 0, ids: [], names: [] });
-      if (f[0] === "P") { p.skill = Number(f[2]) || 0; p.ids = (f[3] || "").split(";").map(Number).filter(Boolean); }
-      else p.names = (f[2] || "").split(";").map((s) => s.trim().toLowerCase()).filter(Boolean);
-    }
-  }
-  if (!chars.length) throw new Error("No characters found in that text. Log in to each character once with the addon on, then export again.");
-  return chars;
-}
-function importAddon(text) {
-  const chars = parseAddonExport(text), doc = ensureMyDoc(), report = [];
-  const siteProf = (n) => (n === "Mining" ? "Mining (Smelting)" : n);
-  let main = null;
-  for (const c of chars) {
-    const ch = doc.chars[c.name] || (doc.chars[c.name] = { profs: {} }); ch.profs = ch.profs || {};
-    if (c.realm) ch.realm = c.realm; if (c.level) ch.level = c.level; if (CLASSES.includes(c.cls)) ch.cls = c.cls;
-    const done = [];
-    for (const [raw, v] of Object.entries(c.profs)) {
-      const prof = siteProf(raw), pi = profIndex(prof);
-      if (pi < 0) continue; // gathering skills the site doesn't list recipes for
-      const mine = RECIPES.filter((r) => r.p === pi);
-      const byName = new Map();
-      mine.forEach((r) => { byName.set(r.name.toLowerCase(), r.id); const it = ITEMS[r.cr]; if (it && !byName.has(it[0].toLowerCase())) byName.set(it[0].toLowerCase(), r.id); });
-      const ids = new Set(mine.map((r) => r.id));
-      const found = new Set();
-      v.ids.forEach((id) => { if (ids.has(id)) found.add(id); });
-      v.names.forEach((n) => { if (byName.has(n)) found.add(byName.get(n)); });
-      if (!found.size && !v.skill) continue;
-      const p = ch.profs[prof] || (ch.profs[prof] = { skill: 1, known: [] });
-      if (v.skill) p.skill = Math.min(300, v.skill);
-      const before = new Set(p.known || []); found.forEach((id) => before.add(id)); p.known = [...before];
-      done.push(`${prof} ${p.skill} (${found.size} recipe${found.size === 1 ? "" : "s"})`);
-    }
-    report.push(`${c.name}${c.level ? " · level " + c.level : ""}: ${done.length ? done.join(", ") : "no crafting professions yet"}`);
-    const pr = S.profiles[S.uid] || {};
-    if (pr.mainChar && pr.mainChar.toLowerCase() === c.name.toLowerCase()) main = c;
-  }
-  if (!S.editChar || !doc.chars[S.editChar]) S.editChar = chars[0].name;
-  queueSave();
-  return { report, main };
-}
 
 /* My crafter: panels the member arranges themselves (order, width, hidden), saved per member in this browser. */
 const MINE_PANELS = {
   summary: "At a glance", chars: "Your characters", recipes: "Professions and recipes", jobs: "Jobs waiting for you",
-  note: "Crafter note", import: "Import from the game", bnet: "Battle.net",
+  note: "Crafter note", bnet: "Battle.net",
 };
 const MINE_PRESETS = {
-  workbench: { name: "Workbench", order: ["summary", "chars", "jobs", "recipes", "note", "import", "bnet"], w: { summary: "full", recipes: "full" }, hidden: [] },
-  recipes: { name: "Recipe focus", order: ["recipes", "chars", "summary", "note", "jobs", "import", "bnet"], w: { recipes: "full" }, hidden: [] },
-  compact: { name: "Compact", order: ["summary", "chars", "recipes", "jobs", "note"], w: { summary: "full", recipes: "full" }, hidden: ["import", "bnet"] },
+  workbench: { name: "Workbench", order: ["summary", "chars", "jobs", "recipes", "note", "bnet"], w: { summary: "full", recipes: "full" }, hidden: [] },
+  recipes: { name: "Recipe focus", order: ["recipes", "chars", "summary", "note", "jobs", "bnet"], w: { recipes: "full" }, hidden: [] },
+  compact: { name: "Compact", order: ["summary", "chars", "recipes", "jobs", "note"], w: { summary: "full", recipes: "full" }, hidden: ["bnet"] },
 };
 function mineLayout() {
   if (S.mineLayout && S.mineLayout.uid === S.uid) return S.mineLayout;
@@ -719,10 +657,6 @@ function minePanelBody(id, ctx) {
   }
   if (id === "note") return `<textarea id="mynote" rows="3" maxlength="200" placeholder="e.g. Bring mats, free for guildies. Online most evenings.">${esc(doc.note || "")}</textarea>
       <p class="saved" id="saved">${esc(S.saveState)}</p>`;
-  if (id === "import") return `<p class="muted" style="margin:0 0 6px">Install the <a href="downloads/BarkAndStone.zip" download>Bark and Stone addon</a>, open each profession window once, then type <code>/bas export</code>. Copy the text (Ctrl+A, Ctrl+C) and paste it here. It fills in your characters, skill levels and every recipe they know.</p>
-      <form id="addonimport"><textarea id="addon-text" rows="3" placeholder="BAS1~1.0.0 …" aria-label="Text from the addon">${esc(S.addonText || "")}</textarea>
-        <button class="btn" type="submit" style="margin-top:6px">Import</button></form>
-      ${S.addonResult ? `<p class="saved" style="white-space:pre-line">${esc(S.addonResult)}</p>` : ""}`;
   if (id === "bnet") return bnetCard().replace("<h3>Battle.net</h3>", "");
   return "";
 }
@@ -1788,23 +1722,6 @@ document.addEventListener("submit", async (e) => {
     catch (x) { saved.textContent = "Couldn't save: " + x.message; }
     btn.disabled = false;
   }
-  else if (f.id === "addonimport") {
-    const text = $("#addon-text").value;
-    try {
-      const { report, main } = importAddon(text);
-      S.addonText = "";
-      S.addonResult = "Imported:\n" + report.join("\n");
-      // Keep the main character's level and class on the profile up to date.
-      const p = S.profiles[S.uid];
-      if (main && p && (main.level !== p.mainLevel || (!p.mainClass && CLASSES.includes(main.cls)))) {
-        const fields = { mainChar: p.mainChar, mainRealm: p.mainRealm || "", mainClass: p.mainClass || (CLASSES.includes(main.cls) ? main.cls : ""),
-          mainLevel: Math.max(0, Math.min(80, main.level)), faction: p.faction || (["Alliance", "Horde"].includes(main.faction) ? main.faction : ""),
-          discord: p.discord || "", playTimes: p.playTimes || "", bio: p.bio || "" };
-        try { await S.B.saveProfile(fields); Object.assign(p, fields); S.addonResult += `\nYour profile now shows ${main.name} at level ${main.level}.`; } catch {}
-      }
-    } catch (x) { S.addonResult = x.message; }
-    renderMine();
-  }
   else if (f.id === "addchar") {
     const name = $("#newchar").value.trim().slice(0, 24); if (!name) return;
     const d = ensureMyDoc(); if (!d.chars[name]) d.chars[name] = { profs: {} };
@@ -2406,6 +2323,4 @@ window.GC_AI = {
 };
 
 route();
-// Keep pasted addon text if the page redraws before Import is pressed.
-document.addEventListener("input", (e) => { if (e.target.id === "addon-text") S.addonText = e.target.value; });
 })();
