@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=22">
+<link rel="stylesheet" href="theme.css?v=24">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -32,7 +32,7 @@
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Loot &amp; Mounts</button>
-        <div class="navmenu"><a href="#mounts" data-tab="mounts">Mounts &amp; best loot</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
+        <div class="navmenu"><a href="#mounts" data-tab="mounts">Mounts &amp; best loot</a><a href="#transmog" data-tab="transmog">Transmog wardrobe</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Crafting <span class="badge" id="req-badge" hidden></span></button>
@@ -487,6 +487,7 @@
 
   <section id="view-loot" hidden></section>
   <section id="view-mounts" class="mounts" hidden></section>
+  <section id="view-transmog" class="transmog" hidden></section>
   <section id="view-board" hidden></section>
   <section id="view-profile" hidden></section>
   <section id="view-members" hidden></section>
@@ -534,14 +535,15 @@
   </div>
 </div>
 
-<script src="backend.js?v=15"></script>
-<script src="app.js?v=30"></script>
+<script src="backend.js?v=16"></script>
+<script src="app.js?v=31"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=7"></script>
 <script src="gallery.js?v=1"></script>
 <script src="music.js?v=1"></script>
 <script src="mounts.js?v=3"></script>
+<script src="transmog.js?v=2"></script>
 <script src="news.js?v=3"></script>
 <script src="chat.js?v=3"></script>
 </body>

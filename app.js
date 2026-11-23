@@ -171,7 +171,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "transmog", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -223,6 +223,7 @@ function render() {
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "mounts") { if (window.GC_MOUNTS && !(typing && typing.closest("#view-mounts"))) window.GC_MOUNTS.render(); }
+    else if (S.view === "transmog") { if (window.GC_TRANSMOG && !(typing && typing.closest("#view-transmog"))) window.GC_TRANSMOG.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "members") { if (!(typing && typing.closest("#view-members"))) renderMembers(); }
@@ -863,7 +864,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", transmog: "the Transmog wardrobe", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
@@ -2249,6 +2250,11 @@ function renderTradeBadge() {
 }
 
 // The guild helper (chat.js) reaches the site through this.
+// What the Transmog wardrobe (transmog.js) needs from the app.
+window.GC_APP = {
+  backend: () => S.B, uid: () => S.uid, signIn: () => openAuth("in"),
+  name: (uid) => { const p = prof(uid); return p.mainChar || p.username || "A guildmate"; },
+};
 window.GC_AI = {
   token: () => (S.B && S.B.accessToken ? S.B.accessToken() : Promise.resolve(null)),
   signedIn: () => !!S.uid, signIn: () => openAuth("in"), page: () => S.view, demo: () => !S.B || S.B.mode === "demo",

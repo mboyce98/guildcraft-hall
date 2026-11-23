@@ -168,6 +168,12 @@ function demoDb() {
     async loadAlerts() { return (data.alerts || []).map((a) => ({ ...a })); },
     async addAlert(o) { need(); (data.alerts = data.alerts || []).push({ ...o, id: String(data.seq++), t: Date.now() }); persist(); },
     async deleteAlert(id) { data.alerts = (data.alerts || []).filter((a) => a.id !== id); persist(); },
+    // ---- Transmog outfits ----
+    async loadOutfits() { return (data.outfits || []).map((o) => ({ ...o, items: { ...o.items } })); },
+    async saveOutfit(o) { const u = need(); data.outfits = data.outfits || []; const now = Date.now();
+      if (o.id) { const x = data.outfits.find((y) => y.id === o.id && y.user === u.id); if (x) Object.assign(x, { name: o.name, cls: o.cls, armor: o.armor, items: { ...o.items }, note: o.note, updated: now }); persist(); return o.id; }
+      const id = String(data.seq++); data.outfits.push({ id, user: u.id, name: o.name, cls: o.cls, armor: o.armor, items: { ...o.items }, note: o.note, created: now, updated: now }); persist(); return id; },
+    async deleteOutfit(id) { data.outfits = (data.outfits || []).filter((o) => o.id !== id); persist(); },
     async recentPrices(items) { const want = new Set(items.map((x) => x.toLowerCase())); return (data.prices || []).filter((p) => want.has(p.item.toLowerCase())).map((p) => ({ ...p })); },
     async discordIdentity() { return null; },
     async linkDiscord() { throw new Error("Linking Discord works on the live site."); },
@@ -375,6 +381,19 @@ async function supabaseDb() {
     },
     async addAlert(o) { await need(); ok(await sb.from("price_alerts").insert({ item: o.item, below: o.below || null, above: o.above || null })); },
     async deleteAlert(id) { ok(await sb.from("price_alerts").delete().eq("id", Number(id))); },
+    // ---- Transmog outfits (the guild sees everyone's; members change their own) ----
+    async loadOutfits() {
+      const r = await sb.from("transmog_outfits").select("*").order("updated_at", { ascending: false }).limit(300);
+      if (r.error) throw r.error;
+      return (r.data || []).map((o) => ({ id: String(o.id), user: o.user_id, name: o.name, cls: o.class, armor: o.armor, items: o.items || {}, note: o.note, created: Date.parse(o.created_at), updated: Date.parse(o.updated_at) }));
+    },
+    async saveOutfit(o) {
+      await need();
+      const row = { name: o.name, class: o.cls || "", armor: o.armor || "", items: o.items || {}, note: o.note || "", updated_at: new Date().toISOString() };
+      if (o.id) { ok(await sb.from("transmog_outfits").update(row).eq("id", Number(o.id))); return o.id; }
+      const r = await sb.from("transmog_outfits").insert(row).select("id").single(); if (r.error) throw r.error; return String(r.data.id);
+    },
+    async deleteOutfit(id) { ok(await sb.from("transmog_outfits").delete().eq("id", Number(id))); },
     async recentPrices(items) {
       if (!items.length) return [];
       const since = new Date(Date.now() - 21 * 86400000).toISOString();

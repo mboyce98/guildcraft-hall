@@ -30,6 +30,7 @@ Pages of the site (link them as plain paths like ${SITE}/#market):
 - #rules, #chronicle (guild lore), #classes (classes and races), #members, #messages (private messages)
 - #guides: member-written guides (gathering paths, questing routes, dungeons) and the Market prices tab, where members report prices and see trends
 - #map: world map with gathering spots, #cities: Stormwind and Ironforge trainers and vendors, #loot: Loot Vault of dungeon drops
+- #transmog: the Transmog wardrobe, where members dress up an outfit slot by slot from WoW Forever gear, save it and share it with the guild (Guild runway), plus how transmog works in Forever
 - #mounts: every mount in WoW Forever and how to get it, riding levels, and the best dungeon drops for each level bracket
 - #classes: classes and races, including what is new in WoW Forever (the Skyborne race, Undead Paladins, and other new race and class pairings)
 - #recipes: every recipe and who in the guild can craft it, #mine: a member's crafter profile, #requests: crafting requests
