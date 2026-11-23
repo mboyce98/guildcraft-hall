@@ -108,7 +108,23 @@ const st = { tab: "mounts", q: "", faction: "A", src: "", speed: "", onlyNew: fa
 try { st.faction = localStorage.getItem("gc.mount.faction") || "A"; st.lvBand = localStorage.getItem("gc.loot.band") || ""; } catch {}
 
 const facLabel = { A: "Alliance", H: "Horde", B: "Both factions" };
-const wh = (name) => `https://www.wowhead.com/forever/search?q=${encodeURIComponent(name)}`;
+// Wowhead item or spell for each mount, with its icon (made by tools/mount-icons.ps1).
+let WH = {}, whLoading = null;
+function loadWh() {
+  if (whLoading) return whLoading;
+  whLoading = fetch("mount-icons.json?v=1").then((r) => r.json()).then((d) => { WH = d || {}; render(); }).catch(() => {});
+  return whLoading;
+}
+const wh = (name) => {
+  const w = WH[name];
+  return w ? `https://www.wowhead.com/forever/${w.t}=${w.id}` : `https://www.wowhead.com/forever/search?q=${encodeURIComponent(name)}`;
+};
+const icon = (m) => {
+  const w = WH[m[0]];
+  return w && /^[a-z0-9_]+$/i.test(w.icon)
+    ? `<img src="https://wow.zamimg.com/images/wow/icons/large/${w.icon}.jpg" alt="" width="46" height="46" loading="lazy">`
+    : ICON[m[1]] || "🐴";
+};
 
 function mountList() {
   const q = st.q.trim().toLowerCase();
@@ -136,9 +152,9 @@ function mountsHtml() {
     <p class="muted small" aria-live="polite">${list.length} mount${list.length === 1 ? "" : "s"}</p>
     <div class="mt-grid">${list.map((m) => `
       <article class="mt-card ${m[3] === 100 ? "epic" : "rare"}">
-        <div class="mt-ico" aria-hidden="true">${ICON[m[1]] || "🐴"}</div>
+        <a class="mt-ico" href="${wh(m[0])}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">${icon(m)}</a>
         <div class="mt-body">
-          <h4><a href="${wh(m[0])}" target="_blank" rel="noopener">${esc(m[0])}</a>${m[7] ? ' <span class="new-pill">New</span>' : ""}</h4>
+          <h4><a href="${wh(m[0])}" target="_blank" rel="noopener" data-wh-icon-size="tiny" data-wh-rename-link="false">${esc(m[0])}</a>${m[7] ? ' <span class="new-pill">New</span>' : ""}</h4>
           <p class="mt-meta"><span class="tag ${m[2] === "A" ? "ally" : m[2] === "H" ? "horde" : ""}">${facLabel[m[2]]}</span> <span title="${esc(SRC_HELP[m[5]])}">${esc(m[5])}</span> · ${m[3] === 100 ? "Swift, +100%" : "+60%"} · level ${m[4]}</p>
           <p class="mt-where">${esc(m[6])}</p>
           ${m[8] ? `<p class="mt-note">${esc(m[8])}</p>` : ""}
@@ -189,6 +205,7 @@ function lootHtml() {
 
 function render() {
   if (root.hidden && root.dataset.built) return;
+  loadWh();
   const active = document.activeElement && document.activeElement.id === "mt-q";
   root.dataset.built = "1";
   root.innerHTML = `
