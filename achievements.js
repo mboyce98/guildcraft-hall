@@ -35,7 +35,7 @@ async function load(force) {
     // The member's WoW Forever character from Blizzard's Armory, for boss kills, mounts, reputation and fishing.
     const slug = mySlug();
     if (slug && ARMORY_RULES.concat("level").some((t) => want(t))) {
-      try { const r = await fetch("/.netlify/functions/armory?c=" + encodeURIComponent(slug)); st.arm = r.ok ? await r.json() : null; } catch { st.arm = null; }
+      try { const r = await fetch("/.netlify/functions/armory?v=2&c=" + encodeURIComponent(slug)); st.arm = r.ok ? await r.json() : null; } catch { st.arm = null; }
     } else st.arm = null;
     st.loaded = true;
     st.lastEarn = st.loadedAt = Date.now();

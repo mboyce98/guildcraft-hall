@@ -89,7 +89,7 @@ exports.handler = async (event) => {
       statusCode: 200,
       headers: {
         "content-type": "application/json", "cache-control": "public, max-age=600",
-        "netlify-cdn-cache-control": "public, s-maxage=1800, stale-while-revalidate=3600", "netlify-vary": "query=c",
+        "netlify-cdn-cache-control": "public, s-maxage=1800, stale-while-revalidate=3600", "netlify-vary": "query=c|v",
       },
       body: JSON.stringify(out),
     };
