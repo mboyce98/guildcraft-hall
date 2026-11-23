@@ -6,11 +6,32 @@ local addonName, ns = ...
 -- Tabs: guildmates near your level, dungeons for your level, and an export of
 -- your characters, professions and recipes to paste into the guild website.
 
-local VERSION = "1.0.0"
+local VERSION = "1.0.1"
 local NEAR = 4            -- "near my level" means within this many levels
 local DB, me              -- saved data, and this character's entry in it
 
 local function say(msg) print("|cffe3b55bBark and Stone:|r " .. msg) end
+
+-------------------------------------------------------------------------------
+-- Keeping it light: the game sends some events many times in a row, so work is
+-- batched (run once, a moment after the last event) and never done in combat.
+-------------------------------------------------------------------------------
+local pending, afterCombat = {}, {}
+local function inCombat() return InCombatLockdown and InCombatLockdown() end
+local function later(key, delay, fn)
+  if pending[key] then return end
+  pending[key] = true
+  local function run()
+    pending[key] = nil
+    if inCombat() then afterCombat[key] = fn; return end
+    fn()
+  end
+  if C_Timer and C_Timer.After then C_Timer.After(delay, run) else run() end
+end
+local function runAfterCombat()
+  local jobs = afterCombat; afterCombat = {}
+  for _, fn in pairs(jobs) do fn() end
+end
 
 -------------------------------------------------------------------------------
 -- Saved data: one entry per character on this account
@@ -77,6 +98,7 @@ end
 -------------------------------------------------------------------------------
 -- Reading known recipes when a profession window opens
 -------------------------------------------------------------------------------
+local lastScan = { prof = nil, n = -1, t = 0 }
 local function scanModern()
   local T = C_TradeSkillUI
   if not (T and T.GetAllRecipeIDs and T.GetRecipeInfo) then return false end
@@ -92,8 +114,13 @@ local function scanModern()
     if child.skillLevel and child.skillLevel > (skill or 0) then skill = child.skillLevel end
   end
   if not prof or prof == "" then return true end
+  local all = T.GetAllRecipeIDs() or {}
+  -- Same window, same number of recipes, scanned under a minute ago: nothing new to read.
+  local now = GetTime and GetTime() or 0
+  if lastScan.prof == prof and lastScan.n == #all and now - lastScan.t < 60 then return true end
+  lastScan.prof, lastScan.n, lastScan.t = prof, #all, now
   local ids = {}
-  for _, id in ipairs(T.GetAllRecipeIDs() or {}) do
+  for _, id in ipairs(all) do
     local info = T.GetRecipeInfo(id)
     if info and info.learned then ids[#ids + 1] = id end
   end
@@ -141,10 +168,16 @@ end
 -------------------------------------------------------------------------------
 -- Guild roster
 -------------------------------------------------------------------------------
+local lastAsk = -100
 local function askRoster()
+  -- The server only refreshes the roster every so often anyway; don't ask more than every 20 seconds.
+  local now = GetTime and GetTime() or 0
+  if now - lastAsk < 20 then return end
+  lastAsk = now
   if C_GuildInfo and C_GuildInfo.GuildRoster then C_GuildInfo.GuildRoster()
   elseif GuildRoster then GuildRoster() end
 end
+local rosterCache = nil -- cleared when the game says the roster changed
 
 local function shortName(n)
   if Ambiguate then return Ambiguate(n, "short") end
@@ -160,6 +193,7 @@ end
 
 -- Online and offline guildmates as { name, level, class, token, zone, online }.
 local function guildmates()
+  if rosterCache then return rosterCache end
   local out = {}
   if not (IsInGuild and IsInGuild()) or not GetNumGuildMembers then return out end
   local myName = UnitName("player")
@@ -173,6 +207,7 @@ local function guildmates()
     end
   end
   table.sort(out, function(a, b) return a.level > b.level end)
+  rosterCache = out
   return out
 end
 
@@ -399,6 +434,7 @@ pcall(ev.RegisterEvent, ev, "TRADE_SKILL_UPDATE")
 pcall(ev.RegisterEvent, ev, "CRAFT_SHOW")
 pcall(ev.RegisterEvent, ev, "CRAFT_UPDATE")
 pcall(ev.RegisterEvent, ev, "SKILL_LINES_CHANGED")
+ev:RegisterEvent("PLAYER_REGEN_ENABLED") -- combat ended: run anything that was waiting
 
 local function sendGuild(msg)
   local send = (C_ChatInfo and C_ChatInfo.SendChatMessage) or SendChatMessage
@@ -429,16 +465,19 @@ ev:SetScript("OnEvent", function(_, event, arg1)
     for _, d in ipairs(ns.DUNGEONS) do
       if d.min - 2 == lvl then say("You can now run " .. d.name .. " (" .. d.where .. "). Type /bas to see who can join.") end
     end
+  elseif event == "PLAYER_REGEN_ENABLED" then
+    runAfterCombat()
   elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_MONEY" then
-    updateMe()
+    later("me", 5, updateMe)                -- gold changes a lot while looting
   elseif event == "SKILL_LINES_CHANGED" then
-    readSkills()
+    later("skills", 3, readSkills)          -- fires on every skill-up while crafting
   elseif event == "GUILD_ROSTER_UPDATE" then
-    if frame and frame:IsShown() and current ~= "export" then setTab(current, true) end
+    rosterCache = nil
+    if frame and frame:IsShown() and current ~= "export" then later("roster", 1.5, function() setTab(current, true) end) end
   elseif event == "CRAFT_SHOW" or event == "CRAFT_UPDATE" then
-    scanClassicCraft()
-  else -- the profession window opened or changed
-    scanTrade()
+    later("craft", 1.5, scanClassicCraft)
+  else -- the profession window opened or changed (this fires many times in a row)
+    later("trade", 1.5, scanTrade)
   end
 end)
 

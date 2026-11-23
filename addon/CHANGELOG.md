@@ -1,5 +1,11 @@
 # Bark and Stone
 
+## 1.0.1
+
+- Lighter on the game: profession scans, guild list refreshes, skill and gold updates are now batched instead of running on every event, and nothing runs during combat.
+- Profession windows aren't re-read when nothing has changed.
+- The guild list is reused until the roster actually changes, and the server is asked for it at most every 20 seconds.
+
 ## 1.0.0
 
 - First release for WoW Forever.
