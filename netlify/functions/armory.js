@@ -35,10 +35,22 @@ exports.handler = async (event) => {
     if (!sum) return json(404, { error: "Blizzard doesn't have that character. Check the name and surname (it shows on the Armory once they've logged in recently)." });
     const isHunter = n(sum.character_class) === "Hunter";
     const opt = (p) => get(p).catch(() => null);
-    const [eq, media, stats, specs, profs, pets, pvp, reps, app] = await Promise.all([
+    const [eq, media, stats, specs, profs, pets, pvp, reps, app, dung, raids, mounts] = await Promise.all([
       opt("/equipment"), opt("/character-media"), opt("/statistics"), opt("/specializations"), opt("/professions"),
       isHunter ? opt("/hunter-pets") : null, opt("/pvp-summary"), opt("/reputations"), opt("/appearance"),
+      opt("/encounters/dungeons"), opt("/encounters/raids"), opt("/collections/mounts"),
     ]);
+    // Dungeon and raid progress (for achievements): cleared instances and every boss killed at least once.
+    const cleared = [], kills = [];
+    for (const src of [dung, raids]) for (const ex of (src && src.expansions) || []) for (const ins of ex.instances || []) {
+      let done = false;
+      for (const m of ins.modes || []) {
+        const pr = m.progress || {};
+        if ((m.status && m.status.type === "COMPLETE") || (pr.total_count && pr.completed_count >= pr.total_count)) done = true;
+        for (const en of pr.encounters || []) if (en.completed_count > 0) kills.push(n(en.encounter));
+      }
+      if (done) cleared.push(n(ins.instance));
+    }
 
     const asset = (k) => ((media && media.assets) || []).find((a) => a.key === k)?.value || "";
     const surname = (app && app.character && app.character.surname) || (eq && eq.character && eq.character.surname) || "";
@@ -75,6 +87,8 @@ exports.handler = async (event) => {
       pvp: pvp ? { kills: pvp.honorable_kills || 0, rank: pvp.pvp_rank || 0 } : null,
       reputations: ((reps && reps.reputations) || []).map((r) => ({ name: n(r.faction), standing: n(r.standing), value: r.standing && r.standing.value, max: r.standing && r.standing.max, tier: r.standing && r.standing.tier }))
         .sort((a, b) => (b.tier ?? 0) - (a.tier ?? 0) || a.name.localeCompare(b.name)),
+      progress: { known: !!(dung || raids), cleared: [...new Set(cleared)], kills: [...new Set(kills)] },
+      mounts: mounts ? ((mounts.mounts || []).map((m) => n(m.mount))) : null,
       fetched: Date.now(),
     };
     return {
