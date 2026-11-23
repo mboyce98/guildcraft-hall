@@ -871,3 +871,61 @@ a.hev:hover{border-color:var(--brass)}
   .guard-fab{padding:4px}
   .tk-label{font-size:.7rem; padding:0 16px 0 10px}
 }
+
+/* ---------- Market: Stormwind trade district backdrop ---------- */
+#view-market{position:relative; isolation:isolate}
+#view-market::before{content:""; position:absolute; z-index:-1; left:50%; top:-16px; width:100vw; height:640px; transform:translateX(-50%); pointer-events:none;
+  background:linear-gradient(180deg, rgb(10 12 18 / .25) 0%, rgb(10 12 18 / .7) 45%, var(--bg) 100%), url("images/market.webp?v=1") center 38% / cover no-repeat}
+#view-market .board-head, #view-market > .card.empty{position:relative; overflow:hidden; border:1px solid #6b5426; border-radius:8px; box-shadow:0 14px 40px rgb(0 0 0 / .55); outline:1px solid rgb(227 181 91 / .15); outline-offset:-6px}
+#view-market .board-head{padding:clamp(110px, 16vw, 200px) clamp(16px, 3vw, 28px) 20px; align-items:flex-end;
+  background:linear-gradient(180deg, rgb(10 12 18 / 0) 25%, rgb(10 12 18 / .55) 60%, rgb(10 12 18 / .92)), url("images/market.webp?v=1") center 42% / cover no-repeat}
+#view-market .board-head .map-intro{color:#efe3c6; text-shadow:0 1px 2px rgb(0 0 0 / .85)}
+#view-market > .card.empty{margin-top:clamp(120px, 18vw, 220px); background:rgb(15 18 27 / .88)}
+
+/* ---------- Classes and races: new in WoW Forever ---------- */
+.forever-new{display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 280px), 1fr)); margin-bottom:10px}
+.fn-card{padding:16px 18px; border:1px solid var(--line); border-radius:8px; background:var(--panel)}
+.fn-card h4{font-family:var(--f-display); font-size:1.2rem; color:var(--gold-hi); margin:0 0 8px}
+.fn-card p{line-height:1.55; margin:0 0 10px}
+.fn-kicker{margin:0 0 4px !important; font:700 .72rem var(--f-display); letter-spacing:.1em; text-transform:uppercase; color:var(--brass)}
+.fn-sky{background:linear-gradient(160deg, rgb(70 120 190 / .28), transparent 60%), var(--panel); border-color:#3d5f8f}
+.fn-pal{background:linear-gradient(160deg, rgb(160 60 60 / .28), transparent 60%), var(--panel); border-color:#7a3a3a}
+.fn-combos{margin:0 0 10px; padding:0; list-style:none; display:grid; gap:6px}
+.fn-combos li{display:flex; align-items:baseline; gap:8px; flex-wrap:wrap}
+.fn-combos small{color:var(--muted)}
+.new-pill{display:inline-block; padding:0 6px; border-radius:999px; font:700 .66rem var(--f-body, inherit); letter-spacing:.04em; text-transform:uppercase; vertical-align:2px;
+  color:#1c1306; background:linear-gradient(180deg, #a9e0ff, #5fb4ea)}
+.race.sky{background:linear-gradient(160deg, rgb(70 120 190 / .22), transparent 55%), var(--panel)}
+.matrix td.n{color:#7fd0ff; font-weight:700}
+.matrix-new{color:#7fd0ff; font-weight:700}
+
+/* ---------- Loot and mounts ---------- */
+.lm-head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:14px; margin:6px 0 16px}
+.lm-tabs{display:flex; flex-wrap:wrap; gap:6px}
+.lm-tabs a.chip{text-decoration:none}
+.mt-riding{display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 240px), 1fr)); margin-bottom:14px; padding:14px; border:1px solid var(--line); border-radius:8px; background:var(--panel)}
+.mt-riding > p{grid-column:1 / -1; margin:0}
+.mt-ride{display:flex; gap:12px; align-items:center}
+.mt-ride b{flex:none; display:grid; place-items:center; width:48px; height:48px; border-radius:50%; font:700 1.2rem var(--f-display); color:var(--brass-ink); background:radial-gradient(circle at 35% 30%, var(--gold-hi), var(--gold-lo))}
+.mt-ride span{line-height:1.4; font-size:.92rem}
+.mt-filters{display:grid; gap:8px; margin-bottom:10px}
+.mt-filters input{max-width:420px}
+.mt-grid{display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 300px), 1fr)); margin-bottom:12px}
+.mt-card{display:flex; gap:12px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--panel)}
+.mt-card.epic{border-color:rgb(163 53 238 / .5); background:linear-gradient(160deg, rgb(163 53 238 / .12), transparent 55%), var(--panel)}
+.mt-card.rare{border-color:rgb(0 112 221 / .45); background:linear-gradient(160deg, rgb(0 112 221 / .12), transparent 55%), var(--panel)}
+.mt-ico{flex:none; width:46px; height:46px; display:grid; place-items:center; font-size:1.6rem; border-radius:8px; background:rgb(0 0 0 / .35); border:1px solid var(--line)}
+.mt-body{min-width:0}
+.mt-body h4{margin:0 0 4px; font-size:1rem}
+.mt-card.epic h4 a{color:#c58cff}
+.mt-card.rare h4 a{color:#5aa9ff}
+.mt-meta{margin:0 0 4px; font-size:.82rem; color:var(--muted)}
+.mt-where{margin:0; font-size:.88rem; line-height:1.4}
+.mt-note{margin:6px 0 0; font-size:.8rem; color:#e6c98a; font-style:italic}
+.lt-grid{display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 250px), 1fr)); margin:10px 0}
+.lt-card{position:relative; display:flex; flex-direction:column; gap:3px; padding:12px; border:1px solid var(--line); border-radius:8px; background:var(--panel); text-decoration:none; color:var(--ink)}
+.lt-card:hover{border-color:var(--brass)}
+.lt-card .q3{color:#5aa9ff} .lt-card .q4{color:#c58cff} .lt-card .q5{color:#ff9a3c}
+.lt-card.q4{background:linear-gradient(160deg, rgb(163 53 238 / .14), transparent 55%), var(--panel)}
+.lt-q{position:absolute; top:10px; right:10px; font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--muted)}
+.lt-card strong{padding-right:64px}

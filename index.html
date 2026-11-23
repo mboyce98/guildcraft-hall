@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=19">
+<link rel="stylesheet" href="theme.css?v=20">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -28,7 +28,11 @@
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">World</button>
-        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#cities" data-tab="cities">City guide</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
+        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#cities" data-tab="cities">City guide</a></div>
+      </div>
+      <div class="navgrp">
+        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Loot &amp; Mounts</button>
+        <div class="navmenu"><a href="#mounts" data-tab="mounts">Mounts &amp; best loot</a><a href="#loot" data-tab="loot">Loot Vault</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Crafting <span class="badge" id="req-badge" hidden></span></button>
@@ -86,11 +90,6 @@
         <img class="crest crest-r" src="images/alliance.png?v=1" alt="" width="49" height="60">
       </div>
       <div class="guild-news" id="guild-news"><p class="muted">Loading guild news…</p></div>
-      <div class="world-head">
-        <div><h3 class="sec">World news</h3><span class="muted small" id="wn-when"></span></div>
-        <div class="chips" id="wn-filter"></div>
-      </div>
-      <div class="world-news" id="world-news"></div>
     </section>
 
     <section class="gallery" id="gallery" aria-roledescription="carousel" aria-label="Guild gallery">
@@ -137,7 +136,7 @@
 
     <div class="tiles groups">
       <div class="tile"><strong>Guild</strong><span><a href="#rules">Rules</a> · <a href="#chronicle">Lore</a> · <a href="#classes">Classes</a> · <a href="#profile">Members</a></span></div>
-      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#cities">Cities</a> · <a href="#loot">Loot Vault</a></span></div>
+      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#cities">Cities</a> · <a href="#mounts">Mounts</a> · <a href="#loot">Loot Vault</a></span></div>
       <div class="tile"><strong>Crafting</strong><span><a href="#recipes">Recipes</a> · <a href="#mine">My crafter</a> · <a href="#requests">Requests</a></span></div>
       <div class="tile"><strong>Trade</strong><span><a href="#board">Request Board</a> · <a href="#market">Market</a></span></div>
     </div>
@@ -308,82 +307,132 @@
     <div class="page-head">
       <p class="eyebrow">Bark and Stone · Heroes of Azeroth</p>
       <h2 class="hero-title">Classes and races</h2>
-      <p class="muted page-intro">Pick your hero: what each race brings, what each class does, and which races can play which class.</p>
+      <p class="muted page-intro">Pick your hero: what's new in WoW Forever, what each race brings, what each class does, and which races can play which class.</p>
       <nav class="chron-nav" aria-label="Classes and races sections">
+        <button class="chip" data-chron="ch-new">New in Forever</button>
         <button class="chip" data-chron="ch-races">Races and racials</button>
         <button class="chip" data-chron="ch-classes">Classes</button>
         <button class="chip" data-chron="ch-matrix">Who can be what</button>
       </nav>
     </div>
 
+    <!-- ===== New in WoW Forever ===== -->
+    <h3 class="chron-h" id="ch-new">New in WoW Forever</h3>
+    <div class="forever-new">
+      <article class="fn-card fn-sky">
+        <p class="fn-kicker">New race</p>
+        <h4>The Skyborne</h4>
+        <p>Elves of Zephras Isle, a storm-wrapped island whose guardian wind spirits have vanished. The only race that can join <strong>either faction</strong>: pick the <strong>High Order</strong> (Alliance), descended from Highborne scholars hunting lost arcane lore, or the <strong>Windshapers</strong> (Horde), heirs of the first elves gifted the wind spirits' skysight.</p>
+        <p class="kfacts">Starts on Zephras Isle (levels 1 to 12) · Needs the Skyborne Heroic Pack or a higher edition</p>
+      </article>
+      <article class="fn-card fn-pal">
+        <p class="fn-kicker">New for the Horde</p>
+        <h4>Undead Paladins</h4>
+        <p>For the first time the Horde has Paladins, and only the Forsaken can be one. They start in Deathknell with their own trainer, follow their own story to Bandarion Keep, and earn their weapon around level 20. They keep <strong>Will of the Forsaken</strong>, which shrugs off fear, charm and sleep.</p>
+        <p class="kfacts">Class mounts: Summon Warhorse at 40, Summon Forsaken Charger at 60</p>
+      </article>
+      <article class="fn-card">
+        <p class="fn-kicker">Six new pairings</p>
+        <h4>New race and class combinations</h4>
+        <ul class="fn-combos">
+          <li><span class="tag ally">Alliance</span> Human Hunter</li>
+          <li><span class="tag ally">Alliance</span> Dwarf Shaman <small>(the Alliance's only Shaman, with new totem quests)</small></li>
+          <li><span class="tag ally">Alliance</span> Gnome Priest <small>(with two gnome-only spells)</small></li>
+          <li><span class="tag horde">Horde</span> Undead Paladin</li>
+          <li><span class="tag horde">Horde</span> Orc Mage</li>
+          <li><span class="tag horde">Horde</span> Troll Warlock</li>
+        </ul>
+        <p class="kfacts">Plus 10 Skyborne pairings. Weapon specialization racials (Human swords, Orc axes) are gone.</p>
+      </article>
+    </div>
+
     <!-- ===== Races ===== -->
     <h3 class="chron-h" id="ch-races">Races and their racial traits</h3>
-    <p class="muted chron-note">Racial traits as they work in classic-era WoW. WoW Forever may have tuned some of them, so check your character's spellbook for the exact numbers. <span class="prof-hint">Gold-marked traits help with professions.</span></p>
+    <p class="muted chron-note">Racial traits as reported after Blizzard's late October changes for WoW Forever. Numbers may still be tuned, so check your character's spellbook for the exact values. <span class="new-pill">New</span> marks a trait that's new or changed in Forever. <span class="prof-hint">Gold-marked traits help with professions.</span></p>
     <div class="races">
       <article class="race ally"><header><h4>Human</h4><span class="tag ally">Alliance</span></header>
         <p>Adaptable and ambitious, the most numerous people of the Eastern Kingdoms.</p>
         <ul class="racials">
           <li><strong>Perception</strong>: briefly see stealthed enemies far more easily.</li>
-          <li><strong>The Human Spirit</strong>: +5% Spirit.</li>
-          <li><strong>Diplomacy</strong>: +10% reputation gains.</li>
-          <li><strong>Sword and Mace Specialization</strong>: +5 skill with swords and maces.</li>
+          <li><strong>The Human Spirit</strong> <span class="new-pill">New</span>: +10% Spirit.</li>
+          <li><strong>Ruthless</strong> <span class="new-pill">New</span>: +1% critical strike chance.</li>
+          <li><strong>Will to Survive</strong> <span class="new-pill">New</span>: break out of a stun.</li>
+          <li><strong>Diplomacy</strong>: faster reputation gains.</li>
         </ul><p class="home">Starts in Elwynn Forest</p></article>
       <article class="race ally"><header><h4>Dwarf</h4><span class="tag ally">Alliance</span></header>
         <p>Stout miners and smiths of Ironforge, rediscovering their Titan-forged origins.</p>
         <ul class="racials">
-          <li><strong>Stoneform</strong>: remove poison, disease and bleeding, and gain armor for a few seconds.</li>
-          <li><strong>Frost Resistance</strong>: +10 Frost resistance.</li>
-          <li><strong>Gun Specialization</strong>: +5 skill with guns.</li>
+          <li><strong>Stoneform</strong>: remove poison, disease and bleeding effects.</li>
+          <li><strong>Artisan's Precision</strong> <span class="new-pill">New</span>: +1% hit with attacks and spells.</li>
+          <li><strong>Big Game Hunter</strong> <span class="new-pill">New</span>: Hunters deal 5% more damage to beasts.</li>
+          <li><strong>Frost Resistance</strong>: extra Frost resistance.</li>
           <li class="prof"><strong>Treasure Finding</strong>: track treasure chests on the minimap.</li>
         </ul><p class="home">Starts in Dun Morogh</p></article>
       <article class="race ally"><header><h4>Night Elf</h4><span class="tag ally">Alliance</span></header>
         <p>Ancient, nature-bound guardians of Kalimdor who have sworn off arcane magic.</p>
         <ul class="racials">
+          <li><strong>Elune's Light</strong> <span class="new-pill">New</span>: +10% critical strike chance for 15 seconds.</li>
           <li><strong>Shadowmeld</strong>: vanish while standing still.</li>
-          <li><strong>Quickness</strong>: +1% chance to dodge.</li>
-          <li><strong>Nature Resistance</strong>: +10 Nature resistance.</li>
+          <li><strong>Quickness</strong>: a little extra chance to dodge.</li>
+          <li><strong>Nature Resistance</strong>: extra Nature resistance.</li>
           <li><strong>Wisp Spirit</strong>: become a fast wisp when dead.</li>
         </ul><p class="home">Starts in Teldrassil</p></article>
       <article class="race ally"><header><h4>Gnome</h4><span class="tag ally">Alliance</span></header>
         <p>Brilliant tinkerers, driven from Gnomeregan but never short of ideas.</p>
         <ul class="racials">
+          <li><strong>Eureka!</strong> <span class="new-pill">New</span>: 10% more damage and cheaper abilities for 8 seconds.</li>
+          <li><strong>Expansive Mind</strong>: +5% maximum mana (rage for Warriors).</li>
           <li><strong>Escape Artist</strong>: break free of roots and snares.</li>
-          <li><strong>Expansive Mind</strong>: +5% Intellect.</li>
-          <li><strong>Arcane Resistance</strong>: +10 Arcane resistance.</li>
-          <li class="prof"><strong>Engineering Specialization</strong>: +15 Engineering skill.</li>
+          <li class="prof"><strong>Engineering Specialization</strong>: a head start in Engineering.</li>
         </ul><p class="home">Starts in Dun Morogh</p></article>
+      <article class="race ally sky"><header><h4>Skyborne · High Order</h4><span class="tag ally">Alliance</span></header>
+        <p>Scholarly Skyborne who seek the arcane secrets their Highborne ancestors left behind.</p>
+        <ul class="racials">
+          <li><strong>Walk on Air</strong> <span class="new-pill">New</span>: glide through the air for 10 seconds, steering as you go.</li>
+          <li><strong>Wind Blessed</strong> <span class="new-pill">New</span>: +2% haste.</li>
+          <li><strong>Elemental Insight</strong> <span class="new-pill">New</span>: +5% damage against elementals.</li>
+          <li><strong>Read Leyline</strong> <span class="new-pill">New</span>: +50% health and mana regeneration for 15 seconds. Use it at a leyline to be Attuned for an hour and double the bonus (not in raids).</li>
+        </ul><p class="home">Starts on Zephras Isle</p></article>
       <article class="race horde"><header><h4>Orc</h4><span class="tag horde">Horde</span></header>
         <p>Freed from demonic corruption, a proud warrior people led by Thrall.</p>
         <ul class="racials">
-          <li><strong>Blood Fury</strong>: a burst of extra attack power.</li>
-          <li><strong>Hardiness</strong>: +25% chance to resist stuns.</li>
-          <li><strong>Command</strong>: hunter and warlock pets deal 5% more damage.</li>
-          <li><strong>Axe Specialization</strong>: +5 skill with axes.</li>
+          <li><strong>Blood Fury</strong> <span class="new-pill">New</span>: +10% attack power and spell power for 15 seconds, every 2 minutes.</li>
+          <li><strong>Hardiness</strong>: shorter stuns.</li>
+          <li><strong>Command</strong>: Hunter and Warlock pets deal 5% more damage.</li>
         </ul><p class="home">Starts in Durotar</p></article>
       <article class="race horde"><header><h4>Undead</h4><span class="tag horde">Horde</span></header>
-        <p>The Forsaken: free-willed dead who broke from the Lich King under Sylvanas.</p>
+        <p>The Forsaken: free-willed dead who broke from the Lich King under Sylvanas. In Forever, some take up the Light as Paladins.</p>
         <ul class="racials">
           <li><strong>Will of the Forsaken</strong>: break charm, fear and sleep.</li>
           <li><strong>Cannibalize</strong>: recover health from humanoid or undead corpses.</li>
+          <li><strong>Touch of the Grave</strong> <span class="new-pill">New</span>: your hits can drain life from the target (every 15 seconds at most).</li>
           <li><strong>Underwater Breathing</strong>: breathe underwater far longer.</li>
-          <li><strong>Shadow Resistance</strong>: +10 Shadow resistance.</li>
-        </ul><p class="home">Starts in Tirisfal Glades</p></article>
+          <li><strong>Shadow Resistance</strong>: extra Shadow resistance.</li>
+        </ul><p class="home">Starts in Tirisfal Glades (Paladins in Deathknell)</p></article>
       <article class="race horde"><header><h4>Tauren</h4><span class="tag horde">Horde</span></header>
         <p>Gentle giants of Mulgore who honour the Earth Mother and walk with the land.</p>
         <ul class="racials">
           <li><strong>War Stomp</strong>: stun nearby enemies.</li>
-          <li><strong>Endurance</strong>: +5% base health.</li>
-          <li><strong>Nature Resistance</strong>: +10 Nature resistance.</li>
-          <li class="prof"><strong>Cultivation</strong>: +15 Herbalism skill.</li>
+          <li><strong>Endurance</strong>: +5% health.</li>
+          <li><strong>Plainsrunning</strong> <span class="new-pill">New</span>: you run faster the longer you keep running, up to 60% faster (not while mounted).</li>
+          <li><strong>Nature Resistance</strong>: extra Nature resistance.</li>
+          <li class="prof"><strong>Cultivation</strong>: a head start in Herbalism.</li>
         </ul><p class="home">Starts in Mulgore</p></article>
       <article class="race horde"><header><h4>Troll</h4><span class="tag horde">Horde</span></header>
         <p>The Darkspear tribe, cunning survivors who owe Thrall a life debt.</p>
         <ul class="racials">
-          <li><strong>Berserking</strong>: faster attacks and casting when hurt.</li>
+          <li><strong>Berserking</strong> <span class="new-pill">New</span>: faster attacks and casting for 15 seconds.</li>
           <li><strong>Regeneration</strong>: faster health regeneration, even in combat.</li>
           <li><strong>Beast Slaying</strong>: +5% damage against beasts.</li>
-          <li><strong>Bow and Throwing Specialization</strong>: +5 skill with bows and thrown weapons.</li>
         </ul><p class="home">Starts in Durotar</p></article>
+      <article class="race horde sky"><header><h4>Skyborne · Windshaper</h4><span class="tag horde">Horde</span></header>
+        <p>Skyborne who carry the wind spirits' gift of skysight and ride the storms of Zephras Isle.</p>
+        <ul class="racials">
+          <li><strong>Walk on Air</strong> <span class="new-pill">New</span>: glide through the air for 10 seconds, steering as you go.</li>
+          <li><strong>Wind Blessed</strong> <span class="new-pill">New</span>: +2% haste.</li>
+          <li><strong>Elemental Insight</strong> <span class="new-pill">New</span>: +5% damage against elementals.</li>
+          <li><strong>Skysight</strong> <span class="new-pill">New</span>: +15% movement speed for 15 seconds. Use it at an elemental convergence to be Charged for an hour and double the bonus (not in raids).</li>
+        </ul><p class="home">Starts on Zephras Isle</p></article>
     </div>
 
     <!-- ===== Classes ===== -->
@@ -391,52 +440,53 @@
     <div class="classes">
       <article class="klass" style="--cc:#C69B6D"><header><h4>Warrior</h4><span class="roles"><span>Tank</span><span>Melee</span></span></header>
         <p>Masters of weapons and armor who build <strong>Rage</strong> by dealing and taking damage. The classic main tank, and a hard-hitting damage dealer.</p>
-        <p class="kfacts">Mail, then plate at 40 · Rage</p></article>
+        <p class="kfacts">Mail, then plate at 40 · Rage · Every race</p></article>
       <article class="klass" style="--cc:#F48CBA"><header><h4>Paladin</h4><span class="roles"><span>Healer</span><span>Tank</span><span>Melee</span></span></header>
-        <p>Holy warriors of the Alliance. Party-wide blessings and auras, strong heals and some of the best survival tools in the game.</p>
-        <p class="kfacts">Mail, then plate at 40 · Mana · Alliance only</p></article>
+        <p>Holy warriors with party-wide blessings and auras, strong heals and some of the best survival tools in the game. <strong>New in Forever:</strong> the Forsaken can be Paladins too, with their own starting story in Deathknell.</p>
+        <p class="kfacts">Mail, then plate at 40 · Mana · Human, Dwarf, Undead</p></article>
       <article class="klass" style="--cc:#AAD372"><header><h4>Hunter</h4><span class="roles"><span>Ranged</span></span></header>
-        <p>Deadly at range with a bow or gun, fighting alongside a tamed beast companion. Great for soloing and pulling in dungeons.</p>
+        <p>Deadly at range with a bow or gun, fighting alongside a tamed beast companion. Great for soloing and pulling in dungeons. <strong>New in Forever:</strong> Humans and both Skyborne can be Hunters.</p>
         <p class="kfacts">Leather, then mail at 40 · Mana · Pet</p></article>
       <article class="klass" style="--cc:#FFF468"><header><h4>Rogue</h4><span class="roles"><span>Melee</span></span></header>
         <p>Stealthy, agile and dangerous. They use <strong>Energy</strong> and combo points, open locked chests, and craft their own poisons.</p>
         <p class="kfacts">Leather · Energy · Lockpicking, poisons</p></article>
       <article class="klass" style="--cc:#E8E8E8"><header><h4>Priest</h4><span class="roles"><span>Healer</span><span>Caster</span></span></header>
-        <p>The group's lifeline: powerful heals and shields, and the Shadow path for those who prefer to hurt.</p>
+        <p>The group's lifeline: powerful heals and shields, and the Shadow path for those who prefer to hurt. <strong>New in Forever:</strong> Gnome Priests, who learn the gnome-only Confounding Flash at 10 and Contingency Plan at 20.</p>
         <p class="kfacts">Cloth · Mana · Fortitude buff, resurrection</p></article>
       <article class="klass" style="--cc:#2E8CE8"><header><h4>Shaman</h4><span class="roles"><span>Healer</span><span>Caster</span><span>Melee</span></span></header>
-        <p>Speakers to the elements who drop totems to strengthen the whole party. Heal, cast lightning, or fight with an enhanced weapon.</p>
-        <p class="kfacts">Leather, then mail at 40 · Mana · Horde only</p></article>
+        <p>Speakers to the elements who drop totems to strengthen the whole party. Heal, cast lightning, or fight with an enhanced weapon. <strong>New in Forever:</strong> Dwarf Shamans bring the class to the Alliance, with all-new totem quests.</p>
+        <p class="kfacts">Leather, then mail at 40 · Mana · Dwarf, Orc, Tauren, Troll, Windshaper</p></article>
       <article class="klass" style="--cc:#3FC7EB"><header><h4>Mage</h4><span class="roles"><span>Caster</span></span></header>
-        <p>Raw arcane, fire and frost power. Huge damage, crowd control, and the guild's favourite service: conjured food, water and portals.</p>
+        <p>Raw arcane, fire and frost power. Huge damage, crowd control, and the guild's favourite service: conjured food, water and portals. <strong>New in Forever:</strong> Orc Mages and High Order Skyborne.</p>
         <p class="kfacts">Cloth · Mana · Portals, conjured food</p></article>
       <article class="klass" style="--cc:#8788EE"><header><h4>Warlock</h4><span class="roles"><span>Caster</span></span></header>
-        <p>Dark casters who command demons, spread curses and drain life. They summon groupmates and make healthstones.</p>
+        <p>Dark casters who command demons, spread curses and drain life. They summon groupmates and make healthstones. <strong>New in Forever:</strong> Troll Warlocks.</p>
         <p class="kfacts">Cloth · Mana · Demon pets, summoning</p></article>
       <article class="klass" style="--cc:#FF7C0A"><header><h4>Druid</h4><span class="roles"><span>Healer</span><span>Tank</span><span>Melee</span><span>Caster</span></span></header>
-        <p>Shapeshifters who can fill any role: bear to tank, cat to fight, tree-hugging healer, or moonkin caster. The game's best all-rounders.</p>
+        <p>Shapeshifters who can fill any role: bear to tank, cat to fight, tree-hugging healer, or moonkin caster. The game's best all-rounders. <strong>New in Forever:</strong> both kinds of Skyborne can be Druids.</p>
         <p class="kfacts">Leather · Mana, Rage or Energy by form</p></article>
     </div>
 
     <!-- ===== Matrix ===== -->
     <h3 class="chron-h" id="ch-matrix">Who can be what</h3>
     <div class="table-wrap matrix-wrap"><table class="matrix">
-      <thead><tr><th>Class</th><th class="ally-h">Human</th><th class="ally-h">Dwarf</th><th class="ally-h">Night Elf</th><th class="ally-h">Gnome</th><th class="horde-h">Orc</th><th class="horde-h">Undead</th><th class="horde-h">Tauren</th><th class="horde-h">Troll</th></tr></thead>
+      <thead><tr><th>Class</th><th class="ally-h">Human</th><th class="ally-h">Dwarf</th><th class="ally-h">Night Elf</th><th class="ally-h">Gnome</th><th class="ally-h">High Order</th><th class="horde-h">Orc</th><th class="horde-h">Undead</th><th class="horde-h">Tauren</th><th class="horde-h">Troll</th><th class="horde-h">Windshaper</th></tr></thead>
       <tbody>
-        <tr><th>Warrior</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td></tr>
-        <tr><th>Paladin</th><td class="y">✔</td><td class="y">✔</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
-        <tr><th>Hunter</th><td></td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td></tr>
-        <tr><th>Rogue</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y">✔</td></tr>
-        <tr><th>Priest</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td></tr>
-        <tr><th>Shaman</th><td></td><td></td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td></tr>
-        <tr><th>Mage</th><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td></td><td class="y">✔</td></tr>
-        <tr><th>Warlock</th><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td></td><td></td></tr>
-        <tr><th>Druid</th><td></td><td></td><td class="y">✔</td><td></td><td></td><td></td><td class="y">✔</td><td></td></tr>
+        <tr><th>Warrior</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td></tr>
+        <tr><th>Paladin</th><td class="y">✔</td><td class="y">✔</td><td></td><td></td><td></td><td></td><td class="y n" title="New in Forever">✦</td><td></td><td></td><td></td></tr>
+        <tr><th>Hunter</th><td class="y n" title="New in Forever">✦</td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y n" title="New in Forever">✦</td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td></tr>
+        <tr><th>Rogue</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td></tr>
+        <tr><th>Priest</th><td class="y">✔</td><td class="y">✔</td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td></td></tr>
+        <tr><th>Shaman</th><td></td><td class="y n" title="New in Forever">✦</td><td></td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td></tr>
+        <tr><th>Mage</th><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td class="y n" title="New in Forever">✦</td><td class="y n" title="New in Forever">✦</td><td class="y">✔</td><td></td><td class="y">✔</td><td></td></tr>
+        <tr><th>Warlock</th><td class="y">✔</td><td></td><td></td><td class="y">✔</td><td></td><td class="y">✔</td><td class="y">✔</td><td></td><td class="y n" title="New in Forever">✦</td><td></td></tr>
+        <tr><th>Druid</th><td></td><td></td><td class="y">✔</td><td></td><td class="y n" title="New in Forever">✦</td><td></td><td></td><td class="y">✔</td><td></td><td class="y n" title="New in Forever">✦</td></tr>
       </tbody></table></div>
-    <p class="muted chron-note">Race and class combinations as in classic-era WoW. If WoW Forever adds new ones, the character creation screen is the final word.</p>
+    <p class="muted chron-note"><span class="matrix-new">✦</span> marks a combination that's new in WoW Forever. High Order and Windshaper are the two Skyborne paths. The character creation screen is the final word.</p>
   </section>
 
   <section id="view-loot" hidden></section>
+  <section id="view-mounts" class="mounts" hidden></section>
   <section id="view-board" hidden></section>
   <section id="view-profile" hidden></section>
   <section id="view-members" hidden></section>
@@ -485,13 +535,14 @@
 </div>
 
 <script src="backend.js?v=15"></script>
-<script src="app.js?v=29"></script>
+<script src="app.js?v=30"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=7"></script>
 <script src="gallery.js?v=1"></script>
 <script src="music.js?v=1"></script>
-<script src="news.js?v=2"></script>
-<script src="chat.js?v=2"></script>
+<script src="mounts.js?v=2"></script>
+<script src="news.js?v=3"></script>
+<script src="chat.js?v=3"></script>
 </body>
 </html>

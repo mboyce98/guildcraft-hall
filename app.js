@@ -171,7 +171,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -222,6 +222,7 @@ function render() {
     else if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
+    else if (S.view === "mounts") { if (window.GC_MOUNTS && !(typing && typing.closest("#view-mounts"))) window.GC_MOUNTS.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "members") { if (!(typing && typing.closest("#view-members"))) renderMembers(); }
@@ -311,7 +312,7 @@ function tickerItems() {
   const fresh = Object.entries(S.profiles).filter(([, p]) => p.joined > Date.now() - 14 * 86400000).sort((a, b) => b[1].joined - a[1].joined).slice(0, 3);
   fresh.forEach(([id, p]) => out.push(`<a href="#member-${esc(id)}"><span aria-hidden="true">🎉</span> Welcome to the guild, <strong>${esc(p.mainChar || p.username || "a new friend")}</strong>!</a>`));
   S.listings.slice().sort((a, b) => b.created - a.created).slice(0, 4).forEach((l) => out.push(`<a href="#market"><span aria-hidden="true">${l.type === "S" ? "💰" : "🔎"}</span> ${l.type === "S" ? "For sale" : "Wanted"}: <strong>${esc(l.item)}</strong> ×${l.qty}${l.price ? " · " + gold(l.price, "") : ""}</a>`));
-  const world = (window.GC_WORLD || []).slice().sort((a, b) => (/forever/i.test(b.category + b.title) ? 1 : 0) - (/forever/i.test(a.category + a.title) ? 1 : 0)).slice(0, 4);
+  const world = (window.GC_WORLD || []).slice().sort((a, b) => (/forever/i.test(b.category + b.title) ? 1 : 0) - (/forever/i.test(a.category + a.title) ? 1 : 0)).slice(0, 6);
   world.forEach((n) => out.push(`<a href="${esc(n.link)}" target="_blank" rel="noopener"><span aria-hidden="true">🌍</span> ${esc(n.title)}</a>`));
   // A guard's tip every few items.
   const tips = TIPS.slice().sort(() => 0.5 - Math.random()).slice(0, Math.max(2, Math.ceil(out.length / 3)));
@@ -862,7 +863,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];

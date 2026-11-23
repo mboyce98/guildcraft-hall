@@ -3,7 +3,7 @@
    and the page checks again every hour while it's open, so there's something new every few hours. */
 (() => {
 "use strict";
-const box = document.getElementById("world-news"); if (!box) return;
+const box = document.getElementById("world-news"); // optional: the headlines also feed the home page ticker
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 const ago = (t) => { if (!t) return ""; const s = (Date.now() - t) / 1000; if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "m ago"; if (s < 86400) return Math.floor(s / 3600) + "h ago"; return Math.floor(s / 86400) + "d ago"; };
 const KEY = "gc.worldnews";
@@ -12,6 +12,7 @@ let items = [], fetched = 0, more = false, failed = false;
 const isForever = (n) => /forever/i.test(n.category) || /wow:? forever/i.test(n.title);
 
 function draw() {
+  if (!box) return;
   const chips = document.getElementById("wn-filter");
   if (chips) chips.innerHTML = [["forever", "WoW Forever"], ["all", "All of WoW"]].map(([k, l]) => `<button class="chip" data-wn="${k}" aria-pressed="${pref === k}">${l}</button>`).join("");
   const when = document.getElementById("wn-when");
