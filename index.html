@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=18">
+<link rel="stylesheet" href="theme.css?v=19">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -62,7 +62,13 @@
   <div id="demo-note" class="notice demo" hidden><strong>Demo mode.</strong> Accounts and data are saved only in this browser until the site is connected to Supabase (see SETUP.md).</div>
   <div id="status-note" class="notice" hidden></div>
   <section id="view-home" class="home">
+    <div class="ticker" id="home-ticker" role="region" aria-label="Latest from around the guild">
+      <span class="tk-label">Town crier</span>
+      <div class="tk-window"><div class="tk-track" id="tk-track"></div></div>
+    </div>
     <div class="announce" id="home-announce" role="status" hidden></div>
+    <div class="home-layout">
+    <div class="home-main">
     <div class="hero">
       <p class="eyebrow">WoW Forever · Australian based · Social first</p>
       <h2 class="hero-title">Welcome to Bark and Stone</h2>
@@ -135,6 +141,10 @@
       <div class="tile"><strong>Crafting</strong><span><a href="#recipes">Recipes</a> · <a href="#mine">My crafter</a> · <a href="#requests">Requests</a></span></div>
       <div class="tile"><strong>Trade</strong><span><a href="#board">Request Board</a> · <a href="#market">Market</a></span></div>
     </div>
+    </div><!-- /home-main -->
+    <aside class="rail rail-l" id="rail-left" aria-label="Guild at a glance"></aside>
+    <aside class="rail rail-r" id="rail-right" aria-label="Around the guild"></aside>
+    </div><!-- /home-layout -->
   </section>
 
   <section id="view-rules" class="rules" hidden>
@@ -475,13 +485,13 @@
 </div>
 
 <script src="backend.js?v=15"></script>
-<script src="app.js?v=28"></script>
+<script src="app.js?v=29"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=7"></script>
 <script src="gallery.js?v=1"></script>
 <script src="music.js?v=1"></script>
-<script src="news.js?v=1"></script>
-<script src="chat.js?v=1"></script>
+<script src="news.js?v=2"></script>
+<script src="chat.js?v=2"></script>
 </body>
 </html>

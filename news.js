@@ -33,6 +33,7 @@ async function load() {
     const d = await r.json();
     if (!r.ok || !Array.isArray(d.items)) throw new Error(d.error || "no news");
     items = d.items; fetched = d.fetched || Date.now(); failed = false;
+    window.GC_WORLD = items; window.dispatchEvent(new Event("gc-world"));
   } catch { failed = true; }
   draw();
 }

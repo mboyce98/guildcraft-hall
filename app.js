@@ -268,6 +268,7 @@ window.GC_SEARCH_RECIPES = (name) => {
 /* ---------- Home ---------- */
 function renderHome() {
   const act = $("#home-actions"); if (!act) return;
+  renderHomeExtras();
   const inv = (S.settings.discord_invite || GUILD.discordInvite || "").trim();
   const discord = /^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(inv) ? `<a class="btn discord" href="${esc(inv)}" target="_blank" rel="noopener">Join our Discord</a>` : "";
   const ann = $("#home-announce");
@@ -286,6 +287,137 @@ function renderHome() {
     + stat(listings, listings === 1 ? "market listing" : "market listings") + stat(open, open === 1 ? "request for you" : "requests for you");
 }
 
+/* ---------- Home: the town crier ticker and the banners down each side ---------- */
+const TIPS = [
+  "Visit your class trainer every even level. New spells and ranks are waiting.",
+  "Pick up every quest in town before heading out, and hand them in together. It saves hours of running.",
+  "Learn First Aid early. Bandages mean less sitting around and fewer trips to the graveyard.",
+  "Run dungeons with guildmates near your level. Type /bas in game to see who's close.",
+  "Keep food and water for your level in your bags. Every innkeeper sells it.",
+  "Herbalism, Mining and Skinning pay for themselves while you level. Sell spares on the guild Market.",
+  "Log out in an inn or a city to build rested XP. You level faster the next day.",
+  "Pick up a dungeon's quests before you go in. The rewards are often better than the drops.",
+  "Start saving for your mount at 40. Guild crafters can make gear so you don't spend it all at the auction house.",
+  "Ask in guild chat before buying from the auction house. A guildmate may craft it for you.",
+  "Grey items are vendor trash, but they add up. Sell them every time you're in town.",
+  "Set your hearthstone at the inn closest to where you're questing.",
+];
+let tipIdx = Math.floor(Math.random() * TIPS.length), lastTicker = "", lastRails = "";
+
+function tickerItems() {
+  const out = [];
+  upcomingEvents().slice(0, 3).forEach((e) => out.push(`<a href="#event-${esc(e.id)}"><span aria-hidden="true">${EV_KINDS[e.kind] || "📅"}</span> <strong>${esc(e.title)}</strong> ${esc(evUntil(e.starts))}</a>`));
+  S.news.slice(0, 4).forEach((n) => out.push(`<span><span aria-hidden="true">📜</span> <strong>${esc(n.tag)}:</strong> ${esc(n.title)}</span>`));
+  const fresh = Object.entries(S.profiles).filter(([, p]) => p.joined > Date.now() - 14 * 86400000).sort((a, b) => b[1].joined - a[1].joined).slice(0, 3);
+  fresh.forEach(([id, p]) => out.push(`<a href="#member-${esc(id)}"><span aria-hidden="true">🎉</span> Welcome to the guild, <strong>${esc(p.mainChar || p.username || "a new friend")}</strong>!</a>`));
+  S.listings.slice().sort((a, b) => b.created - a.created).slice(0, 4).forEach((l) => out.push(`<a href="#market"><span aria-hidden="true">${l.type === "S" ? "💰" : "🔎"}</span> ${l.type === "S" ? "For sale" : "Wanted"}: <strong>${esc(l.item)}</strong> ×${l.qty}${l.price ? " · " + gold(l.price, "") : ""}</a>`));
+  const world = (window.GC_WORLD || []).slice().sort((a, b) => (/forever/i.test(b.category + b.title) ? 1 : 0) - (/forever/i.test(a.category + a.title) ? 1 : 0)).slice(0, 4);
+  world.forEach((n) => out.push(`<a href="${esc(n.link)}" target="_blank" rel="noopener"><span aria-hidden="true">🌍</span> ${esc(n.title)}</a>`));
+  // A guard's tip every few items.
+  const tips = TIPS.slice().sort(() => 0.5 - Math.random()).slice(0, Math.max(2, Math.ceil(out.length / 3)));
+  const mixed = [];
+  out.forEach((x, i) => { mixed.push(x); if (i % 3 === 2 && tips.length) mixed.push(`<span><span aria-hidden="true">🛡️</span> <em>The guard says:</em> ${esc(tips.pop())}</span>`); });
+  while (mixed.length < 4 && tips.length) mixed.push(`<span><span aria-hidden="true">🛡️</span> <em>The guard says:</em> ${esc(tips.pop())}</span>`);
+  return mixed;
+}
+
+function renderTicker() {
+  const track = $("#tk-track"); if (!track) return;
+  const items = tickerItems();
+  const key = items.join("|").replace(/<em>The guard says:<\/em>[^<]*/g, ""); // tips are shuffled; don't restart the scroll for that alone
+  if (key === lastTicker) return;
+  lastTicker = key;
+  const row = items.map((x) => `<span class="tk-item">${x}</span><span class="tk-sep" aria-hidden="true">✦</span>`).join("");
+  track.innerHTML = `<div class="tk-run">${row}</div><div class="tk-run" aria-hidden="true">${row}</div>`;
+  track.querySelectorAll('[aria-hidden="true"] a').forEach((a) => a.setAttribute("tabindex", "-1"));
+  const chars = track.firstElementChild.textContent.length;
+  track.style.setProperty("--tk-dur", Math.max(35, Math.round(chars / 6)) + "s");
+}
+
+const banner = (cls, title, body) => `<section class="banner ${cls}"><div class="banner-rod" aria-hidden="true"></div><div class="banner-cloth"><h3>${title}</h3>${body}</div></section>`;
+
+function countdownHtml(t) { return `<div class="cd" data-cd="${t}" aria-label="Time until it starts">${cdParts(t)}</div>`; }
+function cdParts(t) {
+  let s = Math.max(0, Math.floor((t - Date.now()) / 1000));
+  const d = Math.floor(s / 86400); s -= d * 86400; const h = Math.floor(s / 3600); s -= h * 3600; const m = Math.floor(s / 60); s -= m * 60;
+  const box = (n, l) => `<span><b>${String(n).padStart(2, "0")}</b><small>${l}</small></span>`;
+  return (d ? box(d, "days") : "") + box(h, "hrs") + box(m, "min") + (d ? "" : box(s, "sec"));
+}
+
+function railLeft() {
+  const parts = [];
+  const next = upcomingEvents()[0];
+  if (next) {
+    const r = evRoster(next), started = next.starts <= Date.now();
+    parts.push(banner("b-event", "Next muster", `<p class="b-big"><span aria-hidden="true">${EV_KINDS[next.kind] || "📅"}</span> ${esc(next.title)}</p>
+      <p class="muted small">${esc(evWhen(next.starts))}${next.location ? " · " + esc(next.location) : ""}</p>
+      ${started ? `<p class="b-live">Happening now</p>` : countdownHtml(next.starts)}
+      <p class="small">${r.inn.length}/${next.size} going · ${roleCounts(r)}</p>
+      <a class="btn small primary" href="#event-${esc(next.id)}">${mySignup(next) ? "See the roster" : "Sign up"}</a>`));
+  } else {
+    parts.push(banner("b-event", "Next muster", `<p class="muted small">Nothing on the calendar yet. Plan a dungeon run or a farming night and the guild will sign up.</p><a class="btn small" href="#events">Plan an event</a>`));
+  }
+  if (S.uid) {
+    const on = S.online;
+    parts.push(banner("b-watch", `On watch <span class="online-dot"></span> ${on.length}`, on.length
+      ? `<div class="b-faces">${on.slice(0, 10).map((o) => `<a href="#member-${esc(o.id)}" title="${esc(o.char || o.username || "")}">${avatarImg(o.id, 34)}</a>`).join("")}</div>
+         <p class="muted small">${on.length === 1 ? "Just you right now. Say hi in Discord!" : `${on.length} guildmates are on the site.`}</p>`
+      : `<p class="muted small">Nobody else is around right now.</p>`));
+    const lv = Object.entries(S.profiles).filter(([, p]) => p.mainLevel > 0).sort((a, b) => b[1].mainLevel - a[1].mainLevel);
+    if (lv.length) {
+      const avg = Math.round(lv.reduce((s, [, p]) => s + p.mainLevel, 0) / lv.length);
+      parts.push(banner("b-ladder", "Leveling ladder", `<ol class="b-ladder">${lv.slice(0, 6).map(([id, p]) => `<li><a href="#member-${esc(id)}">${classDot(p.mainClass)}${esc(p.mainChar || p.username || "Member")}</a><b>${p.mainLevel}</b></li>`).join("")}</ol>
+        <p class="small">Guild average: <strong>level ${avg}</strong></p>
+        <div class="b-bar" role="img" aria-label="${Math.round(avg / 60 * 100)}% of the way to level 60"><i style="width:${Math.min(100, avg / 60 * 100)}%"></i></div>
+        <p class="muted small">${Math.round(avg / 60 * 100)}% of the way to 60. Keep your level up to date by importing from the addon.</p>`));
+    }
+  } else {
+    parts.push(banner("b-watch", "Join the watch", `<p class="muted small">Sign in to see who's online, the guild's leveling ladder and the market.</p><button class="btn small primary" data-act="signin">Sign in</button>`));
+  }
+  return parts.join("");
+}
+
+function railRight() {
+  const parts = [];
+  parts.push(banner("b-tip", "Guard's advice", `<div class="b-guard"><img src="images/guard-face.jpg?v=1" alt="" width="56" height="56"><p id="tip-text" aria-live="polite">${esc(TIPS[tipIdx])}</p></div>
+    <button class="btn small" data-act="ask-guard">Ask the guard</button>`));
+  if (S.uid) {
+    const ls = S.listings.slice().sort((a, b) => b.created - a.created).slice(0, 5);
+    parts.push(banner("b-trade", "Trade winds", ls.length
+      ? `<ul class="b-list">${ls.map((l) => `<li><span class="tag ${l.type === "S" ? "sell" : "buy"}">${l.type === "S" ? "Sell" : "Want"}</span> <a href="#market">${esc(l.item)}</a> <span class="muted">×${l.qty}</span>${l.price ? `<div class="small">${gold(l.price, "")}</div>` : ""}</li>`).join("")}</ul><a class="small" href="#market">Open the market</a>`
+      : `<p class="muted small">The market's quiet. <a href="#market">List something</a> for the guild.</p>`));
+    const fresh = Object.entries(S.profiles).filter(([, p]) => p.joined).sort((a, b) => b[1].joined - a[1].joined).slice(0, 4);
+    if (fresh.length) parts.push(banner("b-recruits", "Newest recruits", `<ul class="b-list">${fresh.map(([id, p]) => `<li><a href="#member-${esc(id)}">${avatarImg(id, 24)} ${esc(p.mainChar || p.username || "Member")}</a> <span class="muted small">${ago(p.joined)}</span></li>`).join("")}</ul>`));
+  }
+  parts.push(banner("b-addon", "Bark and Stone addon", `<p class="small">Find guildmates near your level, see which dungeons suit you, and send your recipes to this site.</p>
+    <a class="btn small primary" href="downloads/BarkAndStone.zip" download>Download</a> <span class="muted small">then type <code>/bas</code></span>`));
+  const inv = (S.settings.discord_invite || GUILD.discordInvite || "").trim();
+  if (/^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(inv)) parts.push(banner("b-discord", "Join us on Discord", `<p class="small">Events, the market feed and the guild bot all live there.</p><a class="btn small discord" href="${esc(inv)}" target="_blank" rel="noopener">Open Discord</a>`));
+  return parts.join("");
+}
+
+function renderHomeExtras() {
+  renderTicker();
+  const l = $("#rail-left"), r = $("#rail-right"); if (!l || !r) return;
+  const a = railLeft(), b = railRight();
+  if (a + b === lastRails) return;
+  lastRails = a + b;
+  l.innerHTML = a; r.innerHTML = b;
+}
+
+// Tick the countdown every second and change the guard's tip now and then, only while the home page is showing.
+setInterval(() => {
+  if (S.view !== "home" || document.hidden) return;
+  document.querySelectorAll(".cd[data-cd]").forEach((el) => { el.innerHTML = cdParts(Number(el.dataset.cd)); });
+}, 1000);
+setInterval(() => {
+  if (S.view !== "home" || document.hidden) return;
+  const el = $("#tip-text"); if (!el) return;
+  tipIdx = (tipIdx + 1) % TIPS.length;
+  el.classList.add("fade"); setTimeout(() => { el.textContent = TIPS[tipIdx]; el.classList.remove("fade"); lastRails = ""; }, 350);
+}, 14000);
+window.addEventListener("gc-world", () => renderTicker());
+
 /* ---------- Guild news (home page, above the gallery) ---------- */
 const NEWS_TAGS = ["News", "Coming soon", "Event", "Update"];
 const newsDate = (t) => new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
@@ -298,6 +430,7 @@ function renderNews() {
       <h4>${esc(n.title)}</h4>${n.body ? `<p>${esc(n.body)}</p>` : ""}
     </article>`).join("") + (list.length > 3 ? `<button class="linkish news-more" data-act="news-more">${S.newsAll ? "Show less" : `Show all ${list.length} posts`}</button>` : "")
     : `<p class="muted">No guild news yet.</p>`;
+  if (S.view === "home") renderHomeExtras();
 }
 
 const signInPrompt = (what) => `<div class="card empty"><strong>Sign in to ${what}.</strong>Guild members share recipes, requests and listings once they're signed in.<div style="margin-top:12px"><button class="btn primary" data-act="signin">Sign in or create an account</button></div></div>`;
@@ -741,6 +874,7 @@ function renderOnline() {
   if (S.onlineOpen) panel.innerHTML = `<div class="np-head"><strong>Online now (${list.length})</strong></div><ul class="online-list">${list.map(row).join("")}</ul>`;
   const home = $("#home-online");
   if (home) home.innerHTML = S.uid && list.length ? `<h3 class="sec">Online now <span class="online-dot"></span> ${list.length}</h3><ul class="online-list inline">${list.slice(0, 12).map(row).join("")}</ul>` : "";
+  if (S.view === "home") renderHomeExtras();
 }
 
 function memberCard(uid, big) {
@@ -1344,6 +1478,7 @@ document.addEventListener("click", async (e) => {
     if (t.dataset.confirm !== "1") { t.dataset.confirm = "1"; t.textContent = "Click again to unlink"; return; }
     try { await S.B.unlinkBnet(); delete S.bnet[S.uid]; renderMine(); } catch (err) { note("Couldn't unlink: " + err.message); }
   }
+  else if (act === "ask-guard") { if (window.GC_CHAT) window.GC_CHAT.open(); }
   else if (act === "import-char") {
     const c = ((S.bnet[S.uid] || {}).characters || [])[Number(t.dataset.i)]; if (!c) return;
     const d = ensureMyDoc(); const name = String(c.name).slice(0, 24);
@@ -1863,6 +1998,7 @@ function renderEventBits() {
         <span class="hev-n">${r.inn.length}/${e.size}${me ? `<small class="ev-mine st-${me.status}">${me.status === "yes" ? "Going" : me.status === "maybe" ? "Maybe" : "Not going"}</small>` : ""}</span></a>`;
     }).join("")}</div><p><a href="#events">All events</a></p>` : "";
   }
+  if (S.view === "home") renderHomeExtras();
 }
 
 function evDateBlock(t) {
@@ -2115,6 +2251,13 @@ function renderTradeBadge() {
 window.GC_AI = {
   token: () => (S.B && S.B.accessToken ? S.B.accessToken() : Promise.resolve(null)),
   signedIn: () => !!S.uid, signIn: () => openAuth("in"), page: () => S.view, demo: () => !S.B || S.B.mode === "demo",
+  // What the guard needs for his quick answers.
+  guard: () => ({
+    events: upcomingEvents().slice(0, 3).map((e) => ({ id: e.id, title: e.title, when: evWhen(e.starts), until: evUntil(e.starts), going: evRoster(e).inn.length, size: e.size })),
+    news: S.news.slice(0, 3).map((n) => ({ tag: n.tag, title: n.title, body: n.body || "" })),
+    invite: (() => { const i = (S.settings.discord_invite || GUILD.discordInvite || "").trim(); return /^https:\/\/(discord\.gg|discord\.com\/invite)\//.test(i) ? i : ""; })(),
+    tips: TIPS, level: (S.uid && prof(S.uid).mainLevel) || 0,
+  }),
 };
 
 route();
