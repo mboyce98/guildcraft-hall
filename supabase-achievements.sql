@@ -150,3 +150,35 @@ update public.achievements set kind = 'self' where kind = 'claim' and id not in 
 -- Claims already waiting on deeds that no longer need approval are granted.
 update public.achievement_awards w set status = 'granted' from public.achievements a
   where a.id = w.achievement_id and a.kind = 'self' and w.status = 'pending';
+
+-- ---------- Upgrade: guild deeds sync from Blizzard's Armory (boss kills, mounts, reputation, fishing) ----------
+-- Needs the member's main character and surname on their profile. Only Recruiter and Leveling Buddy wait for the guild master.
+update public.achievements set kind = 'auto', rule = '{"t":"boss","inst":"Ragefire Chasm"}'::jsonb where id = 'rfc';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","inst":"Wailing Caverns"}'::jsonb where id = 'wailing-caverns';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Edwin VanCleef"]}'::jsonb where id = 'deadmines';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Archmage Arugal"]}'::jsonb where id = 'shadowfang';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Aku''mai"]}'::jsonb where id = 'blackfathom';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","inst":"Stockade"}'::jsonb where id = 'stockade';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Mekgineer Thermaplugg"]}'::jsonb where id = 'gnomeregan';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Charlga Razorflank"]}'::jsonb where id = 'razorfen-kraul';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["High Inquisitor Whitemane"]}'::jsonb where id = 'scarlet';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Amnennar"]}'::jsonb where id = 'razorfen-downs';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Archaedas"]}'::jsonb where id = 'uldaman';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Chief Ukorz Sandscalp"]}'::jsonb where id = 'zulfarrak';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Princess Theradras"]}'::jsonb where id = 'maraudon';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Shade of Eranikus"]}'::jsonb where id = 'sunken-temple';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Emperor Dagran Thaurissan"]}'::jsonb where id = 'blackrock-depths';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Baron Rivendare"]}'::jsonb where id = 'stratholme';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Darkmaster Gandling"]}'::jsonb where id = 'scholomance';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Ragnaros"]}'::jsonb where id = 'molten-core';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Onyxia"]}'::jsonb where id = 'onyxia';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Hakkar"]}'::jsonb where id = 'zulgurub';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Nefarian"]}'::jsonb where id = 'blackwing-lair';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["C''Thun"]}'::jsonb where id = 'ahnqiraj';
+update public.achievements set kind = 'auto', rule = '{"t":"boss","boss":["Kel''Thuzad"]}'::jsonb where id = 'naxxramas';
+update public.achievements set kind = 'auto', rule = '{"t":"mounts","n":1}'::jsonb where id = 'first-mount';
+update public.achievements set kind = 'auto', rule = '{"t":"epic_mount"}'::jsonb where id = 'epic-mount';
+update public.achievements set kind = 'auto', rule = '{"t":"exalted"}'::jsonb where id = 'exalted';
+update public.achievements set kind = 'auto', rule = '{"t":"fishing","n":300}'::jsonb where id = 'angler';
+update public.achievements set description = 'Defeat High Inquisitor Whitemane in the Scarlet Monastery.' where id = 'scarlet';
+update public.achievements set kind = 'claim' where id in ('recruiter', 'leveling-buddy');

@@ -118,6 +118,6 @@ Run `supabase-achievements.sql` once in the Supabase SQL Editor. It creates the 
 
 - **The guild master is the ruling authority.** That is whoever has the **Thane** rank (set by admins on the Admin page). Only they can create, edit or retire achievements, approve or deny claims, award honours, and revoke anything. The database enforces this.
 - **Site achievements** (Getting started, Leveling, Crafting, Trade, Guild life) are earned automatically as members use the site, on any page. A revoked one stays revoked.
-- **Guild deeds** (Dungeons, Raids, Adventure): members press **I did this** and get them straight away. Only Recruiter, Ahn'Qiraj and Naxxramas are claimed with a note and wait for the guild master on the Guild master tab. The guild master can change any achievement's type in the achievement book, and can revoke any achievement.
+- **Guild deeds** (Dungeons, Raids, Adventure) sync automatically from Blizzard's WoW Forever Armory: boss kills, mounts, Exalted reputation and fishing skill. Members only need their main character and surname on their profile. Recruiter and Leveling Buddy can't be seen by Blizzard, so members claim them and the guild master approves. The guild master can change any achievement's type in the achievement book, and can revoke any achievement.
 - **Honours** (Guild master's honours) can only be given by the guild master.
 - Members see their points, progress bars and rank. The Hall of fame shows the leaderboard and recently earned achievements, and badges appear on member profiles.

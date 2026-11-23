@@ -14,7 +14,7 @@ const ICON = (ic) => `https://wow.zamimg.com/images/wow/icons/large/${/^[a-z0-9_
 const img = (ic, cls) => `<img class="${cls || "ach-ic"}" src="${ICON(ic)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${ICON("inv_misc_questionmark")}'">`;
 const ago = (t) => { if (!t) return ""; const s = (Date.now() - t) / 1000; if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "m ago"; if (s < 86400) return Math.floor(s / 3600) + "h ago"; return Math.floor(s / 86400) + "d ago"; };
 const day = (t) => (t ? new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
-const KIND = { auto: "Earned on the site", self: "Done it? Mark it and it's yours", claim: "Claim it, the guild master approves", award: "Only the guild master can award this" };
+const KIND = { auto: "Earned automatically on the site or in game", self: "Done it? Mark it and it's yours", claim: "Claim it, the guild master approves", award: "Only the guild master can award this" };
 
 const st = { tab: "mine", cat: "", list: [], awards: [], loaded: false, busy: false, extra: null, claimFor: null, msg: "", gmMember: "", gmEdit: null, gmQ: "" };
 
@@ -32,6 +32,11 @@ async function load(force) {
       const [guides, prices] = await Promise.all([want("guide") ? B.loadGuides().catch(() => []) : [], want("prices") ? B.loadPrices().catch(() => []) : []]);
       st.extra = { guides, prices };
     }
+    // The member's WoW Forever character from Blizzard's Armory, for boss kills, mounts, reputation and fishing.
+    const slug = mySlug();
+    if (slug && ARMORY_RULES.concat("level").some((t) => want(t))) {
+      try { const r = await fetch("/.netlify/functions/armory?c=" + encodeURIComponent(slug)); st.arm = r.ok ? await r.json() : null; } catch { st.arm = null; }
+    } else st.arm = null;
     st.loaded = true;
     st.lastEarn = st.loadedAt = Date.now();
     await earnNew();
@@ -45,16 +50,34 @@ const awardOf = (ach, user) => st.awards.find((w) => w.ach === ach && w.user ===
 const granted = (user) => st.awards.filter((w) => w.user === user && w.status === "granted" && byId(w.ach));
 const points = (user) => granted(user).reduce((s, w) => s + (byId(w.ach).points || 0), 0);
 
+// Rules read from the Armory. Their achievements sync from the game with no button to press.
+const ARMORY_RULES = ["boss", "mounts", "epic_mount", "exalted", "fishing"];
+const EPIC_MOUNT = /swift|black war|great |charger|dreadsteed|deathcharger|qiraji|frostwolf howler|stormpike battle|winterspring frostsaber|green kodo|teal kodo/i;
+const myProfile = () => ((A().profiles ? A().profiles() : {})[app().uid()] || {});
+const mySlug = () => { const p = myProfile(); return p.mainChar && p.mainRealm ? `${p.mainChar}-${p.mainRealm}`.trim().toLowerCase().replace(/\s+/g, "-") : ""; };
+const low = (s) => String(s || "").toLowerCase();
+function armoryHave(r) {
+  const d = st.arm; if (!d) return 0;
+  switch (r.t) {
+    case "boss": return (d.bosses || []).some((k) => (r.boss || []).some((b) => low(k.b).includes(low(b))) || (r.inst && low(k.i).includes(low(r.inst)))) ? 1 : 0;
+    case "mounts": return (d.mounts || []).length;
+    case "epic_mount": return (d.mounts || []).some((m) => EPIC_MOUNT.test(m)) ? 1 : 0;
+    case "exalted": return (d.reputations || []).some((x) => x.standing === "Exalted") ? 1 : 0;
+    case "fishing": return ((d.professions || []).find((x) => x.name === "Fishing") || {}).skill || 0;
+  }
+  return 0;
+}
 // Progress on a site achievement for the signed-in member: { have, need }.
 function progress(a) {
   const uid = app().uid(), x = A(), p = (x.profiles ? x.profiles() : {})[uid] || {}, r = a.rule || {};
   const doc = (x.crafter && x.crafter(uid)) || {}, profs = Object.values(doc.chars || {}).flatMap((c) => Object.values(c.profs || {}));
   const n = r.n || 1;
+  if (ARMORY_RULES.includes(r.t)) return { have: Math.min(armoryHave(r), n), need: n, armory: true };
   switch (r.t) {
     case "account": return { have: 1, need: 1 };
     case "profile": return { have: [p.mainChar, p.mainClass, p.mainLevel].filter(Boolean).length, need: 3 };
     case "avatar": return { have: p.avatar ? 1 : 0, need: 1 };
-    case "level": return { have: Math.min(p.mainLevel || 0, n), need: n };
+    case "level": return { have: Math.min(Math.max(p.mainLevel || 0, (st.arm && st.arm.level) || 0), n), need: n };
     case "profession": return { have: Math.min(profs.length, 1), need: 1 };
     case "recipes": return { have: Math.min(profs.reduce((s, q) => s + (q.known || []).length, 0), n), need: n };
     case "skill": return { have: Math.min(Math.max(0, ...profs.map((q) => q.skill || 0)), n), need: n };
@@ -119,6 +142,8 @@ function card(a, uid) {
   else if (s === "pending") foot = `<span class="ach-pend">⏳ Waiting for the guild master</span>${me ? ` <button class="linkish" data-ac="withdraw" data-id="${esc(w.id)}">Withdraw</button>` : ""}`;
   else if (s === "denied") foot = `<span class="ach-deny">Not approved${w.gmNote ? `: “${esc(w.gmNote)}”` : ""}</span>${me ? ` <button class="linkish" data-ac="withdraw" data-id="${esc(w.id)}">Clear and claim again later</button>` : ""}`;
   else if (s === "revoked") foot = `<span class="ach-deny">Revoked by the guild master${w.gmNote ? `: “${esc(w.gmNote)}”` : ""}</span>`;
+  else if (pr && pr.armory && !mySlug()) foot = `<span class="muted small">🔗 <a href="#profile">Add your main character and surname</a> to sync this from the game</span>`;
+  else if (pr && pr.armory && pr.need === 1) foot = `<span class="muted small">⚔️ Syncs from your Armory when you do it in game</span>`;
   else if (pr) foot = `<div class="ach-prog" title="${pr.have} of ${pr.need}"><i style="width:${Math.round(pr.have / pr.need * 100)}%"></i></div><span class="muted small">${pr.have} / ${pr.need}</span>`;
   else if (a.kind === "self" && me && !a.retired) foot = `<button class="btn small primary" data-ac="done" data-id="${esc(a.id)}">✔ I did this</button>`;
   else if (a.kind === "claim" && me && !a.retired) foot = st.claimFor === a.id
@@ -227,9 +252,9 @@ function render() {
   root.innerHTML = `
     <div class="shop-head ach-head">
       <div><p class="eyebrow">Bark and Stone · Guild</p><h2 class="hero-title">Achievements</h2>
-        <p class="muted map-intro">Site achievements unlock on their own. Done something in game? Mark it and it's yours. Only a few big deeds wait for the guild master, who can still revoke anything.</p>
+        <p class="muted map-intro">Achievements unlock on their own: from what you do on the site, and from your character's boss kills, mounts, reputation and fishing on Blizzard's Armory. Only a couple wait for the guild master, who can still revoke anything.</p>
         <div class="chips">${tabs.map(([k, l]) => `<button class="chip" data-ac="tab" data-v="${k}" aria-pressed="${st.tab === k}">${l}</button>`).join("")}</div></div>
-      <div class="shop-keeper">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("thorek", "empty-merchant") : ""}<p class="shop-bubble">Every deed counts, friend. Done it? Mark it and wear it proud!</p></div>
+      <div class="shop-keeper">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("thorek", "empty-merchant") : ""}<p class="shop-bubble">Every deed counts, friend. Slay it in game and the hall knows!</p></div>
     </div>
     ${st.msg ? `<p class="ach-msg" role="status">${esc(st.msg)}</p>` : ""}
     ${!st.loaded ? `<p class="muted">Opening the book of deeds…</p>` : st.tab === "mine" ? mineHtml() : st.tab === "fame" ? fameHtml() : st.tab === "all" ? allHtml() : gmHtml()}`;
