@@ -52,6 +52,8 @@ const points = (user) => granted(user).reduce((s, w) => s + (byId(w.ach).points 
 
 // Rules read from the Armory. Their achievements sync from the game with no button to press.
 const ARMORY_RULES = ["boss", "mounts", "epic_mount", "exalted", "fishing"];
+// Free account-wide mounts every character gets; they do not count as earning a mount.
+const FREE_MOUNT = /cerulean prideclaw|veteran adventurer/i;
 const EPIC_MOUNT = /swift|black war|great |charger|dreadsteed|deathcharger|qiraji|frostwolf howler|stormpike battle|winterspring frostsaber|green kodo|teal kodo/i;
 const myProfile = () => ((A().profiles ? A().profiles() : {})[app().uid()] || {});
 const mySlug = () => { const p = myProfile(); return p.mainChar && p.mainRealm ? `${p.mainChar}-${p.mainRealm}`.trim().toLowerCase().replace(/\s+/g, "-") : ""; };
@@ -60,7 +62,7 @@ function armoryHave(r) {
   const d = st.arm; if (!d) return 0;
   switch (r.t) {
     case "boss": return (d.bosses || []).some((k) => (r.boss || []).some((b) => low(k.b).includes(low(b))) || (r.inst && low(k.i).includes(low(r.inst)))) ? 1 : 0;
-    case "mounts": return (d.mounts || []).length;
+    case "mounts": return (d.mounts || []).filter((m) => !FREE_MOUNT.test(m)).length;
     case "epic_mount": return (d.mounts || []).some((m) => EPIC_MOUNT.test(m)) ? 1 : 0;
     case "exalted": return (d.reputations || []).some((x) => x.standing === "Exalted") ? 1 : 0;
     case "fishing": return ((d.professions || []).find((x) => x.name === "Fishing") || {}).skill || 0;
