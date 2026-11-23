@@ -637,36 +637,53 @@ function importAddon(text) {
   return { report, main };
 }
 
-function renderMine() {
-  const root = $("#view-mine");
-  if (!S.uid) { root.innerHTML = signInPrompt("list what you can craft"); return; }
-  const doc = ensureMyDoc();
-  const chars = Object.keys(doc.chars);
-  if (!S.editChar || !doc.chars[S.editChar]) S.editChar = chars[0] || null;
-  const ch = S.editChar && doc.chars[S.editChar];
-  const profs = ch ? Object.keys(ch.profs || {}) : [];
-  if (!S.editProf || !profs.includes(S.editProf)) S.editProf = profs[0] || null;
-  const left = `
-    <div class="card">
-      <h2>Your characters</h2>
-      <div style="display:grid;gap:4px">${chars.map((c) => {
+/* My crafter: panels the member arranges themselves (order, width, hidden), saved per member in this browser. */
+const MINE_PANELS = {
+  summary: "At a glance", chars: "Your characters", recipes: "Professions and recipes", jobs: "Jobs waiting for you",
+  note: "Crafter note", import: "Import from the game", bnet: "Battle.net",
+};
+const MINE_PRESETS = {
+  workbench: { name: "Workbench", order: ["summary", "chars", "jobs", "recipes", "note", "import", "bnet"], w: { summary: "full", recipes: "full" }, hidden: [] },
+  recipes: { name: "Recipe focus", order: ["recipes", "chars", "summary", "note", "jobs", "import", "bnet"], w: { recipes: "full" }, hidden: [] },
+  compact: { name: "Compact", order: ["summary", "chars", "recipes", "jobs", "note"], w: { summary: "full", recipes: "full" }, hidden: ["import", "bnet"] },
+};
+function mineLayout() {
+  if (S.mineLayout && S.mineLayout.uid === S.uid) return S.mineLayout;
+  let l = null; try { l = JSON.parse(lsGet("gc.mine.layout." + S.uid) || "null"); } catch {}
+  const base = structuredClone(MINE_PRESETS.workbench);
+  if (!l || !Array.isArray(l.order)) l = { ...base, preset: "workbench" };
+  // Keep every known panel exactly once (new panels added later show up at the end).
+  const ids = Object.keys(MINE_PANELS);
+  l.order = l.order.filter((id, i, a) => ids.includes(id) && a.indexOf(id) === i);
+  ids.forEach((id) => { if (!l.order.includes(id) && !(l.hidden || []).includes(id)) l.order.push(id); });
+  l.hidden = (l.hidden || []).filter((id) => ids.includes(id) && !l.order.includes(id));
+  l.w = l.w || {};
+  S.mineLayout = { ...l, uid: S.uid };
+  return S.mineLayout;
+}
+function saveMineLayout(l) { S.mineLayout = { ...l, uid: S.uid }; const { uid, ...keep } = S.mineLayout; void uid; lsSet("gc.mine.layout." + S.uid, JSON.stringify(keep)); }
+
+function minePanelBody(id, ctx) {
+  const { doc, chars, ch, profs } = ctx;
+  if (id === "summary") {
+    const all = Object.entries(doc.chars).flatMap(([c, v]) => Object.entries(v.profs || {}).map(([p, x]) => ({ c, p, skill: x.skill || 0, n: (x.known || []).length })));
+    const known = all.reduce((s, x) => s + x.n, 0);
+    const waiting = S.requests.filter((r) => r.to === S.uid && r.status === "pending").length;
+    const mine = S.listings.filter((l) => l.seller === S.uid).length;
+    const stat = (n, label, href) => `<a class="mstat" ${href ? `href="${href}"` : ""}><b>${fmt(n)}</b><span>${label}</span></a>`;
+    return `<div class="mstats">${stat(chars.length, chars.length === 1 ? "character" : "characters")}${stat(all.length, all.length === 1 ? "profession" : "professions")}${stat(known, "recipes known")}${stat(waiting, waiting === 1 ? "job waiting" : "jobs waiting", "#requests")}${stat(mine, mine === 1 ? "market listing" : "market listings", "#market")}</div>
+      ${all.length ? `<div class="mskills">${all.map((x) => `<div class="mskill"><span>${profIcon(x.p)}<strong>${esc(x.p)}</strong> <span class="muted">${esc(x.c)}</span></span><span class="mbar" title="${x.skill} of 300"><i style="width:${Math.min(100, x.skill / 3)}%"></i></span><span class="num muted">${x.skill}</span></div>`).join("")}</div>`
+        : `<p class="muted">Add a character and their professions to see your skills here.</p>`}`;
+  }
+  if (id === "chars") {
+    return `<div style="display:grid;gap:4px">${chars.map((c) => {
         const n = Object.values(doc.chars[c].profs || {}).reduce((s, p) => s + (p.known || []).length, 0);
-        return `<button class="list-btn" data-act="pick-char" data-char="${esc(c)}" aria-pressed="${c === S.editChar}"><span>${esc(c)}</span><span class="muted num">${n} recipes</span></button>`;
+        return `<button class="list-btn" data-act="pick-char" data-char="${esc(c)}" aria-pressed="${c === S.editChar}"><span>${esc(c)}</span><span class="muted num">${n} recipe${n === 1 ? "" : "s"}</span></button>`;
       }).join("") || `<p class="muted" style="margin:0 0 6px">Add the character that does your crafting.</p>`}</div>
-      <form class="inline" id="addchar" style="margin-top:10px"><input type="text" id="newchar" maxlength="24" placeholder="Character name" aria-label="Character name"><button class="btn" type="submit">Add</button></form>
-      ${bnetCard()}
-      <h3>Crafter note</h3>
-      <textarea id="mynote" rows="3" maxlength="200" placeholder="e.g. Bring mats, free for guildies. Online most evenings.">${esc(doc.note || "")}</textarea>
-      <p class="saved" id="saved">${esc(S.saveState)}</p>
-      <h3>Import from the game</h3>
-      <p class="muted" style="margin:0 0 6px">Install the <a href="downloads/BarkAndStone.zip" download>Bark and Stone addon</a>, open each profession window once, then type <code>/bas export</code>. Copy the text (Ctrl+A, Ctrl+C) and paste it here. It fills in your characters, skill levels and every recipe they know.</p>
-      <form id="addonimport"><textarea id="addon-text" rows="3" placeholder="BAS1~1.0.0 …" aria-label="Text from the addon">${esc(S.addonText || "")}</textarea>
-        <button class="btn" type="submit" style="margin-top:6px">Import</button></form>
-      ${S.addonResult ? `<p class="saved" style="white-space:pre-line">${esc(S.addonResult)}</p>` : ""}
-    </div>`;
-  let right;
-  if (!ch) right = `<div class="card empty"><strong>Add a character to start.</strong>Then add their professions and tick the recipes they know.</div>`;
-  else {
+      <form class="inline" id="addchar" style="margin-top:10px"><input type="text" id="newchar" maxlength="24" placeholder="Character name" aria-label="Character name"><button class="btn" type="submit">Add</button></form>`;
+  }
+  if (id === "recipes") {
+    if (!ch) return `<div class="empty"><strong>Add a character to start.</strong>Then add their professions and tick the recipes they know.</div>`;
     const avail = PROFS.filter((p) => !profs.includes(p));
     const p = S.editProf && ch.profs[S.editProf];
     const pi = profIndex(S.editProf);
@@ -686,15 +703,103 @@ function renderMine() {
           <span class="muted num">${known.size} of ${RECIPES.filter((r) => r.p === pi).length} known</span></div>
         <div class="known">${rs.map((r) => `<label><input type="checkbox" data-known="${r.id}" ${known.has(r.id) ? "checked" : ""}><span class="t q${r.q}">${esc(r.name)}</span><span class="lv">${r.lv}</span></label>`).join("")}</div>`;
     }
-    right = `<div class="card">
-      <div class="inline" style="justify-content:space-between"><h2 style="margin:0">${esc(S.editChar)}</h2><button class="btn small danger" data-act="remove-char">Remove character</button></div>
-      <div class="chips" style="margin-top:12px">${profs.map((x) => `<button class="chip" data-act="pick-prof" data-prof="${esc(x)}" aria-pressed="${x === S.editProf}">${esc(x)} <span class="n">${(ch.profs[x].known || []).length}</span></button>`).join("")}
+    return `<div class="inline" style="justify-content:space-between"><h3 style="margin:0">${esc(S.editChar)}</h3><button class="btn small danger" data-act="remove-char">Remove character</button></div>
+      <div class="chips" style="margin-top:12px">${profs.map((x) => `<button class="chip" data-act="pick-prof" data-prof="${esc(x)}" aria-pressed="${x === S.editProf}">${profIcon(x)}${esc(x)} <span class="n">${(ch.profs[x].known || []).length}</span></button>`).join("")}
         ${avail.length ? `<select id="addprof" aria-label="Add profession"><option value="">+ Add profession</option>${avail.map((x) => `<option>${esc(x)}</option>`).join("")}</select>` : ""}</div>
-      ${body}</div>`;
+      ${body}`;
   }
-  root.innerHTML = `<div class="cols">${left}${right}</div>`;
+  if (id === "jobs") {
+    const jobs = S.requests.filter((r) => r.to === S.uid && (r.status === "pending" || r.status === "accepted")).sort((a, b) => (b.created || 0) - (a.created || 0));
+    if (!jobs.length) return `<p class="muted" style="margin:0">No jobs waiting. When a guildmate asks you to craft something, it shows up here.</p>`;
+    return `<ul class="mjobs">${jobs.slice(0, 6).map((r) => {
+        const rec = r.kind === "craft" && BYID.get(r.recipeId);
+        return `<li><span class="pill st-${esc(r.status)}">${esc(r.status)}</span> <a href="#requests">${rec ? esc(rec.name) : esc(r.label || "Item")}</a> <span class="num muted">×${r.qty || 1}</span><div class="muted small">for ${esc(r.fromChar || userName(r.from) || "a guildmate")} · ${ago(r.created)}</div></li>`;
+      }).join("")}</ul>${jobs.length > 6 ? `<p class="small"><a href="#requests">See all ${jobs.length}</a></p>` : ""}<a class="btn small" href="#requests">Open requests</a>`;
+  }
+  if (id === "note") return `<textarea id="mynote" rows="3" maxlength="200" placeholder="e.g. Bring mats, free for guildies. Online most evenings.">${esc(doc.note || "")}</textarea>
+      <p class="saved" id="saved">${esc(S.saveState)}</p>`;
+  if (id === "import") return `<p class="muted" style="margin:0 0 6px">Install the <a href="downloads/BarkAndStone.zip" download>Bark and Stone addon</a>, open each profession window once, then type <code>/bas export</code>. Copy the text (Ctrl+A, Ctrl+C) and paste it here. It fills in your characters, skill levels and every recipe they know.</p>
+      <form id="addonimport"><textarea id="addon-text" rows="3" placeholder="BAS1~1.0.0 …" aria-label="Text from the addon">${esc(S.addonText || "")}</textarea>
+        <button class="btn" type="submit" style="margin-top:6px">Import</button></form>
+      ${S.addonResult ? `<p class="saved" style="white-space:pre-line">${esc(S.addonResult)}</p>` : ""}`;
+  if (id === "bnet") return bnetCard().replace("<h3>Battle.net</h3>", "");
+  return "";
+}
+
+function renderMine() {
+  const root = $("#view-mine");
+  if (!S.uid) { root.innerHTML = signInPrompt("list what you can craft"); return; }
+  if (S.mineDrag) return; // don't redraw under someone dragging a panel
+  const doc = ensureMyDoc();
+  const chars = Object.keys(doc.chars);
+  if (!S.editChar || !doc.chars[S.editChar]) S.editChar = chars[0] || null;
+  const ch = S.editChar && doc.chars[S.editChar];
+  const profs = ch ? Object.keys(ch.profs || {}) : [];
+  if (!S.editProf || !profs.includes(S.editProf)) S.editProf = profs[0] || null;
+  const L = mineLayout(), edit = !!S.mineEdit, ctx = { doc, chars, ch, profs };
+  const p = prof(S.uid), who = p.mainChar || chars[0] || p.username || "";
+  const panel = (id, i) => {
+    const full = (L.w[id] || "half") === "full";
+    return `<section class="mpanel ${full ? "w-full" : "w-half"} mp-${id}" data-panel="${id}" ${edit ? 'draggable="true"' : ""}>
+      <header class="mp-head"><h2>${esc(MINE_PANELS[id])}</h2>
+        ${edit ? `<div class="mp-tools"><span class="mp-grip" title="Drag to move" aria-hidden="true">⠿</span>
+          <button class="btn small" data-act="mp-move" data-id="${id}" data-d="-1" ${i === 0 ? "disabled" : ""} aria-label="Move ${esc(MINE_PANELS[id])} up">↑</button>
+          <button class="btn small" data-act="mp-move" data-id="${id}" data-d="1" ${i === L.order.length - 1 ? "disabled" : ""} aria-label="Move ${esc(MINE_PANELS[id])} down">↓</button>
+          <button class="btn small" data-act="mp-width" data-id="${id}" title="Change width">${full ? "Half width" : "Full width"}</button>
+          <button class="btn small" data-act="mp-hide" data-id="${id}" title="Hide this panel">Hide</button></div>` : ""}
+      </header>
+      <div class="mp-body">${edit && id === "recipes" ? `<p class="muted">Recipes are hidden while you arrange the page.</p>` : minePanelBody(id, ctx)}</div>
+    </section>`;
+  };
+  root.innerHTML = `
+    <div class="shop-head mine-head">
+      <div><p class="eyebrow">Bark and Stone · Crafting</p><h2 class="hero-title">${who ? esc(who) + "'s workshop" : "Your workshop"}</h2>
+        <p class="muted map-intro">Your crafter profile: what you can make, for whom, and how guildmates reach you. Arrange this page however suits you.</p>
+        <div class="mine-bar">
+          <button class="btn ${edit ? "primary" : ""}" data-act="mp-edit">${edit ? "✔ Done arranging" : "🧩 Customize layout"}</button>
+          ${edit ? `<span class="muted small">Layouts:</span>${Object.entries(MINE_PRESETS).map(([k, v]) => `<button class="chip" data-act="mp-preset" data-v="${k}" aria-pressed="${L.preset === k}">${v.name}</button>`).join("")}` : ""}
+        </div>
+        ${edit && L.hidden.length ? `<div class="mine-bar"><span class="muted small">Hidden panels:</span>${L.hidden.map((id) => `<button class="chip" data-act="mp-show" data-id="${id}">＋ ${esc(MINE_PANELS[id])}</button>`).join("")}</div>` : ""}
+        ${edit ? `<p class="muted small" style="margin:8px 0 0">Drag panels by their title bar, or use the arrows. Your layout is saved in this browser.</p>` : ""}
+      </div>
+      <div class="shop-keeper">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("brannoc", "empty-merchant") : ""}<p class="shop-bubble">${edit ? "Shift it about! Put what you use most at the top." : "Your bench, your rules. Press Customize layout to rearrange it."}</p></div>
+    </div>
+    <div class="mine-grid ${edit ? "arranging" : ""}">${L.order.map(panel).join("")}</div>`;
   const nq = $("#mineq"); if (nq && S._focusMine) { nq.focus(); nq.setSelectionRange(nq.value.length, nq.value.length); }
 }
+
+// Layout editing: buttons, and drag and drop between panels.
+document.addEventListener("click", (e) => {
+  const t = e.target.closest("[data-act^='mp-']"); if (!t) return;
+  const L = structuredClone(mineLayout()), id = t.dataset.id, a = t.dataset.act;
+  if (a === "mp-edit") { S.mineEdit = !S.mineEdit; renderMine(); return; }
+  if (a === "mp-preset") { const p = structuredClone(MINE_PRESETS[t.dataset.v]); saveMineLayout({ ...p, preset: t.dataset.v }); renderMine(); return; }
+  if (a === "mp-move") { const i = L.order.indexOf(id), j = i + Number(t.dataset.d); if (j < 0 || j >= L.order.length) return; [L.order[i], L.order[j]] = [L.order[j], L.order[i]]; }
+  else if (a === "mp-width") L.w[id] = (L.w[id] || "half") === "full" ? "half" : "full";
+  else if (a === "mp-hide") { L.order = L.order.filter((x) => x !== id); L.hidden.push(id); }
+  else if (a === "mp-show") { L.hidden = L.hidden.filter((x) => x !== id); L.order.push(id); }
+  L.preset = "custom"; saveMineLayout(L); renderMine();
+  if (a === "mp-move") { const b = document.querySelector(`[data-act="mp-move"][data-id="${id}"][data-d="${t.dataset.d}"]`); if (b && !b.disabled) b.focus(); }
+});
+document.addEventListener("dragstart", (e) => {
+  const p = e.target.closest && e.target.closest(".mine-grid.arranging .mpanel"); if (!p) return;
+  S.mineDrag = p.dataset.panel; p.classList.add("dragging");
+  try { e.dataTransfer.setData("text/plain", S.mineDrag); e.dataTransfer.effectAllowed = "move"; } catch {}
+});
+document.addEventListener("dragover", (e) => {
+  if (!S.mineDrag) return;
+  const over = e.target.closest && e.target.closest(".mine-grid .mpanel"); if (!over) return;
+  e.preventDefault();
+  const dragged = document.querySelector(`.mpanel[data-panel="${S.mineDrag}"]`); if (!dragged || over === dragged) return;
+  const r = over.getBoundingClientRect(), after = (e.clientY - r.top) > r.height / 2 || (e.clientX - r.left) > r.width * 0.66;
+  over.parentNode.insertBefore(dragged, after ? over.nextSibling : over);
+});
+document.addEventListener("dragend", () => {
+  if (!S.mineDrag) return;
+  const order = [...document.querySelectorAll(".mine-grid .mpanel")].map((x) => x.dataset.panel);
+  S.mineDrag = null;
+  const L = structuredClone(mineLayout()); L.order = order; L.preset = "custom"; saveMineLayout(L); renderMine();
+});
 
 function bnetCard() {
   const link = S.bnet[S.uid];

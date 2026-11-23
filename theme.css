@@ -1011,3 +1011,30 @@ a.hev:hover{border-color:var(--brass)}
   .mr-models{grid-template-columns:repeat(3, minmax(0, 1fr))}
   .mr-pic, .mr-portrait{width:84px} .mr-portrait{height:112px}
 }
+
+/* ---------- My crafter: panels the member arranges ---------- */
+.mine-bar{display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:10px}
+.mine-grid{display:grid; grid-template-columns:repeat(2, minmax(0, 1fr)); gap:14px; align-items:start}
+.mpanel{min-width:0; border:1px solid var(--line); border-radius:10px; background:linear-gradient(180deg, rgb(70 45 20 / .28), transparent 110px), var(--panel); box-shadow:0 8px 22px rgb(0 0 0 / .35)}
+.mpanel.w-full{grid-column:1 / -1}
+.mp-head{display:flex; align-items:center; justify-content:space-between; gap:8px; flex-wrap:wrap; padding:10px 14px; border-bottom:1px solid var(--line)}
+.mp-head h2{margin:0; font-size:1.05rem; font-family:var(--f-display); color:var(--gold-hi)}
+.mp-body{padding:12px 14px 14px}
+.mp-body h3{font-family:var(--f-display)}
+.mp-tools{display:flex; align-items:center; gap:4px; flex-wrap:wrap}
+.mp-grip{cursor:grab; color:var(--brass); font-size:1.1rem; padding:0 4px}
+.arranging .mpanel{border-style:dashed; border-color:var(--brass); cursor:grab}
+.arranging .mpanel .mp-head{background:rgb(227 181 91 / .08)}
+.mpanel.dragging{opacity:.45}
+.mstats{display:grid; grid-template-columns:repeat(auto-fit, minmax(110px, 1fr)); gap:8px; margin-bottom:12px}
+.mstat{display:flex; flex-direction:column; gap:2px; padding:10px; border-radius:8px; border:1px solid var(--line); background:rgb(0 0 0 / .25); color:var(--ink); text-decoration:none}
+a.mstat[href]:hover{border-color:var(--brass)}
+.mstat b{font:700 1.4rem var(--f-display); color:var(--gold-hi)}
+.mstat span{font-size:.8rem; color:var(--muted)}
+.mskills{display:grid; gap:6px}
+.mskill{display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(0, 2fr) 36px; align-items:center; gap:10px; font-size:.88rem}
+.mbar{height:8px; border-radius:4px; background:rgb(0 0 0 / .4); border:1px solid var(--line); overflow:hidden}
+.mbar i{display:block; height:100%; background:linear-gradient(90deg, var(--gold-lo), var(--gold-hi))}
+.mjobs{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:8px}
+.mjobs li{padding-bottom:6px; border-bottom:1px dashed var(--line)}
+@media (max-width:760px){ .mine-grid{grid-template-columns:minmax(0, 1fr)} .mskill{grid-template-columns:minmax(0, 1fr) 80px 32px} }
