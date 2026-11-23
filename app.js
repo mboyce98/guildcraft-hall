@@ -1206,22 +1206,14 @@ function renderAdmin() {
           ${c.webhook_set ? '<button class="btn small danger" type="button" data-act="dc-hook-clear">Remove webhook</button><button class="btn small" type="button" data-act="dc-test">Send a test message</button>' : ""}
           <button class="btn primary" type="submit">Save</button></div>
       </form>
-      <h3 class="sec">Invite newcomers</h3>
+      <h3 class="sec">Invite people to the website</h3>
       ${(() => {
-        const N = D.nc;
-        const intro = `<p class="muted" style="margin:0 0 10px">The guard bot greets people in your Discord server who haven't used the website yet: it tags them in a channel with a short tour of the hall and a button to visit. People who linked Discord on their profile, or whose Discord name matches a site username or main character, are left out.</p>`;
-        if (!N) return intro + `<p><button class="btn small primary" data-act="dc-nc-check">Find newcomers</button></p>`;
-        if (N.loading) return intro + `<p class="muted">Checking the Discord server…</p>`;
-        if (N.err) return intro + `<p class="dc-err">${esc(N.err)}</p><p><button class="btn small" data-act="dc-nc-check">Try again</button></p>`;
-        const list = N.list || [];
-        if (!list.length) return intro + `<p class="dc-ready">✓ Everyone in the Discord server already uses the website.</p><p><button class="btn small" data-act="dc-nc-check">Check again</button></p>`;
-        const chans = (D.ch && D.ch.channels) || [], conf = N.config || (D.ch && D.ch.config) || {};
-        return intro + `<form class="form" id="dcncform" style="margin:0">
-          <p style="margin:0 0 8px"><strong>${list.length}</strong> ${list.length === 1 ? "person hasn't" : "people haven't"} visited yet. Untick anyone the bot should leave alone.</p>
-          <div class="dc-nc-list">${list.map((p) => `<label class="dc-nc"><input type="checkbox" name="nc" value="${esc(p.id)}" checked>${p.avatar ? `<img src="${esc(p.avatar)}" alt="" width="24" height="24" loading="lazy">` : `<span class="dc-nc-av">${esc((p.name || "?").slice(0, 1).toUpperCase())}</span>`}<span>${esc(p.name)}</span></label>`).join("")}</div>
-          <div class="row"><label for="dc-nc-ch">Post in</label><select id="dc-nc-ch">${chans.length ? chans.map((c) => `<option value="${esc(c.id)}" ${conf.feed_channel === c.id ? "selected" : ""}>#${esc(c.name)}${c.server ? " · " + esc(c.server) : ""}</option>`).join("") : `<option value="">The guild feed channel</option>`}</select></div>
-          <div class="row"><label for="dc-nc-note">Add a note</label><input type="text" id="dc-nc-note" maxlength="300" placeholder="Optional, e.g. Raid sign-ups for Friday are on the site!"></div>
-          <div class="actions"><span class="saved" id="dc-nc-msg">${esc(N.msg || "")}</span><button class="btn small" type="button" data-act="dc-nc-check">Refresh</button><button class="btn primary" type="submit">Have the bot invite them</button></div>
+        const chans = (D.ch && D.ch.channels) || [], conf = (D.ch && D.ch.config) || {};
+        return `<form class="form" id="dcinvform" style="margin:0">
+          <p class="muted" style="margin:0 0 10px">The guard bot posts a message in the channel you pick, inviting anyone who hasn't seen the guild website yet to have a look, with a short tour of the hall and a button to visit. Nobody is tagged or pinged.</p>
+          <div class="row"><label for="dc-inv-ch">Post in</label><select id="dc-inv-ch">${chans.length ? chans.map((c) => `<option value="${esc(c.id)}" ${conf.feed_channel === c.id ? "selected" : ""}>#${esc(c.name)}${c.server ? " · " + esc(c.server) : ""}</option>`).join("") : `<option value="">The guild feed channel</option>`}</select></div>
+          <div class="row"><label for="dc-inv-note">Add a note</label><input type="text" id="dc-inv-note" maxlength="300" placeholder="Optional, e.g. Raid sign-ups for Friday are on the site!"></div>
+          <div class="actions"><span class="saved" id="dc-inv-msg">${esc(D.invMsg || "")}</span><button class="btn primary" type="submit">Post the invite</button></div>
         </form>`;
       })()}`;
   } else if (S.adminTab === "news") {
@@ -1506,12 +1498,6 @@ document.addEventListener("click", async (e) => {
   else if (act === "dm-del") { t.disabled = true; try { await S.B.deleteDm(t.dataset.id); await refresh(); } catch (err) { note("Couldn't delete that message: " + err.message); } }
   else if (act === "adm-tab") { S.adminTab = t.dataset.t; renderAdmin(); }
   else if (act === "dc-check") { S.dc = null; renderAdmin(); }
-  else if (act === "dc-nc-check") {
-    S.dc.nc = { loading: true }; renderAdmin();
-    try { const r = await S.B.discordNewcomers(); S.dc.nc = r.error ? { err: r.error } : { list: r.newcomers || [], config: r.config }; }
-    catch (err) { S.dc.nc = { err: err.message }; }
-    if (S.view === "admin" && S.adminTab === "discord") renderAdmin();
-  }
   else if (act === "dc-setup") {
     t.disabled = true; t.textContent = "Setting up…";
     try { const r = await S.B.discordBot("setup"); S.dc = { ...(S.dc || {}), bot: r, botErr: "" }; }
@@ -1689,18 +1675,14 @@ document.addEventListener("submit", async (e) => {
       renderAdmin();
     } catch (x) { $("#dcch-saved").textContent = "Couldn't save: " + x.message; btn.disabled = false; }
   }
-  else if (f.id === "dcncform") {
-    const ids = [...f.querySelectorAll('input[name="nc"]:checked')].map((i) => i.value), msg = $("#dc-nc-msg");
-    if (!ids.length) { msg.textContent = "Tick at least one person."; return; }
-    const sel = $("#dc-nc-ch"), chName = sel.value && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent.split(" · ")[0] : "the guild feed channel";
-    if (!confirm(`The bot will tag ${ids.length} ${ids.length === 1 ? "person" : "people"} in ${chName} and invite them to the website. Send it?`)) return;
-    btn.disabled = true; msg.textContent = "Sending…";
+  else if (f.id === "dcinvform") {
+    const sel = $("#dc-inv-ch"), msg = $("#dc-inv-msg"), chName = sel.value && sel.selectedOptions[0] ? sel.selectedOptions[0].textContent.split(" · ")[0] : "the guild feed channel";
+    btn.disabled = true; msg.textContent = "Posting…";
     try {
-      const r = await S.B.discordNewcomers({ ids, channel: sel.value, note: $("#dc-nc-note").value });
+      const r = await S.B.discordInvite({ channel: sel.value, note: $("#dc-inv-note").value });
       if (r.error) { msg.textContent = r.error; btn.disabled = false; return; }
-      S.dc.nc = { list: r.newcomers || [], config: r.config, msg: `✓ The bot invited ${r.posted} ${r.posted === 1 ? "person" : "people"} in ${chName}.` };
-      renderAdmin();
-    } catch (x) { msg.textContent = "Couldn't send: " + x.message; btn.disabled = false; }
+      S.dc.invMsg = `✓ Posted in ${chName}.`; renderAdmin();
+    } catch (x) { msg.textContent = "Couldn't post: " + x.message; btn.disabled = false; }
   }
   else if (f.id === "dcform") {
     const hook = $("#dc-hook").value.trim(), s = $("#dc-saved");

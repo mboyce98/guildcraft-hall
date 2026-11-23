@@ -75,78 +75,35 @@ exports.handler = async (event) => {
     return json(200, out);
   }
 
-  // Invite newcomers: find people in the Discord server who don't use the website yet, and (on POST) have the bot greet them.
-  if (action === "newcomers" || action === "newcomers-post") {
-    const key = dataKey(cfg);
-    let site;
-    try { site = await rpc("bot_site_people", { p_key: key }); }
-    catch (e) { return json(200, { error: /Not allowed/.test(e.message) ? "Press “Set up slash commands” first so the bot is linked to the website."
-      : /bot_site_people|function/i.test(e.message) ? "Run supabase-invite.sql in the Supabase SQL editor first." : e.message }); }
-    const norm = (s) => String(s || "").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
-    const linked = new Set(site.ids || []), names = new Set((site.names || []).map(norm).filter(Boolean));
-    const people = [];
-    for (const g of out.servers.slice(0, 5)) {
-      let after = "0";
-      for (let page = 0; page < 5; page++) {
-        let list;
-        try { list = await discordApi(cfg, "GET", `/guilds/${g.id}/members?limit=1000&after=${after}`); }
-        catch (e) {
-          if (e.status === 403 || (e.data && e.data.code === 50001)) return json(200, { ...out, error: "Discord won't share the member list yet. In the Discord Developer Portal, open the app → Bot, turn on “Server Members Intent”, press Save Changes, then try again." });
-          throw e;
-        }
-        for (const m of list) {
-          const u = m.user || {};
-          if (u.bot || linked.has(u.id) || people.some((p) => p.id === u.id)) continue;
-          // Someone whose Discord name, nickname or username matches a site username, main character or saved Discord name already uses the site.
-          const parts = [m.nick, u.global_name, u.username].filter(Boolean);
-          if (parts.some((p) => names.has(norm(p)) || String(p).split(/[\s|/,()\[\]-]+/).some((w) => w.length > 2 && names.has(norm(w))))) continue;
-          people.push({ id: u.id, name: m.nick || u.global_name || u.username, avatar: u.avatar ? `https://cdn.discordapp.com/avatars/${u.id}/${u.avatar}.png?size=64` : "" });
-        }
-        if (list.length < 1000) break;
-        after = list[list.length - 1].user.id;
-      }
+  // Site invite: the bot posts a "come and see the guild website" message in a channel. Nobody is tagged.
+  if (action === "invite-post") {
+    if (event.httpMethod !== "POST") return json(405, { error: "Use POST." });
+    let b = {}; try { b = JSON.parse(event.body || "{}"); } catch {}
+    let conf = null; try { conf = await rpc("bot_config", { p_key: dataKey(cfg) }); } catch {}
+    const channel = /^\d{5,25}$/.test(String(b.channel || "")) ? String(b.channel) : (conf && conf.feed_channel) || "";
+    if (!channel) return json(200, { error: "Pick a channel for the bot to post in." });
+    const note = String(b.note || "").trim().slice(0, 300);
+    try {
+      await discordApi(cfg, "POST", `/channels/${channel}/messages`, {
+        allowed_mentions: { parse: [] }, // never pings anyone
+        embeds: [{
+          title: "🛡️ Hold there, traveller! Have you seen the guild hall?", url: cfg.site + "/", color: 0xe3b55b,
+          description: (note ? note + "\n\n" : "") +
+            "The guard at the gate says the **Bark and Stone** website has a place for everyone in the guild. If you haven't had a look yet, come on in:\n\n" +
+            "⚒️ Find who can craft what, and post jobs on the **Request Board**\n" +
+            "💰 Buy and sell on the guild **market**\n" +
+            "📅 Sign up for **dungeons, raids and events**\n" +
+            "🏆 Earn **achievements** that sync from your Armory as you play\n" +
+            "🗺️ The world map, Loot Vault, guides and guild news\n\n" +
+            "Signing up takes a minute. Add your main character and you're on the guild roster.",
+          footer: { text: "Bark and Stone · guild website" },
+        }],
+        components: [{ type: 1, components: [{ type: 2, style: 5, label: "Visit the guild hall", url: cfg.site + "/" }] }],
+      });
+    } catch (e) {
+      return json(200, { error: e.status === 403 ? "The bot isn't allowed to post in that channel. Pick another, or ask a Discord admin to let the bot send messages there." : "Discord didn't take the message: " + e.message });
     }
-    people.sort((a, b) => a.name.localeCompare(b.name));
-    out.newcomers = people;
-    try { out.config = await rpc("bot_config", { p_key: key }); } catch { out.config = null; }
-
-    if (action === "newcomers-post") {
-      if (event.httpMethod !== "POST") return json(405, { error: "Use POST." });
-      let b = {}; try { b = JSON.parse(event.body || "{}"); } catch {}
-      const channel = /^\d{5,25}$/.test(String(b.channel || "")) ? String(b.channel) : (out.config && out.config.feed_channel) || "";
-      if (!channel) return json(200, { ...out, error: "Pick a channel for the bot to post in." });
-      const want = new Set((Array.isArray(b.ids) ? b.ids : []).map(String));
-      const ids = people.filter((p) => want.has(p.id)).map((p) => p.id); // only people who really are newcomers
-      if (!ids.length) return json(200, { ...out, error: "Tick at least one person to invite." });
-      const note = String(b.note || "").trim().slice(0, 300);
-      const chunks = []; for (let i = 0; i < ids.length; i += 50) chunks.push(ids.slice(i, i + 50));
-      try {
-        for (let i = 0; i < chunks.length; i++) {
-          const tags = chunks[i].map((id) => `<@${id}>`).join(" ");
-          const msg = { allowed_mentions: { parse: [], users: chunks[i] }, content: i === 0 ? `🛡️ **Hold there, travellers!** ${tags}` : tags };
-          if (i === chunks.length - 1) {
-            msg.embeds = [{
-              title: "Your name isn't in the hall's ledger yet", url: cfg.site + "/", color: 0xe3b55b,
-              description: (note ? note + "\n\n" : "") +
-                "The guard at the gate says the **Bark and Stone** hall has a place for you. Come and have a look:\n\n" +
-                "⚒️ Find who can craft what, and post jobs on the **Request Board**\n" +
-                "💰 Buy and sell on the guild **market**\n" +
-                "📅 Sign up for **dungeons, raids and events**\n" +
-                "🏆 Earn **achievements** that sync from your Armory as you play\n" +
-                "🗺️ The world map, Loot Vault, guides and guild news\n\n" +
-                "Signing up takes a minute. Add your main character and you're in the guild roster.",
-              footer: { text: "Bark and Stone · guild website" },
-            }];
-            msg.components = [{ type: 1, components: [{ type: 2, style: 5, label: "Visit the guild hall", url: cfg.site + "/" }] }];
-          }
-          await discordApi(cfg, "POST", `/channels/${channel}/messages`, msg);
-        }
-      } catch (e) {
-        return json(200, { ...out, error: e.status === 403 ? "The bot isn't allowed to post in that channel. Pick another, or ask a Discord admin to let the bot send messages there." : "Discord didn't take the message: " + e.message });
-      }
-      out.posted = ids.length;
-    }
-    return json(200, out);
+    return json(200, { posted: true });
   }
 
   if (action === "setup") {
