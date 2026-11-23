@@ -1,6 +1,6 @@
 /* Bark and Stone — Achievements (#achievements).
-   Site achievements are earned automatically from what members do on the site. Guild deeds (dungeons, raids,
-   adventures) are claimed by members and approved by the guild master. Honours can only be given by the guild master.
+   Site achievements are earned automatically from what members do on the site. Most in-game deeds are marked done by
+   the member and granted at once ("self"). A few big deeds are claimed and approved by the guild master. Honours are GM-only.
    The guild master (rank Thane) is the ruling authority: creates, edits and retires achievements, decides claims,
    awards honours and can revoke anything. The database enforces this (supabase-achievements.sql). */
 (() => {
@@ -14,7 +14,7 @@ const ICON = (ic) => `https://wow.zamimg.com/images/wow/icons/large/${/^[a-z0-9_
 const img = (ic, cls) => `<img class="${cls || "ach-ic"}" src="${ICON(ic)}" alt="" loading="lazy" onerror="this.onerror=null;this.src='${ICON("inv_misc_questionmark")}'">`;
 const ago = (t) => { if (!t) return ""; const s = (Date.now() - t) / 1000; if (s < 3600) return Math.max(1, Math.floor(s / 60)) + "m ago"; if (s < 86400) return Math.floor(s / 3600) + "h ago"; return Math.floor(s / 86400) + "d ago"; };
 const day = (t) => (t ? new Date(t).toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }) : "");
-const KIND = { auto: "Earned on the site", claim: "Claim it, the guild master approves", award: "Only the guild master can award this" };
+const KIND = { auto: "Earned on the site", self: "Done it? Mark it and it's yours", claim: "Claim it, the guild master approves", award: "Only the guild master can award this" };
 
 const st = { tab: "mine", cat: "", list: [], awards: [], loaded: false, busy: false, extra: null, claimFor: null, msg: "", gmMember: "", gmEdit: null, gmQ: "" };
 
@@ -120,6 +120,7 @@ function card(a, uid) {
   else if (s === "denied") foot = `<span class="ach-deny">Not approved${w.gmNote ? `: “${esc(w.gmNote)}”` : ""}</span>${me ? ` <button class="linkish" data-ac="withdraw" data-id="${esc(w.id)}">Clear and claim again later</button>` : ""}`;
   else if (s === "revoked") foot = `<span class="ach-deny">Revoked by the guild master${w.gmNote ? `: “${esc(w.gmNote)}”` : ""}</span>`;
   else if (pr) foot = `<div class="ach-prog" title="${pr.have} of ${pr.need}"><i style="width:${Math.round(pr.have / pr.need * 100)}%"></i></div><span class="muted small">${pr.have} / ${pr.need}</span>`;
+  else if (a.kind === "self" && me && !a.retired) foot = `<button class="btn small primary" data-ac="done" data-id="${esc(a.id)}">✔ I did this</button>`;
   else if (a.kind === "claim" && me && !a.retired) foot = st.claimFor === a.id
     ? `<form class="ach-claim" data-ach="${esc(a.id)}"><input id="ach-note" maxlength="200" placeholder="Who was there, when, a screenshot link…" aria-label="Claim note"><button class="btn small primary" type="submit">Send claim</button><button class="btn small" type="button" data-ac="claim-cancel">Cancel</button></form>`
     : `<button class="btn small" data-ac="claim" data-id="${esc(a.id)}">Claim</button>`;
@@ -161,7 +162,7 @@ function fameHtml() {
         : `<p class="muted">No achievements earned yet. Be the first!</p>`}
     </section>
     <section class="card"><h3 class="sec">📜 Recently earned</h3>
-      ${feed.length ? `<ul class="ach-feed">${feed.map((w) => { const a = byId(w.ach); return `<li>${img(a.icon, "ach-ic sm")}<span><a href="#member-${esc(w.user)}">${esc(name(w.user))}</a> earned <strong>${esc(a.name)}</strong>${a.kind !== "auto" ? ` <span class="muted">(${a.kind === "award" ? "awarded" : "approved"} by the guild master)</span>` : ""}<br><span class="muted small">${ago(w.decided || w.t)}</span></span></li>`; }).join("")}</ul>`
+      ${feed.length ? `<ul class="ach-feed">${feed.map((w) => { const a = byId(w.ach); return `<li>${img(a.icon, "ach-ic sm")}<span><a href="#member-${esc(w.user)}">${esc(name(w.user))}</a> earned <strong>${esc(a.name)}</strong>${a.kind === "claim" || a.kind === "award" ? ` <span class="muted">(${a.kind === "award" ? "awarded" : "approved"} by the guild master)</span>` : ""}<br><span class="muted small">${ago(w.decided || w.t)}</span></span></li>`; }).join("")}</ul>`
         : `<p class="muted">Nothing yet.</p>`}
     </section></div>`;
 }
@@ -204,7 +205,7 @@ function gmHtml() {
           <label>Wowhead icon name<input id="ae-icon" maxlength="80" pattern="[a-z0-9_]+" value="${esc(e.icon)}" placeholder="e.g. inv_misc_trophy_01"></label>
           <label>Category<input id="ae-cat" list="ae-cats" required maxlength="30" value="${esc(e.category)}"><datalist id="ae-cats">${cats.map((c) => `<option value="${esc(c)}">`).join("")}</datalist></label>
           <label>Points<input id="ae-pts" type="number" min="0" max="100" value="${e.points}"></label>
-          <label>How it's earned<select id="ae-kind" ${e.kind === "auto" && !e.isNew ? "disabled" : ""}>${e.kind === "auto" && !e.isNew ? `<option value="auto">Automatically on the site</option>` : ""}<option value="claim" ${e.kind === "claim" ? "selected" : ""}>Members claim it, you approve</option><option value="award" ${e.kind === "award" ? "selected" : ""}>Only you award it</option></select></label>
+          <label>How it's earned<select id="ae-kind" ${e.kind === "auto" && !e.isNew ? "disabled" : ""}>${e.kind === "auto" && !e.isNew ? `<option value="auto">Automatically on the site</option>` : ""}<option value="self" ${e.kind === "self" ? "selected" : ""}>Members mark it done themselves</option><option value="claim" ${e.kind === "claim" ? "selected" : ""}>Members claim it, you approve</option><option value="award" ${e.kind === "award" ? "selected" : ""}>Only you award it</option></select></label>
           <label>Order<input id="ae-sort" type="number" min="0" max="9999" value="${e.sort}"></label>
           <label class="chk"><input type="checkbox" id="ae-retired" ${e.retired ? "checked" : ""}> Retired (hidden from members; earned ones still count)</label>
           <div class="ach-edit-act"><button class="btn primary" type="submit">${e.isNew ? "Create" : "Save"}</button><button class="btn" type="button" data-ac="edit-cancel">Cancel</button></div>
@@ -226,9 +227,9 @@ function render() {
   root.innerHTML = `
     <div class="shop-head ach-head">
       <div><p class="eyebrow">Bark and Stone · Guild</p><h2 class="hero-title">Achievements</h2>
-        <p class="muted map-intro">Earn achievements around the site, claim your deeds in game, and climb the hall of fame. <strong>The guild master has the final say</strong> on every achievement.</p>
+        <p class="muted map-intro">Site achievements unlock on their own. Done something in game? Mark it and it's yours. Only a few big deeds wait for the guild master, who can still revoke anything.</p>
         <div class="chips">${tabs.map(([k, l]) => `<button class="chip" data-ac="tab" data-v="${k}" aria-pressed="${st.tab === k}">${l}</button>`).join("")}</div></div>
-      <div class="shop-keeper">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("thorek", "empty-merchant") : ""}<p class="shop-bubble">Every deed counts, friend. Claim yours and the guild master will judge it!</p></div>
+      <div class="shop-keeper">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("thorek", "empty-merchant") : ""}<p class="shop-bubble">Every deed counts, friend. Done it? Mark it and wear it proud!</p></div>
     </div>
     ${st.msg ? `<p class="ach-msg" role="status">${esc(st.msg)}</p>` : ""}
     ${!st.loaded ? `<p class="muted">Opening the book of deeds…</p>` : st.tab === "mine" ? mineHtml() : st.tab === "fame" ? fameHtml() : st.tab === "all" ? allHtml() : gmHtml()}`;
@@ -246,6 +247,11 @@ root.addEventListener("click", async (e) => {
   if (a === "tab") { st.tab = b.dataset.v; st.msg = ""; render(); }
   else if (a === "cat") { st.cat = b.dataset.v; render(); }
   else if (a === "signin") { if (app().signIn) app().signIn(); }
+  else if (a === "done") {
+    b.disabled = true; const ach = byId(b.dataset.id);
+    await act(() => B.earnAchievements([b.dataset.id]), `🏆 ${ach.name} is yours!`);
+    if ((awardOf(ach.id, app().uid()) || {}).status === "granted") toast([ach]);
+  }
   else if (a === "claim") { st.claimFor = b.dataset.id; render(); const n = $("#ach-note"); if (n) n.focus(); }
   else if (a === "claim-cancel") { st.claimFor = null; render(); }
   else if (a === "withdraw") { b.disabled = true; await act(() => B.withdrawClaim(b.dataset.id), "Claim withdrawn."); }
@@ -255,7 +261,7 @@ root.addEventListener("click", async (e) => {
     if (s === "revoked" && !confirm(`Revoke “${ach.name}” from ${app().name(st.gmMember)}?`)) return;
     b.disabled = true; await act(() => B.giveAward(b.dataset.id, st.gmMember, s, msg.trim()), s === "revoked" ? "Revoked." : "Awarded.");
   }
-  else if (a === "new") { st.gmEdit = { isNew: true, id: "", name: "", description: "", icon: "inv_misc_trophy_01", category: "Guild", points: 10, kind: "claim", sort: 100, retired: false }; render(); }
+  else if (a === "new") { st.gmEdit = { isNew: true, id: "", name: "", description: "", icon: "inv_misc_trophy_01", category: "Guild", points: 10, kind: "self", sort: 100, retired: false }; render(); }
   else if (a === "edit") { st.gmEdit = { ...byId(b.dataset.id) }; render(); $("#ae-name") && $("#ae-name").focus(); }
   else if (a === "edit-cancel") { st.gmEdit = null; render(); }
 });

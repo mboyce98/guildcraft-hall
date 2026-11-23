@@ -117,7 +117,7 @@ Run `supabase-adverts.sql` once in the Supabase SQL Editor. Merchant Row shows o
 Run `supabase-achievements.sql` once in the Supabase SQL Editor. It creates the tables, the guild master rules and 59 starter achievements (`achievements-default.json`, also used by the demo).
 
 - **The guild master is the ruling authority.** That is whoever has the **Thane** rank (set by admins on the Admin page). Only they can create, edit or retire achievements, approve or deny claims, award honours, and revoke anything. The database enforces this.
-- **Site achievements** (Getting started, Leveling, Crafting, Trade, Guild life) are earned automatically as members use the site. A revoked one stays revoked.
-- **Guild deeds** (Dungeons, Raids, Adventure) are claimed by members with a note. The claim waits for the guild master on the Guild master tab.
+- **Site achievements** (Getting started, Leveling, Crafting, Trade, Guild life) are earned automatically as members use the site, on any page. A revoked one stays revoked.
+- **Guild deeds** (Dungeons, Raids, Adventure): members press **I did this** and get them straight away. Only Recruiter, Ahn'Qiraj and Naxxramas are claimed with a note and wait for the guild master on the Guild master tab. The guild master can change any achievement's type in the achievement book, and can revoke any achievement.
 - **Honours** (Guild master's honours) can only be given by the guild master.
 - Members see their points, progress bars and rank. The Hall of fame shows the leaderboard and recently earned achievements, and badges appear on member profiles.

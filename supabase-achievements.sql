@@ -17,7 +17,7 @@ create table if not exists public.achievements (
   icon        text not null default 'inv_misc_questionmark' check (icon ~ '^[a-z0-9_]{1,80}$'),
   category    text not null default 'Guild' check (char_length(category) between 1 and 30),
   points      int  not null default 10 check (points between 0 and 100),
-  kind        text not null default 'claim' check (kind in ('auto', 'claim', 'award')),
+  kind        text not null default 'claim' check (kind in ('auto', 'self', 'claim', 'award')),
   rule        jsonb,
   sort        int  not null default 100,
   retired     boolean not null default false,
@@ -55,7 +55,7 @@ drop policy if exists "claim or earn" on public.achievement_awards;
 create policy "claim or earn" on public.achievement_awards for insert to authenticated with check (
   public.is_guildmaster() or (
     user_id = auth.uid() and exists (select 1 from public.achievements a where a.id = achievement_id and not a.retired
-      and ((a.kind = 'claim' and status = 'pending') or (a.kind = 'auto' and status = 'granted')))));
+      and ((a.kind = 'claim' and status = 'pending') or (a.kind in ('auto', 'self') and status = 'granted')))));
 drop policy if exists "guild master decides" on public.achievement_awards;
 create policy "guild master decides" on public.achievement_awards for update to authenticated
   using (public.is_guildmaster()) with check (public.is_guildmaster());
@@ -105,34 +105,34 @@ insert into public.achievements (id, name, description, icon, category, points, 
   ('regular', 'Regular', 'Sign up for 5 guild events.', 'ability_warrior_battleshout', 'Guild life', 15, 'auto', '{"t":"event","n":5}'::jsonb, 41),
   ('rally-leader', 'Rally Leader', 'Plan a guild event.', 'inv_misc_horn_01', 'Guild life', 10, 'auto', '{"t":"event_host"}'::jsonb, 42),
   ('lorekeeper', 'Lorekeeper', 'Write a guide for the guild.', 'inv_misc_book_07', 'Guild life', 15, 'auto', '{"t":"guide"}'::jsonb, 43),
-  ('rfc', 'Ragefire Chasm', 'Clear Ragefire Chasm with guildmates.', 'spell_fire_fire', 'Dungeons', 10, 'claim', null, 50),
-  ('wailing-caverns', 'Wailing Caverns', 'Clear Wailing Caverns with guildmates.', 'spell_nature_sleep', 'Dungeons', 10, 'claim', null, 51),
-  ('deadmines', 'The Deadmines', 'Defeat Edwin VanCleef with guildmates.', 'inv_misc_bandana_03', 'Dungeons', 10, 'claim', null, 52),
-  ('shadowfang', 'Shadowfang Keep', 'Defeat Archmage Arugal with guildmates.', 'spell_shadow_charm', 'Dungeons', 10, 'claim', null, 53),
-  ('blackfathom', 'Blackfathom Deeps', 'Defeat Aku''mai with guildmates.', 'spell_frost_summonwaterelemental', 'Dungeons', 10, 'claim', null, 54),
-  ('stockade', 'The Stockade', 'Clear the Stockade with guildmates.', 'inv_misc_key_03', 'Dungeons', 10, 'claim', null, 55),
-  ('gnomeregan', 'Gnomeregan', 'Defeat Mekgineer Thermaplugg with guildmates.', 'inv_misc_gear_02', 'Dungeons', 15, 'claim', null, 56),
-  ('razorfen-kraul', 'Razorfen Kraul', 'Defeat Charlga Razorflank with guildmates.', 'inv_misc_root_02', 'Dungeons', 15, 'claim', null, 57),
-  ('scarlet', 'Scarlet Crusader', 'Clear all four wings of the Scarlet Monastery with guildmates.', 'inv_shield_14', 'Dungeons', 20, 'claim', null, 58),
-  ('razorfen-downs', 'Razorfen Downs', 'Defeat Amnennar the Coldbringer with guildmates.', 'spell_shadow_raisedead', 'Dungeons', 15, 'claim', null, 59),
-  ('uldaman', 'Uldaman', 'Defeat Archaedas with guildmates.', 'inv_misc_stonetablet_05', 'Dungeons', 15, 'claim', null, 60),
-  ('zulfarrak', 'Zul''Farrak', 'Defeat Chief Ukorz Sandscalp with guildmates.', 'inv_misc_head_troll_01', 'Dungeons', 15, 'claim', null, 61),
-  ('maraudon', 'Maraudon', 'Defeat Princess Theradras with guildmates.', 'inv_misc_root_01', 'Dungeons', 15, 'claim', null, 62),
-  ('sunken-temple', 'Sunken Temple', 'Defeat the Shade of Eranikus with guildmates.', 'inv_misc_head_dragon_green', 'Dungeons', 20, 'claim', null, 63),
-  ('blackrock-depths', 'Blackrock Depths', 'Defeat Emperor Dagran Thaurissan with guildmates.', 'spell_fire_lavaspawn', 'Dungeons', 20, 'claim', null, 64),
-  ('stratholme', 'Stratholme', 'Defeat Baron Rivendare with guildmates.', 'spell_shadow_deathcoil', 'Dungeons', 20, 'claim', null, 65),
-  ('scholomance', 'Scholomance', 'Defeat Darkmaster Gandling with guildmates.', 'spell_shadow_shadowbolt', 'Dungeons', 20, 'claim', null, 66),
-  ('molten-core', 'Into the Fire', 'Defeat Ragnaros in Molten Core with the guild.', 'spell_fire_incinerate', 'Raids', 50, 'claim', null, 70),
-  ('onyxia', 'Onyxia''s End', 'Defeat Onyxia with the guild.', 'inv_misc_head_dragon_01', 'Raids', 40, 'claim', null, 71),
-  ('zulgurub', 'The Blood God', 'Defeat Hakkar in Zul''Gurub with the guild.', 'inv_misc_head_troll_01', 'Raids', 40, 'claim', null, 72),
-  ('blackwing-lair', 'Blackwing Descent', 'Defeat Nefarian in Blackwing Lair with the guild.', 'inv_misc_head_dragon_black', 'Raids', 50, 'claim', null, 73),
+  ('rfc', 'Ragefire Chasm', 'Clear Ragefire Chasm with guildmates.', 'spell_fire_fire', 'Dungeons', 10, 'self', null, 50),
+  ('wailing-caverns', 'Wailing Caverns', 'Clear Wailing Caverns with guildmates.', 'spell_nature_sleep', 'Dungeons', 10, 'self', null, 51),
+  ('deadmines', 'The Deadmines', 'Defeat Edwin VanCleef with guildmates.', 'inv_misc_bandana_03', 'Dungeons', 10, 'self', null, 52),
+  ('shadowfang', 'Shadowfang Keep', 'Defeat Archmage Arugal with guildmates.', 'spell_shadow_charm', 'Dungeons', 10, 'self', null, 53),
+  ('blackfathom', 'Blackfathom Deeps', 'Defeat Aku''mai with guildmates.', 'spell_frost_summonwaterelemental', 'Dungeons', 10, 'self', null, 54),
+  ('stockade', 'The Stockade', 'Clear the Stockade with guildmates.', 'inv_misc_key_03', 'Dungeons', 10, 'self', null, 55),
+  ('gnomeregan', 'Gnomeregan', 'Defeat Mekgineer Thermaplugg with guildmates.', 'inv_misc_gear_02', 'Dungeons', 15, 'self', null, 56),
+  ('razorfen-kraul', 'Razorfen Kraul', 'Defeat Charlga Razorflank with guildmates.', 'inv_misc_root_02', 'Dungeons', 15, 'self', null, 57),
+  ('scarlet', 'Scarlet Crusader', 'Clear all four wings of the Scarlet Monastery with guildmates.', 'inv_shield_14', 'Dungeons', 20, 'self', null, 58),
+  ('razorfen-downs', 'Razorfen Downs', 'Defeat Amnennar the Coldbringer with guildmates.', 'spell_shadow_raisedead', 'Dungeons', 15, 'self', null, 59),
+  ('uldaman', 'Uldaman', 'Defeat Archaedas with guildmates.', 'inv_misc_stonetablet_05', 'Dungeons', 15, 'self', null, 60),
+  ('zulfarrak', 'Zul''Farrak', 'Defeat Chief Ukorz Sandscalp with guildmates.', 'inv_misc_head_troll_01', 'Dungeons', 15, 'self', null, 61),
+  ('maraudon', 'Maraudon', 'Defeat Princess Theradras with guildmates.', 'inv_misc_root_01', 'Dungeons', 15, 'self', null, 62),
+  ('sunken-temple', 'Sunken Temple', 'Defeat the Shade of Eranikus with guildmates.', 'inv_misc_head_dragon_green', 'Dungeons', 20, 'self', null, 63),
+  ('blackrock-depths', 'Blackrock Depths', 'Defeat Emperor Dagran Thaurissan with guildmates.', 'spell_fire_lavaspawn', 'Dungeons', 20, 'self', null, 64),
+  ('stratholme', 'Stratholme', 'Defeat Baron Rivendare with guildmates.', 'spell_shadow_deathcoil', 'Dungeons', 20, 'self', null, 65),
+  ('scholomance', 'Scholomance', 'Defeat Darkmaster Gandling with guildmates.', 'spell_shadow_shadowbolt', 'Dungeons', 20, 'self', null, 66),
+  ('molten-core', 'Into the Fire', 'Defeat Ragnaros in Molten Core with the guild.', 'spell_fire_incinerate', 'Raids', 50, 'self', null, 70),
+  ('onyxia', 'Onyxia''s End', 'Defeat Onyxia with the guild.', 'inv_misc_head_dragon_01', 'Raids', 40, 'self', null, 71),
+  ('zulgurub', 'The Blood God', 'Defeat Hakkar in Zul''Gurub with the guild.', 'inv_misc_head_troll_01', 'Raids', 40, 'self', null, 72),
+  ('blackwing-lair', 'Blackwing Descent', 'Defeat Nefarian in Blackwing Lair with the guild.', 'inv_misc_head_dragon_black', 'Raids', 50, 'self', null, 73),
   ('ahnqiraj', 'Scarab Lord''s Shadow', 'Defeat C''Thun in the Temple of Ahn''Qiraj with the guild.', 'spell_shadow_charm', 'Raids', 60, 'claim', null, 74),
   ('naxxramas', 'The Fall of Naxxramas', 'Defeat Kel''Thuzad with the guild.', 'spell_shadow_soulgem', 'Raids', 75, 'claim', null, 75),
-  ('first-mount', 'Saddle Up', 'Learn to ride and get your first mount.', 'ability_mount_ridinghorse', 'Adventure', 15, 'claim', null, 80),
-  ('epic-mount', 'Swift as the Wind', 'Get a swift (epic) mount.', 'ability_mount_whitetiger', 'Adventure', 25, 'claim', null, 81),
-  ('exalted', 'Exalted', 'Reach Exalted with any faction.', 'inv_misc_tabardpvp_01', 'Adventure', 20, 'claim', null, 82),
-  ('angler', 'Master Angler', 'Reach 300 Fishing.', 'trade_fishing', 'Adventure', 15, 'claim', null, 83),
-  ('leveling-buddy', 'Leveling Buddy', 'Level 10 times while grouped with a guildmate.', 'inv_misc_groupneedmore', 'Adventure', 15, 'claim', null, 84),
+  ('first-mount', 'Saddle Up', 'Learn to ride and get your first mount.', 'ability_mount_ridinghorse', 'Adventure', 15, 'self', null, 80),
+  ('epic-mount', 'Swift as the Wind', 'Get a swift (epic) mount.', 'ability_mount_whitetiger', 'Adventure', 25, 'self', null, 81),
+  ('exalted', 'Exalted', 'Reach Exalted with any faction.', 'inv_misc_tabardpvp_01', 'Adventure', 20, 'self', null, 82),
+  ('angler', 'Master Angler', 'Reach 300 Fishing.', 'trade_fishing', 'Adventure', 15, 'self', null, 83),
+  ('leveling-buddy', 'Leveling Buddy', 'Level 10 times while grouped with a guildmate.', 'inv_misc_groupneedmore', 'Adventure', 15, 'self', null, 84),
   ('recruiter', 'Recruiter', 'Bring a friend into Bark and Stone.', 'inv_letter_02', 'Adventure', 15, 'claim', null, 85),
   ('founder', 'Founding Member', 'One of the first members of Bark and Stone.', 'inv_misc_tabardsummer01', 'Guild master''s honours', 25, 'award', null, 90),
   ('guild-hero', 'Hero of the Guild', 'Went above and beyond for Bark and Stone.', 'spell_holy_heroism', 'Guild master''s honours', 50, 'award', null, 91),
@@ -141,3 +141,12 @@ insert into public.achievements (id, name, description, icon, category, points, 
 on conflict (id) do nothing;
 
 select (select count(*) from public.achievements) as achievements, (select string_agg(username, ', ') from public.profiles where guild_rank = 'Thane') as guild_master;
+
+-- ---------- Upgrade: "self" achievements (members mark them done, granted at once) ----------
+-- Safe to run on an existing install. Keeps only a few big deeds for the guild master to approve.
+alter table public.achievements drop constraint if exists achievements_kind_check;
+alter table public.achievements add constraint achievements_kind_check check (kind in ('auto', 'self', 'claim', 'award'));
+update public.achievements set kind = 'self' where kind = 'claim' and id not in ('recruiter', 'ahnqiraj', 'naxxramas');
+-- Claims already waiting on deeds that no longer need approval are granted.
+update public.achievement_awards w set status = 'granted' from public.achievements a
+  where a.id = w.achievement_id and a.kind = 'self' and w.status = 'pending';
