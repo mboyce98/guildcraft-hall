@@ -218,6 +218,7 @@ function render() {
       if (box && document.activeElement !== box) { box.value = chatState.value; box.focus(); try { box.setSelectionRange(chatState.s, chatState.e); } catch {} }
     }, 0);
     renderBell(); renderOnline(); renderDmButton(); renderEventBits(); renderTradeBadge();
+    if (window.GC_ACH && S.uid && S.view !== "achievements") window.GC_ACH.check();
     if (S.view === "events") { if (!(typing && typing.closest("#view-events"))) renderEvents(); }
     else if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }

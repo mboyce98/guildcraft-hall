@@ -24,14 +24,21 @@ async function load(force) {
   if (!B || !B.loadAchievements || !uid || st.busy || (st.loaded && !force)) return;
   st.busy = true;
   try {
-    const [d, guides, prices] = await Promise.all([B.loadAchievements(), st.extra ? null : B.loadGuides().catch(() => []), st.extra ? null : B.loadPrices().catch(() => [])]);
+    const d = await B.loadAchievements();
     st.list = d.list; st.awards = d.awards;
-    if (!st.extra) st.extra = { guides: guides || [], prices: prices || [] };
+    // Guides and prices are only fetched when an unearned achievement needs them.
+    const want = (t) => st.list.some((a) => a.kind === "auto" && !a.retired && (a.rule || {}).t === t && !awardOf(a.id, uid));
+    if (!st.extra) {
+      const [guides, prices] = await Promise.all([want("guide") ? B.loadGuides().catch(() => []) : [], want("prices") ? B.loadPrices().catch(() => []) : []]);
+      st.extra = { guides, prices };
+    }
     st.loaded = true;
+    st.lastEarn = st.loadedAt = Date.now();
     await earnNew();
   } catch (e) { st.msg = "Achievements didn't load: " + (e.message || "try again") + ". The guild master may need to run supabase-achievements.sql."; }
   st.busy = false;
-  render(); paintBadges();
+  if (!root.hidden) render();
+  paintBadges();
 }
 const byId = (id) => st.list.find((a) => a.id === id);
 const awardOf = (ach, user) => st.awards.find((w) => w.ach === ach && w.user === user);
@@ -67,7 +74,34 @@ async function earnNew() {
   const uid = app().uid(); if (!uid) return;
   const fresh = st.list.filter((a) => a.kind === "auto" && !a.retired && !awardOf(a.id, uid) && (() => { const q = progress(a); return q.have >= q.need; })()).map((a) => a.id);
   if (!fresh.length) return;
-  try { await app().backend().earnAchievements(fresh); const d = await app().backend().loadAchievements(); st.awards = d.awards; st.msg = `🏆 New achievement${fresh.length === 1 ? "" : "s"}: ${fresh.map((id) => byId(id).name).join(", ")}!`; } catch {}
+  try {
+    await app().backend().earnAchievements(fresh); const d = await app().backend().loadAchievements(); st.awards = d.awards;
+    const got = fresh.filter((id) => (awardOf(id, uid) || {}).status === "granted").map(byId);
+    if (!got.length) return;
+    st.msg = `🏆 New achievement${got.length === 1 ? "" : "s"}: ${got.map((a) => a.name).join(", ")}!`;
+    toast(got); paintBadges();
+  } catch {}
+}
+// A small notice in the corner, shown on whatever page the member is on.
+function toast(got) {
+  let box = document.getElementById("ach-toasts");
+  if (!box) { box = document.createElement("div"); box.id = "ach-toasts"; box.setAttribute("role", "status"); document.body.appendChild(box); }
+  got.slice(0, 3).forEach((a, i) => {
+    const t = document.createElement("a"); t.className = "ach-toast"; t.href = "#achievements";
+    t.innerHTML = `${img(a.icon, "ach-ic sm")}<span><small>Achievement earned</small><strong>${esc(a.name)}</strong></span><b class="ach-pts sm">${a.points || 0}</b>`;
+    setTimeout(() => { box.appendChild(t); setTimeout(() => { t.classList.add("out"); setTimeout(() => t.remove(), 400); }, 6000); }, i * 700);
+  });
+}
+// Background check from any page: new site achievements are recorded as soon as they're earned.
+function check() {
+  const uid = app().uid && app().uid(); if (!uid || st.busy) return;
+  if (st.uid !== uid) { st.uid = uid; st.loaded = false; st.extra = null; st.awards = []; st.msg = ""; }
+  if (!st.loaded) { if (!st.waiting) { st.waiting = true; setTimeout(() => { st.waiting = false; load(); }, 3000); } return; }
+  if (Date.now() - (st.loadedAt || 0) > 300000) { st.extra = null; load(true); return; } // fresh copy every 5 minutes
+  const wait = 15000 - (Date.now() - (st.lastEarn || 0));
+  if (wait > 0) { if (!st.again) st.again = setTimeout(() => { st.again = 0; check(); }, wait + 50); return; } // check again once the pause ends
+  st.lastEarn = Date.now(); st.busy = true;
+  earnNew().finally(() => { st.busy = false; if (!root.hidden && st.msg) render(); });
 }
 
 // ---------- Views ----------
@@ -254,5 +288,5 @@ function badgesHtml(uid) {
 }
 function paintBadges() { document.querySelectorAll("[data-ach-badges]").forEach((el) => { el.innerHTML = badgesHtml(el.dataset.achBadges); }); }
 
-window.GC_ACH = { render, reload: () => load(true), badges: (uid) => `<div data-ach-badges="${esc(uid)}">${badgesHtml(uid)}</div>`, reset: () => { st.loaded = false; st.extra = null; st.awards = []; } };
+window.GC_ACH = { render, check, reload: () => load(true), badges: (uid) => `<div data-ach-badges="${esc(uid)}">${badgesHtml(uid)}</div>`, reset: () => { st.loaded = false; st.extra = null; st.awards = []; } };
 })();

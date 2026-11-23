@@ -1099,3 +1099,11 @@ a.mstat[href]:hover{border-color:var(--brass)}
 .ach-badges{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
 .ach-badge img{display:block}
 .ach-prof{margin-top:16px}
+#ach-toasts{position:fixed; left:16px; bottom:16px; z-index:90; display:grid; gap:8px; pointer-events:none}
+.ach-toast{pointer-events:auto; display:flex; align-items:center; gap:10px; min-width:240px; max-width:calc(100vw - 32px); padding:10px 12px; border-radius:10px; border:1px solid var(--brass); background:var(--panel); box-shadow:0 8px 24px rgb(0 0 0 / .55); color:inherit; text-decoration:none; animation:ach-in .35s ease-out; transition:opacity .4s, transform .4s}
+.ach-toast span{flex:1; min-width:0; display:flex; flex-direction:column}
+.ach-toast small{font-size:.75rem; color:var(--muted); text-transform:uppercase; letter-spacing:.06em}
+.ach-toast strong{color:var(--gold-hi); font-family:var(--f-display)}
+.ach-toast.out{opacity:0; transform:translateY(8px)}
+@keyframes ach-in{from{opacity:0; transform:translateY(12px)}}
+@media (prefers-reduced-motion:reduce){.ach-toast{animation:none; transition:none}}
