@@ -174,6 +174,36 @@ function demoDb() {
       if (data.ads.filter((a) => a.user === u.id).length >= 2) throw new Error("You can have 2 adverts running at once. Remove one first.");
       data.ads.push({ id: String(data.seq++), user: u.id, model: o.model, title: o.title, body: o.body, kind: o.kind, link: o.link, char: o.char || "", created: now, expires: now + (o.days || 14) * 86400000 }); persist(); },
     async deleteAd(id) { data.ads = (data.ads || []).filter((a) => a.id !== id); persist(); },
+    // ---- Achievements (demo: kept in this browser; the starter list comes from achievements-default.json) ----
+    async loadAchievements() {
+      if (!data.achList) { try { data.achList = await (await fetch("achievements-default.json")).json(); data.achList.forEach((a) => { a.retired = false; }); persist(); } catch { data.achList = []; } }
+      return { list: data.achList.map((a) => ({ ...a })), awards: (data.achAwards || []).map((w) => ({ ...w })) };
+    },
+    async earnAchievements(ids) {
+      const u = need(); data.achAwards = data.achAwards || [];
+      ids.forEach((a) => { if (!data.achAwards.some((w) => w.ach === a && w.user === u.id)) data.achAwards.push({ id: String(data.seq++), ach: a, user: u.id, status: "granted", note: "", gmNote: "", t: Date.now(), decided: 0 }); });
+      persist();
+    },
+    async claimAchievement(ach, note) {
+      const u = need(); data.achAwards = data.achAwards || [];
+      if (data.achAwards.some((w) => w.ach === ach && w.user === u.id)) throw new Error("You've already claimed this one.");
+      data.achAwards.push({ id: String(data.seq++), ach, user: u.id, status: "pending", note: note || "", gmNote: "", t: Date.now(), decided: 0 }); persist();
+    },
+    async withdrawClaim(id) { data.achAwards = (data.achAwards || []).filter((w) => w.id !== id); persist(); },
+    async decideAward(id, status, gmNote) { const w = (data.achAwards || []).find((x) => x.id === id); if (w) Object.assign(w, { status, gmNote: gmNote || "", decided: Date.now() }); persist(); },
+    async giveAward(ach, user, status, gmNote) {
+      data.achAwards = data.achAwards || [];
+      const w = data.achAwards.find((x) => x.ach === ach && x.user === user);
+      if (w) Object.assign(w, { status, gmNote: gmNote || "", decided: Date.now() });
+      else data.achAwards.push({ id: String(data.seq++), ach, user, status, note: "", gmNote: gmNote || "", t: Date.now(), decided: Date.now() });
+      persist();
+    },
+    async saveAchievement(a, isNew) {
+      data.achList = data.achList || [];
+      if (isNew) { if (data.achList.some((x) => x.id === a.id)) throw new Error("An achievement with that ID already exists."); data.achList.push({ ...a }); }
+      else Object.assign(data.achList.find((x) => x.id === a.id) || {}, a);
+      persist();
+    },
     async recentPrices(items) { const want = new Set(items.map((x) => x.toLowerCase())); return (data.prices || []).filter((p) => want.has(p.item.toLowerCase())).map((p) => ({ ...p })); },
     async discordIdentity() { return null; },
     async linkDiscord() { throw new Error("Linking Discord works on the live site."); },
@@ -393,6 +423,32 @@ async function supabaseDb() {
       if (r.error) throw new Error(/row-level security/i.test(r.error.message) ? "You can have 2 adverts running at once. Remove one first." : r.error.message);
     },
     async deleteAd(id) { ok(await sb.from("adverts").delete().eq("id", Number(id))); },
+    // ---- Achievements (the guild master rules them; the database enforces it) ----
+    async loadAchievements() {
+      const [a, w] = await Promise.all([
+        sb.from("achievements").select("*").order("sort").order("name"),
+        sb.from("achievement_awards").select("*").order("created_at", { ascending: false }).limit(5000),
+      ]);
+      if (a.error) throw a.error; if (w.error) throw w.error;
+      return {
+        list: a.data.map((x) => ({ id: x.id, name: x.name, description: x.description, icon: x.icon, category: x.category, points: x.points, kind: x.kind, rule: x.rule, sort: x.sort, retired: x.retired })),
+        awards: w.data.map((x) => ({ id: String(x.id), ach: x.achievement_id, user: x.user_id, status: x.status, note: x.note, gmNote: x.gm_note, by: x.decided_by, t: Date.parse(x.created_at), decided: x.decided_at ? Date.parse(x.decided_at) : 0 })),
+      };
+    },
+    async earnAchievements(ids) {
+      const id = await need(); if (!ids.length) return;
+      ok(await sb.from("achievement_awards").upsert(ids.map((a) => ({ achievement_id: a, user_id: id, status: "granted" })), { onConflict: "achievement_id,user_id", ignoreDuplicates: true }));
+    },
+    async claimAchievement(ach, note) { const id = await need(); ok(await sb.from("achievement_awards").insert({ achievement_id: ach, user_id: id, status: "pending", note: note || "" })); },
+    async withdrawClaim(awardId) { ok(await sb.from("achievement_awards").delete().eq("id", Number(awardId))); },
+    async decideAward(awardId, status, gmNote) { ok(await sb.from("achievement_awards").update({ status, gm_note: gmNote || "" }).eq("id", Number(awardId))); },
+    async giveAward(ach, user, status, gmNote) {
+      ok(await sb.from("achievement_awards").upsert({ achievement_id: ach, user_id: user, status, gm_note: gmNote || "" }, { onConflict: "achievement_id,user_id" }));
+    },
+    async saveAchievement(a, isNew) {
+      const row = { id: a.id, name: a.name, description: a.description, icon: a.icon, category: a.category, points: a.points, kind: a.kind, sort: a.sort, retired: !!a.retired, ...(isNew ? { rule: a.rule || null } : {}) };
+      ok(await (isNew ? sb.from("achievements").insert(row) : sb.from("achievements").update(row).eq("id", a.id)));
+    },
     async recentPrices(items) {
       if (!items.length) return [];
       const since = new Date(Date.now() - 21 * 86400000).toISOString();

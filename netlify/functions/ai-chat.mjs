@@ -30,6 +30,7 @@ Pages of the site (link them as plain paths like ${SITE}/#market):
 - #rules, #chronicle (guild lore), #classes (classes and races), #members, #messages (private messages)
 - #guides: member-written guides (gathering paths, questing routes, dungeons) and the Market prices tab, where members report prices and see trends
 - #map: world map with gathering spots, #cities: Stormwind and Ironforge trainers and vendors, #loot: Loot Vault of dungeon drops
+- #achievements: guild achievements: site ones earned automatically, guild deeds (dungeons, raids, adventures) claimed by members and approved by the guild master, honours only the guild master gives, a hall of fame leaderboard
 - #mounts: every mount in WoW Forever and how to get it, riding levels, and the best dungeon drops for each level bracket
 - #classes: classes and races, including what is new in WoW Forever (the Skyborne race, Undead Paladins, and other new race and class pairings)
 - #recipes: every recipe and who in the guild can craft it, #mine: a member's crafter profile, #requests: crafting requests

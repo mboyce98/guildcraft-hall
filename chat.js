@@ -65,7 +65,7 @@ function localAnswer(k) {
 function format(text) {
   const link = (s) => s
     .replace(/(https?:\/\/[^\s<)]+[^\s<).,!?;:'"])/g, (u) => `<a href="${u}" ${u.startsWith(location.origin) || /guildcraft-hall\.netlify\.app/.test(u) ? "" : 'target="_blank" rel="noopener"'}>${u.replace(/^https?:\/\/(www\.)?/, "").replace(/^guildcraft-hall\.netlify\.app\/?/, "").replace(location.host + "/", "")}</a>`)
-    .replace(/(^|[\s(])(#(?:home|rules|chronicle|classes|members|messages|guides|prices|guide-\d+|event-\d+|events|map|cities|loot|mounts|recipes|mine|requests|board|market|profile))\b/g, '$1<a href="$2">$2</a>');
+    .replace(/(^|[\s(])(#(?:home|rules|chronicle|classes|members|messages|guides|prices|guide-\d+|event-\d+|events|map|cities|loot|mounts|achievements|recipes|mine|requests|board|market|profile))\b/g, '$1<a href="$2">$2</a>');
   const inline = (s) => link(esc(s)).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   let html = "", inList = false;
   for (const raw of String(text).split("\n")) {

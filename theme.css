@@ -1038,3 +1038,71 @@ a.mstat[href]:hover{border-color:var(--brass)}
 .mjobs{list-style:none; margin:0 0 10px; padding:0; display:grid; gap:8px}
 .mjobs li{padding-bottom:6px; border-bottom:1px dashed var(--line)}
 @media (max-width:760px){ .mine-grid{grid-template-columns:minmax(0, 1fr)} .mskill{grid-template-columns:minmax(0, 1fr) 80px 32px} }
+
+/* ---------- Achievements ---------- */
+.ach-msg{margin:0 0 12px; padding:10px 14px; border-radius:8px; border:1px solid var(--brass); background:rgb(227 181 91 / .1); color:var(--gold-hi); font-weight:600}
+.ach-summary{display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr)); gap:10px; margin-bottom:14px}
+.ach-big{display:flex; flex-direction:column; gap:2px; padding:14px 16px; border-radius:10px; border:1px solid #6b5426; background:radial-gradient(ellipse at 0 0, rgb(227 181 91 / .14), transparent 60%), var(--panel)}
+.ach-big b{font:700 1.9rem var(--f-display); color:var(--gold-hi)} .ach-big small{font-size:1rem; color:var(--muted)}
+.ach-big span{font-size:.82rem; color:var(--muted)}
+.ach-cats{margin-bottom:4px}
+.ach-cat{margin:18px 0 8px}
+.ach-grid{display:grid; gap:10px; grid-template-columns:repeat(auto-fill, minmax(min(100%, 330px), 1fr))}
+.ach{position:relative; display:flex; gap:12px; padding:12px 48px 12px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel); min-height:84px}
+.ach-ic{flex:none; width:52px; height:52px; border-radius:8px; border:2px solid #3b3b3b; box-shadow:0 2px 8px rgb(0 0 0 / .5)}
+.ach-ic.sm{width:34px; height:34px; border-radius:6px; border-width:1px}
+.ach-main{min-width:0; display:flex; flex-direction:column; gap:3px}
+.ach h4{margin:0; font-family:var(--f-display); font-size:1rem}
+.ach p{margin:0; font-size:.86rem; color:var(--muted); line-height:1.4}
+.ach-foot{margin-top:auto; display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:.82rem; padding-top:4px}
+.ach-pts, .ach-pts.sm{position:absolute; right:10px; top:10px; display:grid; place-items:center; width:32px; height:36px; font:700 .9rem var(--f-display); color:var(--brass-ink);
+  background:linear-gradient(180deg, var(--gold-hi), var(--gold-lo)); clip-path:polygon(50% 0, 100% 18%, 100% 70%, 50% 100%, 0 70%, 0 18%)}
+.ach-pts.sm{position:static; width:26px; height:30px; font-size:.78rem; flex:none}
+.ach.s-granted{border-color:var(--brass); background:radial-gradient(ellipse at 0 0, rgb(227 181 91 / .16), transparent 55%), var(--panel)}
+.ach.s-granted h4{color:var(--gold-hi)}
+.ach.s-locked .ach-ic, .ach.s-denied .ach-ic, .ach.s-revoked .ach-ic{filter:grayscale(1) brightness(.6)}
+.ach.s-locked .ach-pts{filter:grayscale(1) brightness(.7)}
+.ach.s-pending{border-color:#4a6fa5}
+.ach.s-revoked h4{text-decoration:line-through; color:var(--muted)}
+.ach-when{color:var(--gold-hi)} .ach-gm{color:#e6c98a; font-style:italic}
+.ach-pend{color:#9fc0ff} .ach-deny{color:#ff9a9a}
+.ach-prog{flex:1 1 120px; height:8px; border-radius:4px; background:rgb(0 0 0 / .4); border:1px solid var(--line); overflow:hidden}
+.ach-prog i{display:block; height:100%; background:linear-gradient(90deg, var(--gold-lo), var(--gold-hi))}
+.ach-claim{display:flex; flex-wrap:wrap; gap:6px; width:100%}
+.ach-claim input{flex:1 1 180px}
+.ach-fame{display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 360px), 1fr))}
+.ach-lb{list-style:none; margin:0; padding:0; display:grid; gap:6px}
+.ach-lb li{display:flex; align-items:center; gap:10px; padding:6px 8px; border-radius:8px; background:rgb(0 0 0 / .2)}
+.ach-lb li a{flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-weight:600}
+.ach-lb li b{font:700 1.05rem var(--f-display); color:var(--gold-hi)}
+.ach-place{width:26px; text-align:center; font:700 1rem var(--f-display); color:var(--muted)}
+.ach-lb li.top1{background:linear-gradient(90deg, rgb(255 215 0 / .22), transparent)} .ach-lb li.top1 .ach-place{color:#ffd700}
+.ach-lb li.top2{background:linear-gradient(90deg, rgb(200 200 220 / .18), transparent)} .ach-lb li.top2 .ach-place{color:#d8dbe6}
+.ach-lb li.top3{background:linear-gradient(90deg, rgb(205 127 50 / .2), transparent)} .ach-lb li.top3 .ach-place{color:#e09a5a}
+.ach-feed{list-style:none; margin:0; padding:0; display:grid; gap:10px}
+.ach-feed li{display:flex; gap:10px; align-items:flex-start; font-size:.9rem}
+.ach-table{display:grid; gap:6px}
+.ach-row{display:flex; align-items:center; gap:10px; padding:8px; border-radius:8px; background:rgb(0 0 0 / .2)}
+.ach-row > div{flex:1; min-width:0}
+.ach-row.retired{opacity:.55}
+.ach-rare{min-width:110px; text-align:right}
+.ach-gm-grid{display:grid; gap:14px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 380px), 1fr))}
+.ach-gm-wide{grid-column:1 / -1}
+.ach-claimrow{display:flex; gap:10px; padding:10px 0; border-bottom:1px dashed var(--line)}
+.ach-claimrow > div{flex:1; min-width:0}
+.ach-decide{display:flex; flex-wrap:wrap; gap:6px; margin-top:6px}
+.ach-decide input{flex:1 1 180px}
+#gm-member{width:100%}
+.ach-gm-list{display:grid; gap:4px; max-height:420px; overflow-y:auto; margin-top:10px; padding-right:4px}
+.ach-gm-item{display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:6px}
+.ach-gm-item span{flex:1; min-width:0}
+.ach-gm-item.s-granted{background:rgb(227 181 91 / .1)}
+.ach-gm-item.s-pending{background:rgb(74 111 165 / .18)}
+.ach-edit{display:grid; gap:10px; grid-template-columns:repeat(auto-fit, minmax(min(100%, 220px), 1fr)); margin:12px 0; padding:12px; border:1px solid var(--brass); border-radius:10px; background:rgb(227 181 91 / .06)}
+.ach-edit label{display:flex; flex-direction:column; gap:4px; font-size:.85rem; color:var(--muted)}
+.ach-edit label.chk{flex-direction:row; align-items:center}
+.ach-edit-prev{display:flex; align-items:center; gap:10px}
+.ach-edit-act{display:flex; gap:8px; align-items:flex-end}
+.ach-badges{display:flex; flex-wrap:wrap; gap:6px; margin-top:10px}
+.ach-badge img{display:block}
+.ach-prof{margin-top:16px}

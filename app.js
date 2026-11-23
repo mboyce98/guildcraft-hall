@@ -171,7 +171,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "achievements", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -223,6 +223,7 @@ function render() {
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "mounts") { if (window.GC_MOUNTS && !(typing && typing.closest("#view-mounts"))) window.GC_MOUNTS.render(); }
+    else if (S.view === "achievements") { if (window.GC_ACH && !(typing && typing.closest("#view-achievements"))) window.GC_ACH.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "members") { if (!(typing && typing.closest("#view-members"))) renderMembers(); }
@@ -993,7 +994,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", achievements: "Achievements", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
@@ -1076,6 +1077,7 @@ function renderProfile() {
     <div class="map-head prof-head"><div><p class="eyebrow"><a href="#members">Bark and Stone · Members</a></p><h2 class="hero-title">${mine ? "Your profile" : esc(p.username || "Member")}</h2></div>
       <div class="prof-acts">${mine ? "" : `<a class="btn primary" href="#messages-${esc(uid)}">Send a message</a>`}<a class="btn" href="#members">All members</a></div></div>
     <div class="cols prof-cols">${details}${editor || `<div class="card"><h2>Get in touch</h2><p class="muted">Send ${esc(p.username || "them")} a <a href="#messages-${esc(uid)}">private message</a>, find a recipe they know on <a href="#recipes">Recipes</a> and press Request, or post on the <a href="#board">Request Board</a> for anyone to pick up.</p></div>`}</div>
+    ${window.GC_ACH ? `<div class="card ach-prof"><div class="inline" style="justify-content:space-between"><h2 style="margin:0">🏅 Achievements</h2><a class="btn small" href="#achievements">${mine ? "My achievements" : "Hall of fame"}</a></div>${window.GC_ACH.badges(uid)}</div>` : ""}
     ${armoryCard(uid, mine)}`;
   void others;
 }
@@ -2386,6 +2388,9 @@ window.GC_APP = {
   backend: () => S.B, uid: () => S.uid, signIn: () => openAuth("in"),
   name: (uid) => { const p = prof(uid); return p.mainChar || p.username || "A guildmate"; },
   listings: () => S.listings, myChar: () => defaultChar(),
+  // What achievements.js needs.
+  ach: { profiles: () => S.profiles, crafter: (uid) => S.crafters.get(uid), requests: () => S.requests, listings: () => S.listings, board: () => S.board, events: () => S.events,
+    avatar: (uid, n) => avatarImg(uid, n), isGM: () => !!S.uid && (prof(S.uid).rank === "Thane" || (S.B && S.B.mode === "demo" && !!(S.me && S.me.isAdmin))) },
   goldText: (g) => { const c = toCopper(g); if (!c) return "offers"; const gg = Math.floor(c / 10000), s = Math.floor((c % 10000) / 100), cc = c % 100; return [gg && gg.toLocaleString("en-US") + "g", s && s + "s", cc && cc + "c"].filter(Boolean).join(" "); },
 };
 window.GC_AI = {
