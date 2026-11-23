@@ -171,7 +171,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "transmog", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
+  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -223,7 +223,6 @@ function render() {
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "mounts") { if (window.GC_MOUNTS && !(typing && typing.closest("#view-mounts"))) window.GC_MOUNTS.render(); }
-    else if (S.view === "transmog") { if (window.GC_TRANSMOG && !(typing && typing.closest("#view-transmog"))) window.GC_TRANSMOG.render(); }
     else if (S.view === "board") { if (!(typing && typing.closest("#view-board"))) { renderBoard(); scrollChats(); } }
     else if (S.view === "profile") { if (!(typing && typing.closest("#view-profile"))) renderProfile(); }
     else if (S.view === "members") { if (!(typing && typing.closest("#view-members"))) renderMembers(); }
@@ -448,11 +447,20 @@ function filteredRecipes() {
   const q = S.q.trim().toLowerCase();
   return RECIPES.filter((r) => (S.prof < 0 || r.p === S.prof) && (!S.onlyNew || r.isNew) && (!S.hasCrafter || INDEX.has(r.id)) && (!q || r.s.includes(q)));
 }
+const PROF_ICON = { Alchemy: "trade_alchemy", Blacksmithing: "trade_blacksmithing", Enchanting: "trade_engraving", Engineering: "trade_engineering", Leatherworking: "inv_misc_armorkit_17",
+  Tailoring: "trade_tailoring", "Mining (Smelting)": "trade_mining", Cooking: "inv_misc_food_15", "First Aid": "spell_holy_sealofsacrifice" };
+const profIcon = (name, size) => PROF_ICON[name] ? `<img class="prof-ic" src="https://wow.zamimg.com/images/wow/icons/${size || "small"}/${PROF_ICON[name]}.jpg" alt="" width="18" height="18" loading="lazy">` : "";
 function renderRecipes() {
   const root = $("#view-recipes");
   if (!root.dataset.built) {
     root.dataset.built = "1";
     root.innerHTML = `
+      <div class="shop-head">
+        <div><p class="eyebrow">Bark and Stone · Crafting</p><h2 class="hero-title">Recipe book</h2>
+          <p class="muted map-intro">Every recipe in WoW Forever, what it takes to make, and who in the guild can craft it for you.</p></div>
+        <div class="shop-keeper">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("thorek", "empty-merchant") : ""}<p class="shop-bubble">Need something made? Pick a recipe and ask a guild crafter. Mats first, mind!</p></div>
+      </div>
+      ${mrSlot("recipes")}
       <div class="filters">
         <input type="search" id="rq" placeholder="Search recipes, items or materials (e.g. Thorium Bar)" aria-label="Search recipes">
         <label class="chk"><input type="checkbox" id="rhas"> Someone in the guild can craft it</label>
@@ -471,14 +479,14 @@ function renderRecipes() {
   }
   const counts = PROFS.map((_, i) => RECIPES.filter((r) => r.p === i).length);
   $("#rprofs").innerHTML = `<button class="chip" data-prof="-1" aria-pressed="${S.prof < 0}">All<span class="n">${fmt(RECIPES.length)}</span></button>` +
-    PROFS.map((p, i) => `<button class="chip" data-prof="${i}" aria-pressed="${S.prof === i}">${esc(p)}<span class="n">${counts[i]}</span></button>`).join("");
+    PROFS.map((p, i) => `<button class="chip" data-prof="${i}" aria-pressed="${S.prof === i}">${profIcon(p)}${esc(p)}<span class="n">${counts[i]}</span></button>`).join("");
   const list = filteredRecipes();
   const shown = list.slice(0, S.limit);
   $("#rbody").innerHTML = shown.length ? shown.map((r) => {
     const cs = INDEX.get(r.id) || [];
     return `<tr class="click" data-recipe="${r.id}" aria-selected="${S.sel === r.id}" tabindex="0">
       <td><span class="rname q${r.q}">${esc(r.name)}</span>${r.isNew ? '<span class="tag new">New</span>' : ""}</td>
-      <td class="hide-sm muted">${esc(profName(r.p))}</td>
+      <td class="hide-sm muted">${profIcon(profName(r.p))} ${esc(profName(r.p))}</td>
       <td><span class="skill">${r.lv} ${skillBar(r)}</span></td>
       <td class="crafters-n ${cs.length ? "has" : ""}">${cs.length ? cs.length : '<span class="muted">' + (S.uid ? "0" : "–") + "</span>"}</td></tr>`;
   }).join("") : `<tr><td colspan="4"><div class="empty"><strong>No recipes match.</strong>Try a different search or profession.</div></td></tr>`;
@@ -486,13 +494,14 @@ function renderRecipes() {
     `<div class="more muted num">${fmt(list.length)} recipe${list.length === 1 ? "" : "s"}</div>`;
   const typing = document.activeElement && document.activeElement.closest && document.activeElement.closest("#reqform");
   if (!typing) renderSheet();
+  afterShop();
 }
 
 function renderSheet() {
   const el = $("#sheet"); if (!el) return;
   const r = S.sel && BYID.get(S.sel);
   el.dataset.empty = r ? "false" : "true";
-  if (!r) { el.innerHTML = `<div class="empty"><strong>Pick a recipe</strong>See its materials, skill-up ranks and who in the guild can craft it.</div>`; return; }
+  if (!r) { el.innerHTML = `<div class="empty with-merchant sheet-empty">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("rowan", "empty-merchant") : ""}<div><strong>Pick a recipe</strong>See its materials, skill-up ranks and who in the guild can craft it.</div></div>`; return; }
   const c = r.colors.length >= 4 ? r.colors : [r.lv, r.lv, r.lv, r.lv];
   const crafters = (INDEX.get(r.id) || []).slice().sort((a, b) => b.skill - a.skill);
   const creates = r.cr ? `Creates <span class="q${itemQ(r.cr)}">${esc(itemName(r.cr))}</span>${r.cmax > 1 ? ` ×${r.cmin === r.cmax ? r.cmin : r.cmin + "–" + r.cmax}` : ""}` : "Enchant / effect";
@@ -725,7 +734,7 @@ function renderRequests() {
     if (dir === "in") acts = r.status === "pending" ? [["accepted", "Accept", "primary"], ["declined", "Decline", ""]] : r.status === "accepted" ? [["done", "Mark done", "primary"], ["declined", "Decline", ""]] : [["delete", "Remove", ""]];
     else acts = r.status === "pending" || r.status === "accepted" ? [["cancelled", "Cancel", ""]] : [["delete", "Remove", ""]];
     const mats = rec && dir === "in" && r.status !== "done" ? `<div class="meta">Mats for ×${r.qty}: ${rec.mats.map((m) => `${esc(itemName(m[0]))} ×${m[1] * (r.qty || 1)}`).join(", ")}</div>` : "";
-    return `<div class="req">
+    return `<div class="req st-${esc(r.status)}">
       <div><div class="what">${verb}: ${rec ? `<a class="q${rec.q}" href="#recipe-${rec.id}">${esc(rec.name)}</a>` : esc(r.label || "Item")} <span class="num">×${r.qty || 1}</span></div>
         <div class="meta">${dir === "in" ? "From" : "To"} <strong>${esc(otherChar || "?")}</strong>${un ? ` (${esc(un)}${tagFor(other) ? " · " + esc(tagFor(other)) : ""})` : ""}${dir === "out" && r.fromChar ? ` · for ${esc(r.fromChar)}` : ""}${dir === "in" && r.toChar ? ` · to ${esc(r.toChar)}` : ""} · ${ago(r.created)} · ${r.kind === "craft" ? "Tip" : "Price"} ${gold(r.tip)}</div>
         ${r.note ? `<div class="meta">“${esc(r.note)}”</div>` : ""}${mats}</div>
@@ -733,13 +742,26 @@ function renderRequests() {
       ${chatBox("request", r.id) ? `<div class="req-chat">${chatBox("request", r.id)}</div>` : ""}
     </div>`;
   };
+  const pending = S.requests.filter((r) => r.to === S.uid && r.status === "pending").length;
+  const portrait = (k) => (window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait(k, "empty-merchant") : "");
   root.innerHTML = `
-    <div class="chips" style="margin-bottom:14px"><button class="chip" data-act="reqtab" data-t="open" aria-pressed="${S.reqTab === "open"}">Open</button><button class="chip" data-act="reqtab" data-t="closed" aria-pressed="${S.reqTab !== "open"}">Finished</button></div>
+    <div class="shop-head">
+      <div><p class="eyebrow">Bark and Stone · Crafting</p><h2 class="hero-title">Crafting requests</h2>
+        <p class="muted map-intro">Jobs guildmates have asked of you, and things you've asked them to make.${pending ? ` <strong class="shop-alert">${pending} waiting for your answer.</strong>` : ""}</p>
+        <div class="chips"><button class="chip" data-act="reqtab" data-t="open" aria-pressed="${S.reqTab === "open"}">Open</button><button class="chip" data-act="reqtab" data-t="closed" aria-pressed="${S.reqTab !== "open"}">Finished</button></div></div>
+      <div class="shop-keeper">${portrait("maren")}<p class="shop-bubble">${pending ? "You've got customers waiting! Accept a job and earn yourself a tip." : "All quiet. List more recipes on My crafter and I'll send folk your way."}</p></div>
+    </div>
+    ${mrSlot("requests")}
     <div class="split">
-      <div><h2>Asked of me</h2><div class="box">${inc.map((r) => card(r, "in")).join("") || `<div class="empty"><strong>Nothing for you right now.</strong>List your recipes on My crafter so guildmates can ask.</div>`}</div></div>
-      <div><h2>I asked for</h2><div class="box">${out.map((r) => card(r, "out")).join("") || `<div class="empty"><strong>You haven't asked for anything.</strong>Find a recipe and press Request next to a crafter.</div>`}</div></div>
+      <div><h2>Asked of me</h2><div class="box">${inc.map((r) => card(r, "in")).join("") || `<div class="empty with-merchant">${portrait("rowan")}<div><strong>Nothing for you right now.</strong>List your recipes on <a href="#mine">My crafter</a> so guildmates can ask.</div></div>`}</div></div>
+      <div><h2>I asked for</h2><div class="box">${out.map((r) => card(r, "out")).join("") || `<div class="empty with-merchant">${portrait("brannoc")}<div><strong>You haven't asked for anything.</strong>Find a recipe on <a href="#recipes">Recipes</a> and press Request next to a crafter.</div></div>`}</div></div>
     </div>`;
+  afterShop();
 }
+
+// Merchant Row characters and big item icons, after a shop page draws.
+function afterShop() { if (window.GC_MERCHANTS) window.GC_MERCHANTS.paint(); if (window.GC_ICONS) window.GC_ICONS.fill(); }
+const mrSlot = (page) => (window.GC_MERCHANTS ? window.GC_MERCHANTS.slot(page) : "");
 
 /* ---------- Market ---------- */
 function renderMarket() {
@@ -752,6 +774,7 @@ function renderMarket() {
       <div class="map-head board-head"><div><p class="eyebrow">Bark and Stone · Trade</p><h2 class="hero-title">Guild market</h2>
         <p class="muted map-intro">Buy and sell with guildmates. Press <strong>Buy</strong> or <strong>Sell to them</strong> and they get a request to arrange the trade in game.</p></div>
         <button class="btn primary" data-act="mk-post">Post a listing</button></div>
+      ${mrSlot("market")}
       <form class="form mk-post" id="postform" hidden>
         <div class="mk-type" role="radiogroup" aria-label="Selling or buying">
           <button type="button" class="chip" data-act="mk-type" data-t="S" aria-pressed="true">I'm selling</button>
@@ -804,7 +827,7 @@ function renderMarket() {
     ].join("");
     return `<article class="mk-card ${l.type === "B" ? "want" : "sell"}">
       <div class="mk-top"><span class="mk-badge">${l.type === "B" ? "Wanted" : "For sale"}</span><span class="muted mk-when">${ago(l.created)}</span></div>
-      <h3 class="mk-name">${name} <span class="mk-qty">×${qty}</span></h3>
+      <div class="mk-head">${it && window.GC_ICONS ? window.GC_ICONS.img(it.id) : `<span class="mk-ic-none" aria-hidden="true">${l.type === "B" ? "🔎" : "📦"}</span>`}<h3 class="mk-name">${name} <span class="mk-qty">×${qty}</span></h3></div>
       <div class="mk-price-row">${l.price > 0 ? `<div><span class="muted">Each</span>${gold(l.price)}</div>${qty > 1 ? `<div><span class="muted">All ${qty}</span>${gold(l.price * qty)}</div>` : ""}` : `<div><span class="muted">Price</span><span class="mk-offer">Open to offers</span></div>`}</div>
       ${l.note ? `<p class="mk-note">${esc(l.note)}</p>` : ""}
       <div class="mk-foot"><span class="mk-who">${avatarImg(l.seller, 22)}<span><strong>${esc(l.char || "?")}</strong>${un ? ` <span class="muted">· ${memberLink(l.seller, un)}</span>` : ""}${mine ? ' <span class="muted">(you)</span>' : ""}</span></span>
@@ -817,6 +840,7 @@ function renderMarket() {
     : tab ? `<div class="mk-grid-cards">${rows.map(card).join("")}</div>`
     : group("For sale", rows.filter((l) => l.type === "S")) + group("Wanted", rows.filter((l) => l.type === "B"));
   refreshWowhead();
+  afterShop();
 }
 
 /* ---------- Members & profiles ---------- */
@@ -864,7 +888,7 @@ function chatBox(type, id) {
 function scrollChats() { document.querySelectorAll(".chat-log").forEach((el) => { el.scrollTop = el.scrollHeight; }); }
 
 /* ---------- Who's online ---------- */
-const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", transmog: "the Transmog wardrobe", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
+const PAGE_NAMES = { home: "Home", rules: "Rules", map: "the map", loot: "the Loot Vault", mounts: "Loot & Mounts", chronicle: "the Lore", classes: "Classes and races", cities: "the city guide", board: "the Request Board", recipes: "Recipes", mine: "My crafter", requests: "Requests", market: "the Market", profile: "profiles", members: "Members", messages: "Messages", admin: "Admin" };
 function renderOnline() {
   const btn = $("#online-btn"); if (!btn) return;
   const list = S.uid ? S.online.slice().sort((a, b) => (a.id === S.uid ? -1 : b.id === S.uid ? 1 : (a.username || "").localeCompare(b.username || ""))) : [];
@@ -1294,6 +1318,7 @@ function renderBoard() {
     <div class="map-head board-head"><div><p class="eyebrow">Bark and Stone · Request Board</p><h2 class="hero-title">Request Board</h2>
       <p class="muted map-intro">Post what you need and anyone in the guild can take the job. Crafts, items, materials or a hand with something.</p></div>
       <button class="btn primary" data-act="post-toggle">${S.postOpen ? "Close" : "Post a request"}</button></div>
+    ${mrSlot("board")}
     ${S.postOpen ? `<form class="form postform" id="boardform">
       <div class="row"><label for="bf-cat">What kind</label><select id="bf-cat">${Object.entries(CATS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></div>
       <div class="row"><label for="bf-title">What you need</label><input type="text" id="bf-title" list="recipelist" maxlength="80" required placeholder="e.g. Elixir of Lion's Strength, 10 Copper Bars, help with a quest"></div>
@@ -1308,7 +1333,8 @@ function renderBoard() {
       <div class="chips">${tabs.map(([k, l]) => `<button class="chip" data-act="board-tab" data-t="${k}" aria-pressed="${S.boardTab === k}">${l}${counts[k] != null ? `<span class="n">${counts[k]}</span>` : ""}</button>`).join("")}</div>
       <div class="chips"><button class="chip" data-act="board-cat" data-c="" aria-pressed="${!S.boardCat}">All kinds</button>${Object.entries(CATS).map(([k, v]) => `<button class="chip" data-act="board-cat" data-c="${k}" aria-pressed="${S.boardCat === k}">${v}</button>`).join("")}</div>
     </div>
-    <div class="posts">${list.map(card).join("") || `<div class="card empty"><strong>${S.boardTab === "open" ? "No open requests right now." : "Nothing here yet."}</strong>${S.boardTab === "open" ? "Post one, and the whole guild will see it." : ""}</div>`}</div>`;
+    <div class="posts">${list.map(card).join("") || `<div class="card empty with-merchant">${window.GC_MERCHANTS ? window.GC_MERCHANTS.portrait("thorek", "empty-merchant") : ""}<div><strong>${S.boardTab === "open" ? "No open requests right now." : "Nothing here yet."}</strong>${S.boardTab === "open" ? "Post one, and the whole guild will see it." : ""}</div></div>`}</div>`;
+  afterShop();
 }
 
 /* ---------- Notifications ---------- */
@@ -2250,10 +2276,12 @@ function renderTradeBadge() {
 }
 
 // The guild helper (chat.js) reaches the site through this.
-// What the Transmog wardrobe (transmog.js) needs from the app.
+// What merchants.js (Merchant Row) needs from the app.
 window.GC_APP = {
   backend: () => S.B, uid: () => S.uid, signIn: () => openAuth("in"),
   name: (uid) => { const p = prof(uid); return p.mainChar || p.username || "A guildmate"; },
+  listings: () => S.listings, myChar: () => defaultChar(),
+  goldText: (g) => { const c = toCopper(g); if (!c) return "offers"; const gg = Math.floor(c / 10000), s = Math.floor((c % 10000) / 100), cc = c % 100; return [gg && gg.toLocaleString("en-US") + "g", s && s + "s", cc && cc + "c"].filter(Boolean).join(" "); },
 };
 window.GC_AI = {
   token: () => (S.B && S.B.accessToken ? S.B.accessToken() : Promise.resolve(null)),

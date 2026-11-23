@@ -130,3 +130,10 @@ The addon lives in `addon/BarkAndStone/`, and a ready-to-install zip is at `down
    - To release a new version: add it to `addon/CHANGELOG.md`, then push a tag, for example `git tag addon-v1.0.1` then `git push origin addon-v1.0.1`. The workflow `.github/workflows/addon-release.yml` builds the zip and uploads it.
    - You can also run it by hand from the **Actions** tab.
 5. Add `## X-Curse-Project-ID: <id>` to both `.toc` files so the CurseForge app recognises installs.
+
+## Merchant Row (adverts)
+
+Run `supabase-adverts.sql` once in the Supabase SQL Editor. Merchant Row shows on the Market, Recipes, Request Board and Crafting requests pages.
+
+- Members press **Advertise here**, pick one of five merchant characters (images/merchants/), and post an advert that runs for 1 or 2 weeks. Each member can have 2 running at a time, and admins can remove any advert.
+- When fewer than four adverts are running, house merchants fill the row by calling out the latest guild market listings.
