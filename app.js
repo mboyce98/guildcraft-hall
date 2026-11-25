@@ -171,7 +171,7 @@ function buildIndex() {
 /* ---------- routing ---------- */
 function route() {
   const h = location.hash.slice(1);
-  const VIEWS = ["home", "rules", "map", "cities", "chronicle", "classes", "loot", "mounts", "achievements", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
+  const VIEWS = ["home", "rules", "map", "cities", "dungeons", "quests", "chronicle", "classes", "loot", "mounts", "achievements", "board", "recipes", "mine", "requests", "market", "profile", "members", "messages", "admin", "guides", "events"];
   let view = "home";
   S.viewUser = null; S.notifOpen = false; S.onlineOpen = false;
   if (/^recipe-\d+$/.test(h)) { S.sel = Number(h.slice(7)); view = "recipes"; }
@@ -222,6 +222,8 @@ function render() {
     if (S.view === "events") { if (!(typing && typing.closest("#view-events"))) renderEvents(); }
     else if (S.view === "map") { if (window.GC_MAP) window.GC_MAP.render(); }
     else if (S.view === "cities") { if (window.GC_CITIES && !(typing && typing.closest("#view-cities"))) window.GC_CITIES.render(); }
+    else if (S.view === "dungeons") { if (window.GC_DUNGEONS && !(typing && typing.closest("#view-dungeons"))) window.GC_DUNGEONS.render(); }
+    else if (S.view === "quests") { if (window.GC_QUESTS && !(typing && typing.closest("#view-quests"))) window.GC_QUESTS.render(); }
     else if (S.view === "loot") { if (window.GC_LOOT && !(typing && typing.closest("#view-loot"))) window.GC_LOOT.render(); }
     else if (S.view === "mounts") { if (window.GC_MOUNTS && !(typing && typing.closest("#view-mounts"))) window.GC_MOUNTS.render(); }
     else if (S.view === "achievements") { if (window.GC_ACH && !(typing && typing.closest("#view-achievements"))) window.GC_ACH.render(); }
@@ -2059,7 +2061,9 @@ const unansweredEvents = () => (S.uid ? upcomingEvents().filter((e) => !mySignup
 // Badge on the Events menu link, and the "coming up" box on the home page.
 function renderEventBits() {
   const b = $("#ev-badge");
-  if (b) { const n = unansweredEvents().length; b.textContent = n; b.hidden = !n; b.title = n ? `${n} event${n === 1 ? "" : "s"} you haven't answered` : ""; }
+  const n = unansweredEvents().length;
+  if (b) { b.textContent = n; b.hidden = !n; b.title = n ? `${n} event${n === 1 ? "" : "s"} you haven't answered` : ""; }
+  const g = $("#guild-badge"); if (g) { g.textContent = n; g.hidden = !n; g.title = b ? b.title : ""; }
   const home = $("#home-events");
   if (home) {
     const list = upcomingEvents().slice(0, 3);

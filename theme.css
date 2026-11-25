@@ -1108,3 +1108,47 @@ a.mstat[href]:hover{border-color:var(--brass)}
 @keyframes ach-in{from{opacity:0; transform:translateY(12px)}}
 @media (prefers-reduced-motion:reduce){.ach-toast{animation:none; transition:none}}
 
+
+/* ---------- Dungeons ---------- */
+.dg-layout{display:grid; grid-template-columns:320px minmax(0,1fr); gap:14px; align-items:start}
+.dg-list{max-height:min(80vh, 820px); overflow:auto; padding:8px; display:flex; flex-direction:column; gap:4px}
+.dg-grp{margin:8px 6px 4px; font:600 .78rem var(--f-display); letter-spacing:.06em; text-transform:uppercase; color:var(--muted)}
+.dg-item{display:flex; gap:10px; align-items:flex-start; width:100%; text-align:left; padding:8px; border-radius:8px; border:1px solid transparent; background:rgb(0 0 0 / .18); color:inherit; font:inherit; cursor:pointer}
+.dg-item:hover{border-color:var(--line)}
+.dg-item.sel{border-color:var(--brass); background:rgb(227 181 91 / .12)}
+.dg-lv{flex:none; min-width:48px; text-align:center; padding:2px 4px; border-radius:6px; background:rgb(0 0 0 / .35); font:700 .8rem var(--f-display); color:var(--gold-hi)}
+.dg-nm{min-width:0; display:flex; flex-direction:column; font-weight:600}
+.dg-nm small{font-weight:400; color:var(--muted); font-size:.8rem}
+.dg-new{font-style:normal; font-size:.7rem; font-weight:700; padding:1px 6px; border-radius:999px; background:rgb(126 200 255 / .16); color:#9fd4ff; vertical-align:middle}
+.dg-card{padding:16px}
+.dg-head{display:flex; flex-wrap:wrap; gap:10px; justify-content:space-between; align-items:flex-start}
+.dg-head h3{margin:0; font-family:var(--f-display); color:var(--gold-hi)}
+.dg-head p{margin:4px 0 0}
+.dg-map{margin:14px 0 0}
+.dg-mapbtn{display:block; width:100%; padding:0; border:1px solid #6b5426; border-radius:6px; overflow:auto; background:#1d1812; cursor:zoom-in; max-height:80vh}
+.dg-map.big .dg-mapbtn{cursor:zoom-out}
+.dg-mapbtn img{display:block; width:100%; height:auto}
+.dg-map.big .dg-mapbtn img{width:auto; max-width:none}
+.dg-map figcaption{margin-top:6px}
+.dg-nomap{margin:14px 0 0; padding:18px; border:1px dashed var(--line); border-radius:8px; text-align:center}
+.dg-nomap p{margin:4px 0 0}
+.dg-bosses{margin:0; padding-left:22px; columns:2 220px; column-gap:24px}
+.dg-bosses li{break-inside:avoid; padding:3px 0}
+@media (max-width:860px){ .dg-layout{grid-template-columns:1fr} .dg-list{max-height:320px} }
+
+/* ---------- Quests ---------- */
+.qs-filters{align-items:center}
+.qs-lvl{display:inline-flex; align-items:center; gap:8px; font-size:.9rem; color:var(--muted)}
+.qs-lvl input{width:80px}
+.qs-layout{display:grid; grid-template-columns:300px minmax(0,1fr); gap:14px; align-items:start; margin-top:10px}
+.qs-zones{max-height:min(80vh, 820px); overflow:auto; padding:8px; display:flex; flex-direction:column; gap:4px}
+.qs-tablewrap{overflow-x:auto; margin-top:10px}
+.qs-table{width:100%; border-collapse:collapse; font-size:.9rem}
+.qs-table th{text-align:left; font-weight:600; color:var(--muted); padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap}
+.qs-table td{padding:6px 8px; border-bottom:1px solid rgb(255 255 255 / .05); vertical-align:top}
+.qs-table .qs-l{font:700 .9rem var(--f-display); text-align:center; width:48px}
+.qs-table tr.q-locked{opacity:.55}
+.q-grey .qs-l, .qs-key .q-grey{color:#9d9d9d} .q-green .qs-l, .qs-key .q-green{color:#40c040}
+.q-yellow .qs-l, .qs-key .q-yellow{color:#ffd100} .q-orange .qs-l, .qs-key .q-orange{color:#ff8040} .q-red .qs-l, .qs-key .q-red{color:#ff3030}
+.qs-key{display:flex; flex-wrap:wrap; gap:14px; margin:10px 0 0; font-weight:700}
+@media (max-width:860px){ .qs-layout{grid-template-columns:1fr} .qs-zones{max-height:320px} }

@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=Cinzel+Decorative:wght@700&family=Inter:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="styles.css?v=13">
-<link rel="stylesheet" href="theme.css?v=30">
+<link rel="stylesheet" href="theme.css?v=31">
 <!-- Wowhead tooltips: hovering an item or spell link shows its Wowhead card -->
 <script>const whTooltips = { colorLinks: false, iconizeLinks: true, renameLinks: false, iconSize: "small" };</script>
 <script src="https://wow.zamimg.com/js/tooltips.js" async></script>
@@ -21,14 +21,13 @@
     <a class="brand" href="#home"><h1>Bark and Stone</h1><span>WoW Forever guild · GuildCraft</span></a>
     <nav class="tabs" aria-label="Sections">
       <a href="#home" data-tab="home">Home</a>
-      <a href="#events" data-tab="events" class="nav-top">Events <span class="badge" id="ev-badge" hidden></span></a>
       <div class="navgrp">
-        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Guild</button>
-        <div class="navmenu"><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Lore</a><a href="#classes" data-tab="classes">Classes &amp; races</a><a href="#achievements" data-tab="achievements">Achievements</a><a href="#guides" data-tab="guides">Guides</a><a href="#members" data-tab="members">Members</a><a href="#messages" data-tab="messages">Messages</a><a href="#admin" data-tab="admin" class="admin-only" hidden>Admin</a></div>
+        <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Guild <span class="badge" id="guild-badge" hidden></span></button>
+        <div class="navmenu"><a href="#events" data-tab="events">Events <span class="badge" id="ev-badge" hidden></span></a><a href="#rules" data-tab="rules">Rules</a><a href="#chronicle" data-tab="chronicle">Lore</a><a href="#classes" data-tab="classes">Classes &amp; races</a><a href="#achievements" data-tab="achievements">Achievements</a><a href="#guides" data-tab="guides">Guides</a><a href="#members" data-tab="members">Members</a><a href="#messages" data-tab="messages">Messages</a><a href="#admin" data-tab="admin" class="admin-only" hidden>Admin</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">World</button>
-        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#cities" data-tab="cities">City guide</a></div>
+        <div class="navmenu"><a href="#map" data-tab="map">World map</a><a href="#cities" data-tab="cities">City guide</a><a href="#dungeons" data-tab="dungeons">Dungeons</a><a href="#quests" data-tab="quests">Quests</a></div>
       </div>
       <div class="navgrp">
         <button class="navbtn" type="button" aria-expanded="false" aria-haspopup="true">Loot &amp; Mounts</button>
@@ -136,7 +135,7 @@
 
     <div class="tiles groups">
       <div class="tile"><strong>Guild</strong><span><a href="#rules">Rules</a> · <a href="#chronicle">Lore</a> · <a href="#classes">Classes</a> · <a href="#profile">Members</a></span></div>
-      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#cities">Cities</a> · <a href="#mounts">Mounts</a> · <a href="#loot">Loot Vault</a></span></div>
+      <div class="tile"><strong>World</strong><span><a href="#map">World map</a> · <a href="#cities">Cities</a> · <a href="#dungeons">Dungeons</a> · <a href="#quests">Quests</a> · <a href="#mounts">Mounts</a> · <a href="#loot">Loot Vault</a></span></div>
       <div class="tile"><strong>Crafting</strong><span><a href="#recipes">Recipes</a> · <a href="#mine">My crafter</a> · <a href="#requests">Requests</a></span></div>
       <div class="tile"><strong>Trade</strong><span><a href="#board">Request Board</a> · <a href="#market">Market</a></span></div>
     </div>
@@ -209,6 +208,8 @@
 
   <section id="view-map" hidden></section>
   <section id="view-cities" hidden></section>
+  <section id="view-dungeons" hidden></section>
+  <section id="view-quests" hidden></section>
 
   <section id="view-chronicle" class="chronicle" hidden>
     <div class="page-head">
@@ -537,10 +538,12 @@
 
 <script src="backend.js?v=20"></script>
 <script src="merchants.js?v=1"></script>
-<script src="app.js?v=38"></script>
+<script src="app.js?v=39"></script>
 <script src="map.js?v=5"></script>
 <script src="loot.js?v=3"></script>
 <script src="cities.js?v=7"></script>
+<script src="dungeons.js?v=1"></script>
+<script src="quests.js?v=1"></script>
 <script src="gallery.js?v=2"></script>
 <script src="music.js?v=1"></script>
 <script src="mounts.js?v=3"></script>
